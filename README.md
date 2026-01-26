@@ -636,5 +636,13 @@ That principle guided every decision in this project.
 
 🚧 Project Status
 
-Version: 0.1.0
+Version: 0.1.0º
 Status: Early preview / experimental
+## 🚧 Project status
+
+**Version:** `0.1.0`  
+**Status:** early preview / experimental
+
+TinyDispatcher is usable today, but still evolving.
+Expect possible breaking changes between minor versions while `0.x`.
+Feedback and PRs are welcome.
