@@ -139,7 +139,9 @@ public sealed class Generator : IIncrementalGenerator
                 EmitDiExtensions: baseOptions.EmitDiExtensions,
                 EmitHandlerRegistrations: baseOptions.EmitHandlerRegistrations,
                 IncludeNamespacePrefix: baseOptions.IncludeNamespacePrefix,
-                CommandContextType: inferredCtx);
+                CommandContextType: inferredCtx,
+                EmitPipelineMap: baseOptions.EmitPipelineMap,
+                PipelineMapFormat: baseOptions.PipelineMapFormat);
         }
 
         // If still no ctx, we cannot generate pipelines (PipelineEmitter requires closed ctx)
@@ -645,7 +647,9 @@ public sealed class Generator : IIncrementalGenerator
             EmitDiExtensions: true,
             EmitHandlerRegistrations: true,
             IncludeNamespacePrefix: null,
-            CommandContextType: null);
+            CommandContextType: null,
+            EmitPipelineMap: true,
+            PipelineMapFormat: "json");
     }
 
     private static string EnsureGlobalPrefix(string s)
