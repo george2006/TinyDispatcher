@@ -20,16 +20,22 @@ public sealed class OptionsProvider
         string? genNs = null;
         string? includePrefix = null;
         string? commandCtx = null;
+        string? emitMap = null;
+        string? mapFormat = null;
 
         global.TryGetValue("build_property.TinyDispatcher_CoreNamespace", out coreNs);
         global.TryGetValue("build_property.TinyDispatcher_GeneratedNamespace", out genNs);
         global.TryGetValue("build_property.TinyDispatcher_IncludeNamespacePrefix", out includePrefix);
         global.TryGetValue("build_property.TinyDispatcher_CommandContextType", out commandCtx);
+        global.TryGetValue("build_property.TinyDispatcher_GeneratePipelineMap", out emitMap);
+        global.TryGetValue("build_property.TinyDispatcher_PipelineMapFormat", out mapFormat);
 
         coreNs = NormalizeOptional(coreNs);
         genNs = NormalizeOptional(genNs);
         includePrefix = NormalizeOptional(includePrefix);
         commandCtx = NormalizeOptional(commandCtx);
+        emitMap = NormalizeOptional(emitMap);
+        mapFormat = NormalizeOptional(mapFormat);
 
         return new GeneratorOptions(
             CoreNamespace: coreNs ?? "TinyDispatcher",
@@ -37,7 +43,10 @@ public sealed class OptionsProvider
             EmitDiExtensions: true,
             EmitHandlerRegistrations: true,
             IncludeNamespacePrefix: includePrefix,
-            CommandContextType: commandCtx is null ? null : EnsureGlobal(commandCtx));
+            CommandContextType: commandCtx is null ? null : EnsureGlobal(commandCtx),
+
+            EmitPipelineMap: string.Equals(emitMap, "true", StringComparison.OrdinalIgnoreCase),
+            PipelineMapFormat: mapFormat ?? "json");
     }
 
     private static string? NormalizeOptional(string? value)

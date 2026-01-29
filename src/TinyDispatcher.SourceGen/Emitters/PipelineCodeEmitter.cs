@@ -15,13 +15,15 @@
 
 #nullable enable
 
+using Microsoft.CodeAnalysis.Text;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
-using Microsoft.CodeAnalysis.Text;
 using TinyDispatcher.SourceGen.Abstractions;
+using TinyDispatcher.SourceGen.PipelineMap;
+using TinyDispatcher.SourceGen.PipelineMaps;
 
 namespace TinyDispatcher.SourceGen;
 
@@ -64,9 +66,38 @@ public sealed class PipelineEmitter : ICodeEmitter
 
         var source = BuildSourceWithPipelines(result, options);
 
+        if (options.EmitPipelineMap)
+        {
+            // For each discovered command handler, generate a map.
+            // (If you prefer: only map commands that actually have any middleware/policy.)
+            foreach (var c in result.Commands)
+            {
+                var resolved = ResolvePipelineForCommand(
+                    commandFqn: c.MessageTypeFqn,
+                    ctxFqn: options.CommandContextType!,
+                    handlerFqn: c.HandlerTypeFqn);
+
+                var descriptor = ToDescriptor(resolved);
+
+                // Format gate: json
+                if ((options.PipelineMapFormat ?? "json")
+                    .IndexOf("json", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    PipelineMapJsonEmitter.Emit(context, descriptor);
+                }
+                if ((options.PipelineMapFormat ?? "")
+                    .IndexOf("mermaid", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    PipelineMapMermaidEmitter.Emit(context, descriptor);
+                }
+            }
+        }
+
         context.AddSource(
             hintName: "TinyDispatcherPipeline.g.cs",
             sourceText: SourceText.From(source, Encoding.UTF8));
+
+      
     }
 
     private string BuildSourceWithPipelines(DiscoveryResult result, GeneratorOptions options)
@@ -396,6 +427,88 @@ public sealed class PipelineEmitter : ICodeEmitter
         sb.AppendLine("}");
     }
 
+    private ResolvedPipeline ResolvePipelineForCommand(
+    string commandFqn,
+    string ctxFqn,
+    string handlerFqn)
+    {
+        var cmd = NormalizeFullyQualifiedType(commandFqn);
+        var ctx = NormalizeFullyQualifiedType(ctxFqn);
+        var handler = NormalizeFullyQualifiedType(handlerFqn);
+
+        var globals = NormalizeDistinct(_globalMiddlewares);
+        var perCmd = _perCommand.TryGetValue(cmd, out var perCmdMids)
+            ? NormalizeDistinct(perCmdMids)
+            : Array.Empty<string>();
+
+        // Determine policy (if any) that claims this command (deterministic order by policy fqn)
+        PolicySpec? policy = null;
+
+        foreach (var p in _policies.Values.OrderBy(x => x.PolicyTypeFqn, StringComparer.Ordinal))
+        {
+            if (p.Commands.Any(c => string.Equals(NormalizeFullyQualifiedType(c), cmd, StringComparison.Ordinal)))
+            {
+                policy = p;
+                break;
+            }
+        }
+
+        var appliedPolicies = policy is null
+            ? ImmutableArray<string>.Empty
+            : ImmutableArray.Create(NormalizeFullyQualifiedType(policy.PolicyTypeFqn));
+
+        // Effective middleware order as executed:
+        // - Global (outer)
+        // - Policy (inner) (if any)
+        // - Per-command (inner-most among middleware)
+        // - Handler final
+        //
+        // NOTE: Your generated pipelines currently do:
+        // per-command: per-command inner, then global outer
+        // policy: policy inner, then global outer
+        // So in *execution order* the global runs first, then policy/command, then handler.
+        var list = ImmutableArray.CreateBuilder<ResolvedMiddleware>();
+
+        // global (outer)
+        foreach (var mw in globals)
+            list.Add(new ResolvedMiddleware(mw, "Global"));
+
+        // policy (middle)
+        if (policy is not null)
+        {
+            foreach (var mw in NormalizeDistinct(policy.Middlewares))
+                list.Add(new ResolvedMiddleware(mw, $"Policy:{NormalizeFullyQualifiedType(policy.PolicyTypeFqn)}"));
+        }
+
+        // per-command (inner-most)
+        foreach (var mw in perCmd)
+            list.Add(new ResolvedMiddleware(mw, $"Command:{cmd}"));
+
+        return new ResolvedPipeline(
+            CommandFqn: cmd,
+            ContextFqn: ctx,
+            HandlerFqn: handler,
+            Middlewares: list.ToImmutable(),
+            PoliciesApplied: appliedPolicies);
+    }
+    private static PipelineDescriptor ToDescriptor(ResolvedPipeline p)
+    {
+        var mids = p.Middlewares
+            .Select(m => new MiddlewareDescriptor(
+                MiddlewareFullName: m.MiddlewareOpenFqn,
+                Source: m.Source))
+            .ToArray();
+
+        return new PipelineDescriptor(
+            CommandFullName: p.CommandFqn,
+            ContextFullName: p.ContextFqn,
+            HandlerFullName: p.HandlerFqn,
+            Middlewares: mids,
+            PoliciesApplied: p.PoliciesApplied.ToArray());
+    }
+
+
+
     // ============================================================
     // HELPERS
     // ============================================================
@@ -463,4 +576,15 @@ public sealed class PipelineEmitter : ICodeEmitter
         var chars = s.Select(c => char.IsLetterOrDigit(c) ? c : '_').ToArray();
         return new string(chars);
     }
+
+    private sealed record ResolvedPipeline(
+        string CommandFqn,
+        string ContextFqn,
+        string HandlerFqn,
+        ImmutableArray<ResolvedMiddleware> Middlewares,
+        ImmutableArray<string> PoliciesApplied);
+
+    private sealed record ResolvedMiddleware(
+        string MiddlewareOpenFqn,
+        string Source);
 }

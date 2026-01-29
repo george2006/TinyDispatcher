@@ -5,6 +5,10 @@
     <IsPackable>false</IsPackable>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <TinyDispatcher_GeneratePipelineMap>true</TinyDispatcher_GeneratePipelineMap>
+    <TinyDispatcher_PipelineMapFormat>json;mermaid</TinyDispatcher_PipelineMapFormat>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,6 +24,11 @@
     <!-- Roslyn for generator tests (in-memory compilation / asserting generated output) -->
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <CompilerVisibleProperty Include="TinyDispatcher_GeneratePipelineMap" />
+    <CompilerVisibleProperty Include="TinyDispatcher_PipelineMapFormat" />
   </ItemGroup>
 
   <ItemGroup>

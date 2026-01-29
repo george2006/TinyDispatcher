@@ -12,6 +12,9 @@
         string? IncludeNamespacePrefix,  // optional filter for handler namespaces
 
         // NEW: Closed command context type (fully-qualified, can be "global::X.Y.Z")
-        string? CommandContextType
+        string? CommandContextType,
+        // NEW: pipeline map emission
+        bool EmitPipelineMap,
+        string? PipelineMapFormat
     );
 }
