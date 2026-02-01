@@ -26,7 +26,6 @@ internal static class ContributionStore
         {
             var commands = Items.SelectMany(c => c.CommandHandlers).ToArray();
             var queries = Items.SelectMany(c => c.QueryHandlers).ToArray();
-            Items.Clear();
             return (commands, queries);
         }
     }
