@@ -1,2 +1,8 @@
-﻿// See https://aka.ms/new-console-template for more information
-Console.WriteLine("Hello, World!");
+﻿using TinyDispatcher.Samples;
+
+
+await PolicySample.Run();
+
+await GlobalMiddlewareSample.Run();
+
+await PerCommandMiddlewareSample.Run();
