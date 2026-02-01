@@ -9,7 +9,10 @@
     <Nullable>enable</Nullable>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <IsRoslynComponent>true</IsRoslynComponent>
+    <IsPackable>false</IsPackable>
+
   </PropertyGroup>
+  
 
   <ItemGroup>
     <Compile Remove="PipelineMap\**" />
