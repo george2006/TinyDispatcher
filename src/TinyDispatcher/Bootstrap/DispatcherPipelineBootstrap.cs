@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace TinyDispatcher;
@@ -24,9 +25,8 @@ internal static class PipelineContributionStore
     {
         lock (_gate)
         {
-            var arr = _items.ToArray();
-            _items.Clear();
-            return arr;
+            // Snapshot: do NOT clear. Allows multiple ServiceProviders in the same process.
+            return _items.ToArray();
         }
     }
 }
@@ -44,7 +44,15 @@ public static class DispatcherPipelineBootstrap
     {
         if (services is null) throw new ArgumentNullException(nameof(services));
 
+        // Apply only once per IServiceCollection to avoid duplicate DI registrations.
+        if (services.Any(d => d.ServiceType == typeof(DispatcherPipelineBootstrapAppliedMarker)))
+            return;
+
+        services.AddSingleton<DispatcherPipelineBootstrapAppliedMarker>();
+
         foreach (var c in PipelineContributionStore.Drain())
             c(services);
     }
+
+    private sealed class DispatcherPipelineBootstrapAppliedMarker { }
 }
