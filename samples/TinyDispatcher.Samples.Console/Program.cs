@@ -1,4 +1,8 @@
 ﻿using TinyDispatcher.Samples;
 
 
-await PolicySample.Run();
+//await PolicySample.Run();
+
+//await GlobalMiddlewareSample.Run();
+
+await PerCommandMiddlewareSample.Run();

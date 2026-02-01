@@ -3,6 +3,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using TinyDispatcher.Dispatching;
+using static TinyDispatcher.Samples.GlobalMiddlewareSample;
 
 namespace TinyDispatcher.Samples;
 
@@ -20,6 +21,9 @@ public static class PolicySample
 
         services.AddTransient(typeof(PolicyLoggingMiddleware<,>));
         services.AddTransient(typeof(PolicyValidationMiddleware<,>));
+        services.AddTransient(typeof(GlobalLoggingMiddleware<,>));
+
+
 
 
         var sp = services.BuildServiceProvider();
