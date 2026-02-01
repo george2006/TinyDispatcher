@@ -17,5 +17,33 @@
           PackagePath="analyzers/dotnet/cs"
           Visible="false" />
   </ItemGroup>
+  <PropertyGroup>
+    <!-- NuGet metadata -->
+    <PackageId>TinyDispatcher</PackageId>
+    <Authors>Jorge Durban Antuñano</Authors>
+    <Company>Innerwave</Company>
+    <Product>TinyDispatcher</Product>
+
+    <Description>TinyDispatcher is a small, compile-time oriented dispatcher for .NET with pipelines and source generation.</Description>
+    <PackageTags>dotnet;dispatcher;mediator;pipeline;sourcegenerator;clean-architecture</PackageTags>
+
+    <PackageProjectUrl>https://github.com/george2006/TinyDispatcher</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/george2006/TinyDispatcher</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+
+    <!-- Show README on nuget.org -->
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <!-- Optional but nice -->
+    <PackageReleaseNotes>Alpha release.</PackageReleaseNotes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Make sure the README is included in the .nupkg root -->
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
 
 </Project>
