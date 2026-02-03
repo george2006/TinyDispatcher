@@ -779,6 +779,45 @@ They can be inspected, debugged step by step, and understood without learning a 
 TinyDispatcher keeps its API surface intentionally small.
 
 It focuses on doing one thing well — dispatching commands and queries predictably — and composes cleanly with existing architectures rather than trying to replace them.
+🚧 Project Status
+
+**Version:** `0.1.0`  
+**Status:** early preview / experimental
+
+TinyDispatcher is usable today, but still evolving.
+Expect possible breaking changes between minor versions while `0.x`.
+Feedback and PRs are welcome.
+
+---
+
+## Assembly-level configuration (important)
+
+TinyDispatcher is configured at **assembly level**.
+
+`UseTinyDispatcher<TContext>(...)` is intended to be called **once per assembly**, typically during application startup.
+
+### Why this matters
+
+TinyDispatcher uses **compile-time discovery** (source generators / analyzers) to build command pipelines.  
+Because of this, the generator analyzes the **entire assembly**.
+
+All `UseTinyDispatcher(...)` calls found in the same assembly are treated as contributions to a **single application configuration**.
+
+This means:
+
+- Multiple `UseTinyDispatcher(...)` calls do **not** create isolated configurations
+- They are **merged** at compile time
+- Middleware and pipeline contributions may affect commands outside their apparent scope
+
+This behavior is powerful, but can be surprising if not understood.
+
+### Rule of thumb
+
+> **Assembly = Application**
+
+If you need isolated configurations (for example, in tests or samples), use **separate projects / assemblies**.
+
+---
 
 ## Final note
 
@@ -789,11 +828,3 @@ then the design has failed.
 
 That principle guided every decision in this project.
 
-🚧 Project Status
-
-**Version:** `0.1.0`  
-**Status:** early preview / experimental
-
-TinyDispatcher is usable today, but still evolving.
-Expect possible breaking changes between minor versions while `0.x`.
-Feedback and PRs are welcome.
