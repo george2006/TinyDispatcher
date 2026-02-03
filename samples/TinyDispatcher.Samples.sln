@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.2.11415.280
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyDispatcher.Samples.Pipelines", "src\TinyDispatcher.Samples.Console\TinyDispatcher.Samples.Pipelines.csproj", "{B8D05677-3450-6CFE-513A-CAF9F2738865}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyDispatcher.Samples.Pipelines", "src\TinyDispatcher.Samples.Pipelines\TinyDispatcher.Samples.Pipelines.csproj", "{B8D05677-3450-6CFE-513A-CAF9F2738865}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyDispatcher.Samples.ShippedContext", "src\TinyDispatcher.Samples.Console.AppContext\TinyDispatcher.Samples.ShippedContext.csproj", "{15831EB7-F177-F222-AA2C-B1208628F8E6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyDispatcher.Samples.ShippedContext", "src\TinyDispatcher.Samples.ShippedContext\TinyDispatcher.Samples.ShippedContext.csproj", "{15831EB7-F177-F222-AA2C-B1208628F8E6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
