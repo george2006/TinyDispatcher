@@ -3,9 +3,9 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using TinyDispatcher.Dispatching;
-using static TinyDispatcher.Samples.GlobalMiddlewareSample;
+using static TinyDispatcher.Samples.Pipelines.GlobalMiddlewareSample;
 
-namespace TinyDispatcher.Samples;
+namespace TinyDispatcher.Samples.Pipelines;
 
 public static class PerCommandMiddlewareSample
 {
