@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using TinyDispatcher.Dispatching;
 
-namespace TinyDispatcher.Samples;
+namespace TinyDispatcher.Samples.Pipelines;
 
 public static class GlobalMiddlewareSample
 {
