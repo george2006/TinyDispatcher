@@ -111,12 +111,17 @@ using TinyDispatcher;
 
 ## 1.4 Dispatch
 
+Commands:
+
+```csharp
 await dispatcher.DispatchAsync(new CreateOrder("123"), ct);
+var dto = await dispatcher.DispatchAsync<GetOrder, OrderDto>(new GetOrder("123"), ct);
 ```
 
 Queries:
 
 ```csharp
+await dispatcher.DispatchAsync(new CreateOrder("123"), ct);
 var dto = await dispatcher.DispatchAsync<GetOrder, OrderDto>(new GetOrder("123"), ct);
 ```
 
