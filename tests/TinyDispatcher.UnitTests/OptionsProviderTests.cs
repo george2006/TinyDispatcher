@@ -21,7 +21,6 @@ using System;
 using TinyDispatcher;
 
 [assembly: TinyDispatcherGeneratorOptions(
-    CoreNamespace = ""Acme.Core"",
     GeneratedNamespace = ""Acme.Gen"",
     IncludeNamespacePrefix = ""Acme."",
     CommandContextType = typeof(MyCtx),
@@ -44,7 +43,6 @@ public sealed class MyCtx {}
         var opts = sut.GetOptions(compilation, optionsProvider: null);
 
         Assert.NotNull(opts);
-        Assert.Equal("Acme.Core", opts!.CoreNamespace);
         Assert.Equal("Acme.Gen", opts.GeneratedNamespace);
         Assert.Equal("Acme.", opts.IncludeNamespacePrefix);
 

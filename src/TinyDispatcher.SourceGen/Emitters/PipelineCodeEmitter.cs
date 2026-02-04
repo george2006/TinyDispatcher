@@ -133,7 +133,7 @@ public sealed class PipelineEmitter : ICodeEmitter
 
     private void AppendPipelines(StringBuilder sb, GeneratorOptions options)
     {
-        var core = $"global::{options.CoreNamespace}";
+        var core = $"global::{Known.CoreNamespace}";
         var ctx = options.CommandContextType!;
 
         var globals = NormalizeDistinct(_globalMiddlewares);
@@ -346,7 +346,7 @@ public sealed class PipelineEmitter : ICodeEmitter
 
     private void AppendContributionPartialImplementation(StringBuilder sb, DiscoveryResult result, GeneratorOptions options)
     {
-        var core = $"global::{options.CoreNamespace}";
+        var core = $"global::{Known.CoreNamespace}";
         var ctx = options.CommandContextType!;
         var generatedNsFqn = "global::" + options.GeneratedNamespace;
 

@@ -5,7 +5,6 @@
     /// Values come from MSBuild / .editorconfig.
     /// </summary>
     public sealed record GeneratorOptions(
-        string CoreNamespace,            // e.g. "TinyDispatcher"
         string GeneratedNamespace,       // e.g. "TinyDispatcher.Generated"
         bool EmitDiExtensions,           // emit DI extensions or not
         bool EmitHandlerRegistrations,   // emit AddDispatcherHandlers or not
@@ -17,4 +16,9 @@
         bool EmitPipelineMap,
         string? PipelineMapFormat
     );
+
+    internal static class Known
+    {
+        internal const string CoreNamespace = "TinyDispatcher";
+    }
 }

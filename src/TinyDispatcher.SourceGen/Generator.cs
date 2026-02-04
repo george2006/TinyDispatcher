@@ -105,7 +105,7 @@ public sealed class Generator : IIncrementalGenerator
 
         // Discover handlers
         var discovery = new RoslynHandlerDiscovery(
-            baseOptions.CoreNamespace,
+            Known.CoreNamespace,
             baseOptions.IncludeNamespacePrefix,
             baseOptions.CommandContextType);
 
@@ -134,7 +134,6 @@ public sealed class Generator : IIncrementalGenerator
         if (string.IsNullOrWhiteSpace(effectiveOptions.CommandContextType) && !string.IsNullOrWhiteSpace(inferredCtx))
         {
             effectiveOptions = new GeneratorOptions(
-                CoreNamespace: baseOptions.CoreNamespace,
                 GeneratedNamespace: baseOptions.GeneratedNamespace,
                 EmitDiExtensions: baseOptions.EmitDiExtensions,
                 EmitHandlerRegistrations: baseOptions.EmitHandlerRegistrations,
@@ -645,7 +644,6 @@ public sealed class Generator : IIncrementalGenerator
         var fromConfig = new OptionsProvider().GetOptions(compilation, provider);
 
         return fromConfig ?? new GeneratorOptions(
-            CoreNamespace: "TinyDispatcher",
             GeneratedNamespace: "TinyDispatcher.Generated",
             EmitDiExtensions: true,
             EmitHandlerRegistrations: true,

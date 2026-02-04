@@ -23,14 +23,12 @@ public sealed class OptionsProvider
 
         var global = optionsProvider.GlobalOptions;
 
-        global.TryGetValue("build_property.TinyDispatcher_CoreNamespace", out var coreNs);
         global.TryGetValue("build_property.TinyDispatcher_GeneratedNamespace", out var genNs);
         global.TryGetValue("build_property.TinyDispatcher_IncludeNamespacePrefix", out var includePrefix);
         global.TryGetValue("build_property.TinyDispatcher_CommandContextType", out var commandCtx);
         global.TryGetValue("build_property.TinyDispatcher_GeneratePipelineMap", out var emitMap);
         global.TryGetValue("build_property.TinyDispatcher_PipelineMapFormat", out var mapFormat);
 
-        coreNs = NormalizeOptional(coreNs);
         genNs = NormalizeOptional(genNs);
         includePrefix = NormalizeOptional(includePrefix);
         commandCtx = NormalizeOptional(commandCtx);
@@ -38,7 +36,6 @@ public sealed class OptionsProvider
         mapFormat = NormalizeOptional(mapFormat);
 
         return new GeneratorOptions(
-            CoreNamespace: coreNs ?? "TinyDispatcher",
             GeneratedNamespace: genNs ?? "TinyDispatcher.Generated",
             EmitDiExtensions: true,
             EmitHandlerRegistrations: true,
@@ -60,7 +57,6 @@ public sealed class OptionsProvider
             if (!SymbolEqualityComparer.Default.Equals(attr.AttributeClass, attrType))
                 continue;
 
-            string? coreNs = GetNamedString(attr, "CoreNamespace");
             string? genNs = GetNamedString(attr, "GeneratedNamespace");
             string? includePrefix = GetNamedString(attr, "IncludeNamespacePrefix");
 
@@ -70,12 +66,10 @@ public sealed class OptionsProvider
             var emitMap = GetNamedBool(attr, "EmitPipelineMap") ?? false;
             var mapFormat = GetNamedString(attr, "PipelineMapFormat") ?? "json";
 
-            coreNs = NormalizeOptional(coreNs);
             genNs = NormalizeOptional(genNs);
             includePrefix = NormalizeOptional(includePrefix);
 
             return new GeneratorOptions(
-                CoreNamespace: coreNs ?? "TinyDispatcher",
                 GeneratedNamespace: genNs ?? "TinyDispatcher.Generated",
                 EmitDiExtensions: true,
                 EmitHandlerRegistrations: true,
@@ -116,7 +110,7 @@ public sealed class OptionsProvider
     }
 
     private static string? NormalizeOptional(string? value)
-        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        => string.IsNullOrWhiteSpace(value) ? null : value!.Trim();
 
     private static string EnsureGlobal(string fqn)
     {

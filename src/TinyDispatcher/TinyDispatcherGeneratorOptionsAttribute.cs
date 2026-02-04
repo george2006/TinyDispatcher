@@ -12,7 +12,6 @@ namespace TinyDispatcher;
 public sealed class TinyDispatcherGeneratorOptionsAttribute : Attribute
 {
     // Namespaces
-    public string? CoreNamespace { get; set; }
     public string? GeneratedNamespace { get; set; }
     public string? IncludeNamespacePrefix { get; set; }
 

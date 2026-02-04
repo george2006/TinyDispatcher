@@ -44,6 +44,12 @@
     <!-- Make sure the README is included in the .nupkg root -->
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
-
+  <PropertyGroup>
+    <PackageReleaseNotes>
+      - Added TinyDispatcherGeneratorOptions assembly attribute (preferred over MSBuild properties)
+      - Source generator now reads options from compilation attribute first, MSBuild props fallback
+      - Added unit test covering attribute options resolution when AnalyzerConfigOptionsProvider is null
+    </PackageReleaseNotes>
+  </PropertyGroup>
 
 </Project>
