@@ -49,6 +49,7 @@
       - Added TinyDispatcherGeneratorOptions assembly attribute (preferred over MSBuild properties)
       - Source generator now reads options from compilation attribute first, MSBuild props fallback
       - Added unit test covering attribute options resolution when AnalyzerConfigOptionsProvider is null
+      - Configuration is now safer by design: core framework namespace is no longer user-configurable
     </PackageReleaseNotes>
   </PropertyGroup>
 

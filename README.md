@@ -91,7 +91,24 @@ If no context factory is provided and none is registered, TinyDispatcher fails f
 
 ---
 
-## 1.3 Dispatch
+## 1.3 Source generator configuration (recommended)
+
+TinyDispatcher is finalized at **build time** by a source generator.
+
+The recommended way to configure generation behavior is via an
+**assembly-level attribute** in your application:
+
+```csharp
+using TinyDispatcher;
+
+[assembly: TinyDispatcherGeneratorOptions(
+    GeneratedNamespace = "MyApp.Dispatcher.Generated",
+    IncludeNamespacePrefix = "MyApp.",
+    EmitPipelineMap = true,
+    PipelineMapFormat = "json"
+)]
+
+## 1.4 Dispatch
 
 ```csharp
 await dispatcher.DispatchAsync(new CreateOrder("123"), ct);
@@ -105,7 +122,7 @@ var dto = await dispatcher.DispatchAsync<GetOrder, OrderDto>(new GetOrder("123")
 
 ---
 
-## 1.4 Middleware and policies (optional)
+## 1.5 Middleware and policies (optional)
 
 Global middleware:
 
@@ -136,7 +153,7 @@ tiny.UsePolicy<CheckoutPolicy>();
 
 ---
 
-## 1.5 Shipped context: add features (optional)
+## 1.6 Shipped context: add features (optional)
 
 `AppContext` ships with a small feature system. Add initializers:
 
