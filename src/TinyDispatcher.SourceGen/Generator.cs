@@ -101,7 +101,7 @@ public sealed class Generator : IIncrementalGenerator
         var roslynContext = new RoslynGeneratorContext(spc);
 
         // Base options
-        var baseOptions = CreateGeneratorOptions(data.Options);
+        var baseOptions = CreateGeneratorOptions(compilation, data.Options);
 
         // Discover handlers
         var discovery = new RoslynHandlerDiscovery(
@@ -637,9 +637,12 @@ public sealed class Generator : IIncrementalGenerator
     // OPTIONS
     // =====================================================================
 
-    private static GeneratorOptions CreateGeneratorOptions(AnalyzerConfigOptionsProvider provider)
+    private static GeneratorOptions CreateGeneratorOptions(
+        Compilation compilation,
+        AnalyzerConfigOptionsProvider provider)
     {
-        var fromConfig = new OptionsProvider().GetOptions(provider);
+        // OptionsProvider now reads assembly attribute first, then build props fallback.
+        var fromConfig = new OptionsProvider().GetOptions(compilation, provider);
 
         return fromConfig ?? new GeneratorOptions(
             CoreNamespace: "TinyDispatcher",
