@@ -107,10 +107,10 @@ using TinyDispatcher;
     EmitPipelineMap = true,
     PipelineMapFormat = "json"
 )]
+```csharp
 
 ## 1.4 Dispatch
 
-```csharp
 await dispatcher.DispatchAsync(new CreateOrder("123"), ct);
 ```
 
