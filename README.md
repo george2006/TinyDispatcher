@@ -107,7 +107,7 @@ using TinyDispatcher;
     EmitPipelineMap = true,
     PipelineMapFormat = "json"
 )]
-```csharp
+```
 
 ## 1.4 Dispatch
 
