@@ -31,21 +31,21 @@ public sealed class PipelineEmitter : ICodeEmitter
 {
     public sealed record PolicySpec(
         string PolicyTypeFqn,
-        ImmutableArray<string> Middlewares, // open generic middleware fqns
+        ImmutableArray<MiddlewareRef> Middlewares, // open generic middleware fqns
         ImmutableArray<string> Commands     // command fqns
     );
 
-    private readonly ImmutableArray<string> _globalMiddlewares; // open generic fqn
-    private readonly ImmutableDictionary<string, ImmutableArray<string>> _perCommand; // cmd fqn -> [open generic fqn]
+    private readonly ImmutableArray<MiddlewareRef> _globalMiddlewares; // open generic fqn
+    private readonly ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> _perCommand; // cmd fqn -> [open generic fqn]
     private readonly ImmutableDictionary<string, PolicySpec> _policies; // policy fqn -> spec
 
     public PipelineEmitter(
-        ImmutableArray<string> globalMiddlewares,
-        ImmutableDictionary<string, ImmutableArray<string>> perCommand,
+        ImmutableArray<MiddlewareRef> globalMiddlewares,
+        ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> perCommand,
         ImmutableDictionary<string, PolicySpec> policies)
     {
         _globalMiddlewares = globalMiddlewares;
-        _perCommand = perCommand ?? ImmutableDictionary<string, ImmutableArray<string>>.Empty;
+        _perCommand = perCommand ?? ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty;
         _policies = policies ?? ImmutableDictionary<string, PolicySpec>.Empty;
     }
 
@@ -97,7 +97,7 @@ public sealed class PipelineEmitter : ICodeEmitter
             hintName: "TinyDispatcherPipeline.g.cs",
             sourceText: SourceText.From(source, Encoding.UTF8));
 
-      
+
     }
 
     private string BuildSourceWithPipelines(DiscoveryResult result, GeneratorOptions options)
@@ -172,7 +172,7 @@ public sealed class PipelineEmitter : ICodeEmitter
             sb.AppendLine();
             sb.AppendLine("      // Global middleware (outer)");
             foreach (var mwOpen in globals)
-                sb.AppendLine($"      next = {StepName(mwOpen)}(next);");
+                sb.AppendLine($"      next = {StepName(mwOpen.OpenTypeFqn)}(next);");
             sb.AppendLine();
             sb.AppendLine("      return next(command, ctxValue, ct);");
             sb.AppendLine("    }");
@@ -180,10 +180,10 @@ public sealed class PipelineEmitter : ICodeEmitter
 
             foreach (var mwOpen in globals)
             {
-                var step = StepName(mwOpen);
+                var step = StepName(mwOpen.OpenTypeFqn);
                 sb.AppendLine($"    private {core}.CommandDelegate<TCommand, {ctx}> {step}({core}.CommandDelegate<TCommand, {ctx}> inner)");
                 sb.AppendLine("    {");
-                sb.AppendLine($"      return (cmd, ctxValue, ct) => _sp.GetRequiredService<{mwOpen}<TCommand, {ctx}>>()");
+                sb.AppendLine($"      return (cmd, ctxValue, ct) => _sp.GetRequiredService<{CloseMiddleware(mwOpen, "TCommand", ctx)}>()");
                 sb.AppendLine("        .InvokeAsync(cmd, ctxValue, inner, ct);");
                 sb.AppendLine("    }");
                 sb.AppendLine();
@@ -223,14 +223,14 @@ public sealed class PipelineEmitter : ICodeEmitter
             sb.AppendLine();
             sb.AppendLine("      // Policy middleware (inner)");
             foreach (var mwOpen in mids)
-                sb.AppendLine($"      next = {StepName(mwOpen)}(next);");
+                sb.AppendLine($"      next = {StepName(mwOpen.OpenTypeFqn)}(next);");
 
             if (hasGlobal)
             {
                 sb.AppendLine();
                 sb.AppendLine("      // Global middleware (outer)");
                 foreach (var mwOpen in globals)
-                    sb.AppendLine($"      next = {StepName(mwOpen)}(next);");
+                    sb.AppendLine($"      next = {StepName(mwOpen.OpenTypeFqn)}(next);");
             }
 
             sb.AppendLine();
@@ -240,10 +240,10 @@ public sealed class PipelineEmitter : ICodeEmitter
 
             foreach (var mwOpen in mids)
             {
-                var step = StepName(mwOpen);
+                var step = StepName(mwOpen.OpenTypeFqn);
                 sb.AppendLine($"    private {core}.CommandDelegate<TCommand, {ctx}> {step}({core}.CommandDelegate<TCommand, {ctx}> inner)");
                 sb.AppendLine("    {");
-                sb.AppendLine($"      return (cmd, ctxValue, ct) => _sp.GetRequiredService<{mwOpen}<TCommand, {ctx}>>()");
+                sb.AppendLine($"      return (cmd, ctxValue, ct) => _sp.GetRequiredService<{CloseMiddleware(mwOpen, "TCommand", ctx)}>()");
                 sb.AppendLine("        .InvokeAsync(cmd, ctxValue, inner, ct);");
                 sb.AppendLine("    }");
                 sb.AppendLine();
@@ -253,10 +253,10 @@ public sealed class PipelineEmitter : ICodeEmitter
             {
                 foreach (var mwOpen in globals)
                 {
-                    var step = StepName(mwOpen);
+                    var step = StepName(mwOpen.OpenTypeFqn);
                     sb.AppendLine($"    private {core}.CommandDelegate<TCommand, {ctx}> {step}({core}.CommandDelegate<TCommand, {ctx}> inner)");
                     sb.AppendLine("    {");
-                    sb.AppendLine($"      return (cmd, ctxValue, ct) => _sp.GetRequiredService<{mwOpen}<TCommand, {ctx}>>()");
+                    sb.AppendLine($"      return (cmd, ctxValue, ct) => _sp.GetRequiredService<{CloseMiddleware(mwOpen, "TCommand", ctx)}>()");
                     sb.AppendLine("        .InvokeAsync(cmd, ctxValue, inner, ct);");
                     sb.AppendLine("    }");
                     sb.AppendLine();
@@ -295,14 +295,14 @@ public sealed class PipelineEmitter : ICodeEmitter
             sb.AppendLine();
             sb.AppendLine("      // Per-command middleware (inner)");
             foreach (var mwOpen in mids)
-                sb.AppendLine($"      next = {StepName(mwOpen)}(next);");
+                sb.AppendLine($"      next = {StepName(mwOpen.OpenTypeFqn)}(next);");
 
             if (hasGlobal)
             {
                 sb.AppendLine();
                 sb.AppendLine("      // Global middleware (outer)");
                 foreach (var mwOpen in globals)
-                    sb.AppendLine($"      next = {StepName(mwOpen)}(next);");
+                    sb.AppendLine($"      next = {StepName(mwOpen.OpenTypeFqn)}(next);");
             }
 
             sb.AppendLine();
@@ -312,10 +312,10 @@ public sealed class PipelineEmitter : ICodeEmitter
 
             foreach (var mwOpen in mids)
             {
-                var step = StepName(mwOpen);
+                var step = StepName(mwOpen.OpenTypeFqn);
                 sb.AppendLine($"    private {core}.CommandDelegate<{cmdFqn}, {ctx}> {step}({core}.CommandDelegate<{cmdFqn}, {ctx}> inner)");
                 sb.AppendLine("    {");
-                sb.AppendLine($"      return (cmd, ctxValue, ct) => _sp.GetRequiredService<{mwOpen}<{cmdFqn}, {ctx}>>()");
+                sb.AppendLine($"      return (cmd, ctxValue, ct) => _sp.GetRequiredService<{CloseMiddleware(mwOpen, cmdFqn, ctx)}>()");
                 sb.AppendLine("        .InvokeAsync(cmd, ctxValue, inner, ct);");
                 sb.AppendLine("    }");
                 sb.AppendLine();
@@ -325,10 +325,10 @@ public sealed class PipelineEmitter : ICodeEmitter
             {
                 foreach (var mwOpen in globals)
                 {
-                    var step = StepName(mwOpen);
+                    var step = StepName(mwOpen.OpenTypeFqn);
                     sb.AppendLine($"    private {core}.CommandDelegate<{cmdFqn}, {ctx}> {step}({core}.CommandDelegate<{cmdFqn}, {ctx}> inner)");
                     sb.AppendLine("    {");
-                    sb.AppendLine($"      return (cmd, ctxValue, ct) => _sp.GetRequiredService<{mwOpen}<{cmdFqn}, {ctx}>>()");
+                    sb.AppendLine($"      return (cmd, ctxValue, ct) => _sp.GetRequiredService<{CloseMiddleware(mwOpen, cmdFqn, ctx)}>()");
                     sb.AppendLine("        .InvokeAsync(cmd, ctxValue, inner, ct);");
                     sb.AppendLine("    }");
                     sb.AppendLine();
@@ -439,7 +439,7 @@ public sealed class PipelineEmitter : ICodeEmitter
         var globals = NormalizeDistinct(_globalMiddlewares);
         var perCmd = _perCommand.TryGetValue(cmd, out var perCmdMids)
             ? NormalizeDistinct(perCmdMids)
-            : Array.Empty<string>();
+            : Array.Empty<MiddlewareRef>();
 
         // Determine policy (if any) that claims this command (deterministic order by policy fqn)
         PolicySpec? policy = null;
@@ -495,7 +495,7 @@ public sealed class PipelineEmitter : ICodeEmitter
     {
         var mids = p.Middlewares
             .Select(m => new MiddlewareDescriptor(
-                MiddlewareFullName: m.MiddlewareOpenFqn,
+                MiddlewareFullName: m.Middleware.OpenTypeFqn,
                 Source: m.Source))
             .ToArray();
 
@@ -512,6 +512,13 @@ public sealed class PipelineEmitter : ICodeEmitter
     // ============================================================
     // HELPERS
     // ============================================================
+
+    private static MiddlewareRef[] NormalizeDistinct(ImmutableArray<MiddlewareRef> items)
+        => items
+            .Where(x => !string.IsNullOrWhiteSpace(x.OpenTypeFqn))
+            .Select(x => new MiddlewareRef(NormalizeFullyQualifiedType(x.OpenTypeFqn), x.Arity))
+            .Distinct()
+            .ToArray();
 
     private static string[] NormalizeDistinct(ImmutableArray<string> items)
         => items
@@ -530,6 +537,11 @@ public sealed class PipelineEmitter : ICodeEmitter
             ? "global::" + trimmed.Substring("global::global::".Length)
             : trimmed;
     }
+
+    private static string CloseMiddleware(MiddlewareRef mw, string cmdType, string ctxType)
+        => mw.Arity == 2
+            ? $"{mw.OpenTypeFqn}<{cmdType}, {ctxType}>"
+            : $"{mw.OpenTypeFqn}<{cmdType}>";
 
     private static string StepName(string openMiddlewareFqn)
     {
@@ -585,6 +597,6 @@ public sealed class PipelineEmitter : ICodeEmitter
         ImmutableArray<string> PoliciesApplied);
 
     private sealed record ResolvedMiddleware(
-        string MiddlewareOpenFqn,
+        MiddlewareRef Middleware,
         string Source);
 }

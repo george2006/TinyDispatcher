@@ -1,0 +1,221 @@
+﻿#nullable enable
+
+using System;
+using System.Linq;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using TinyDispatcher.SourceGen;
+using Xunit;
+
+namespace TinyDispatcher.UnitTests.SourceGen;
+public sealed class ContextClosedMiddlewareTests
+{
+    [Fact]
+    public void Generates_closed_middleware_correctly_for_arity1_and_arity2()
+    {
+        // Arrange
+        var source = @"
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace TinyDispatcher
+{
+    public interface ICommand { }
+
+    public delegate Task CommandDelegate<TCommand, TContext>(TCommand cmd, TContext ctx, CancellationToken ct);
+
+    public interface ICommandHandler<TCommand, TContext> where TCommand : ICommand
+    {
+        Task HandleAsync(TCommand command, TContext context, CancellationToken ct);
+    }
+
+    public interface ICommandMiddleware<TCommand, TContext> where TCommand : ICommand
+    {
+        Task InvokeAsync(TCommand cmd, TContext ctx, CommandDelegate<TCommand, TContext> next, CancellationToken ct);
+    }
+
+    public interface ICommandPipelineInvoker<TCommand, TContext> where TCommand : ICommand
+    {
+        Task ExecuteAsync(TCommand command, TContext ctx, ICommandHandler<TCommand, TContext> handler, CancellationToken ct = default);
+    }
+
+    public interface IGlobalCommandPipeline<TCommand, TContext> : ICommandPipelineInvoker<TCommand, TContext> where TCommand : ICommand { }
+    public interface IPolicyCommandPipeline<TCommand, TContext> : ICommandPipelineInvoker<TCommand, TContext> where TCommand : ICommand { }
+    public interface ICommandPipeline<TCommand, TContext> : ICommandPipelineInvoker<TCommand, TContext> where TCommand : ICommand { }
+
+    public sealed class TinyBootstrapp
+    {
+        public void UseGlobalMiddleware(Type openMiddleware) { }
+        public void UseMiddlewareFor<TCommand>(Type openMiddleware) where TCommand : ICommand { }
+    }
+}
+
+namespace Microsoft.Extensions.DependencyInjection
+{
+    public static class ServiceCollectionExtensions
+    {
+        public static IServiceCollection UseTinyDispatcher<TContext>(this IServiceCollection services, Action<TinyDispatcher.TinyBootstrapp> tiny)
+            => services;
+    }
+}
+
+namespace ConsoleApp
+{
+    public sealed record MyTestContext;
+
+    public sealed record Ping : TinyDispatcher.ICommand;
+
+    public sealed class PingHandler : TinyDispatcher.ICommandHandler<Ping, MyTestContext>
+    {
+        public Task HandleAsync(Ping command, MyTestContext context, CancellationToken ct) => Task.CompletedTask;
+    }
+
+    // arity-2 middleware (classic)
+    public sealed class OpenMw<TCommand, TContext> : TinyDispatcher.ICommandMiddleware<TCommand, TContext>
+        where TCommand : TinyDispatcher.ICommand
+    {
+        public Task InvokeAsync(TCommand cmd, TContext ctx, TinyDispatcher.CommandDelegate<TCommand, TContext> next, CancellationToken ct)
+            => next(cmd, ctx, ct);
+    }
+
+    // arity-1 middleware (context-closed)
+    public sealed class ClosedMw<TCommand> : TinyDispatcher.ICommandMiddleware<TCommand, MyTestContext>
+        where TCommand : TinyDispatcher.ICommand
+    {
+        public Task InvokeAsync(TCommand cmd, MyTestContext ctx, TinyDispatcher.CommandDelegate<TCommand, MyTestContext> next, CancellationToken ct)
+            => next(cmd, ctx, ct);
+    }
+
+    public static class Startup
+    {
+        public static void Configure(IServiceCollection services)
+        {
+            services.UseTinyDispatcher<MyTestContext>(tiny =>
+            {
+                tiny.UseGlobalMiddleware(typeof(OpenMw<,>));
+                tiny.UseMiddlewareFor<Ping>(typeof(ClosedMw<>));
+            });
+        }
+    }
+}
+";
+
+        var compilation = CreateCompilation(source);
+
+        var generator = new Generator();
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(generator);
+
+        // Act
+        driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out _, out _);
+        var generated = GetGeneratedSource(driver, "TinyDispatcherPipeline.g.cs");
+
+        // Assert: per-command middleware (ClosedMw<>) must be closed as ClosedMw<Ping>
+        Assert.Contains("GetRequiredService<global::ConsoleApp.ClosedMw<global::ConsoleApp.Ping>>()", generated);
+
+        // Assert: global middleware (OpenMw<,>) must be closed as OpenMw<Ping, MyTestContext>
+        Assert.Contains("GetRequiredService<global::ConsoleApp.OpenMw<global::ConsoleApp.Ping, global::ConsoleApp.MyTestContext>>()", generated);
+    }
+
+    [Fact]
+    public void Rejects_closed_middleware_if_context_does_not_match_expected()
+    {
+        var source = @"
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace TinyDispatcher
+{
+    public interface ICommand { }
+
+    public delegate Task CommandDelegate<TCommand, TContext>(TCommand cmd, TContext ctx, System.Threading.CancellationToken ct);
+
+    public interface ICommandMiddleware<TCommand, TContext> where TCommand : ICommand
+    {
+        Task InvokeAsync(TCommand cmd, TContext ctx, CommandDelegate<TCommand, TContext> next, System.Threading.CancellationToken ct);
+    }
+
+    public sealed class TinyBootstrapp
+    {
+        public void UseGlobalMiddleware(Type openMiddleware) { }
+    }
+}
+
+namespace Microsoft.Extensions.DependencyInjection
+{
+    public static class ServiceCollectionExtensions
+    {
+        public static IServiceCollection UseTinyDispatcher<TContext>(this IServiceCollection services, Action<TinyDispatcher.TinyBootstrapp> tiny)
+            => services;
+    }
+}
+
+namespace ConsoleApp
+{
+    public sealed record MyTestContext;
+    public sealed record OtherContext;
+
+    public sealed class BadClosedMw<TCommand> : TinyDispatcher.ICommandMiddleware<TCommand, OtherContext>
+        where TCommand : TinyDispatcher.ICommand
+    {
+        public Task InvokeAsync(TCommand cmd, OtherContext ctx, TinyDispatcher.CommandDelegate<TCommand, OtherContext> next, System.Threading.CancellationToken ct)
+            => next(cmd, ctx, ct);
+    }
+
+    public static class Startup
+    {
+        public static void Configure(IServiceCollection services)
+        {
+            services.UseTinyDispatcher<MyTestContext>(tiny =>
+            {
+                tiny.UseGlobalMiddleware(typeof(BadClosedMw<>));
+            });
+        }
+    }
+}
+";
+
+        var compilation = CreateCompilation(source);
+
+        var generator = new Generator();
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(generator);
+
+        driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out _, out var diagnostics);
+
+        // DISP304 expected (invalid context-closed middleware)
+        Assert.Contains(diagnostics, d => d.Id == "DISP304");
+    }
+
+    private static CSharpCompilation CreateCompilation(string source)
+    {
+        var refs =
+            AppDomain.CurrentDomain.GetAssemblies()
+                .Where(a => !a.IsDynamic && !string.IsNullOrWhiteSpace(a.Location))
+                .Select(a => MetadataReference.CreateFromFile(a.Location))
+                .Cast<MetadataReference>()
+                .ToList();
+
+        // Ensure generator assembly is referenced (tests usually already reference it, but keep explicit)
+        refs.Add(MetadataReference.CreateFromFile(typeof(Generator).Assembly.Location));
+
+        return CSharpCompilation.Create(
+            assemblyName: "Tests",
+            syntaxTrees: new[] { CSharpSyntaxTree.ParseText(source) },
+            references: refs,
+            options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+    }
+
+    private static string GetGeneratedSource(GeneratorDriver driver, string hintName)
+    {
+        var run = driver.GetRunResult();
+        var generated = run.Results
+            .SelectMany(r => r.GeneratedSources)
+            .FirstOrDefault(s => string.Equals(s.HintName, hintName, StringComparison.Ordinal));
+
+        Assert.False(generated.Equals(default), $"Generated source '{hintName}' not found.");
+        return generated.SourceText.ToString();
+    }
+}
