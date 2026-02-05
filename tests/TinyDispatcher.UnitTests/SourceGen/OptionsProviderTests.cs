@@ -5,11 +5,10 @@ using System.IO;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using TinyDispatcher;
 using TinyDispatcher.SourceGen.Internal;
 using Xunit;
 
-namespace TinyDispatcher.UnitTets;
+namespace TinyDispatcher.UnitTests.SourceGen;
 
 public sealed class OptionsProviderTests
 {

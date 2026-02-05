@@ -30,6 +30,8 @@ using TinyDispatcher.SourceGen.Internal;
 
 namespace TinyDispatcher.SourceGen;
 
+public readonly record struct MiddlewareRef(string OpenTypeFqn, int Arity);
+
 [Generator]
 public sealed class Generator : IIncrementalGenerator
 {
@@ -156,22 +158,36 @@ public sealed class Generator : IIncrementalGenerator
         // Policy registrations discovered from the lambda (as symbols)
         var policyTypeSymbols = new List<INamedTypeSymbol>();
 
+        var expectedContextFqn = EnsureGlobalPrefix(effectiveOptions.CommandContextType!);
+        var diagsCatalog = new DiagnosticsCatalog();
+        var diags = new List<Diagnostic>();
+
         for (var i = 0; i < useTinyCalls.Length; i++)
         {
             ExtractFromUseTinyLambda(
                 useTinyCalls[i],
                 compilation,
+                expectedContextFqn,
                 globalEntries,
                 perCmdEntries,
-                policyTypeSymbols);
+                policyTypeSymbols,
+                diagsCatalog,
+                diags);
+        }
+
+        // Policies: build PolicySpec map (policyTypeFqn -> PolicySpec)
+        var policies = BuildPolicies(compilation, expectedContextFqn, policyTypeSymbols, diagsCatalog, diags);
+
+        if (diags.Count > 0)
+        {
+            for (var i = 0; i < diags.Count; i++)
+                roslynContext.ReportDiagnostic(diags[i]);
+            return;
         }
 
         // Order + distinct middleware
         var globals = OrderAndDistinctGlobals(globalEntries);
         var perCmd = BuildPerCommandMap(perCmdEntries);
-
-        // Policies: build PolicySpec map (policyTypeFqn -> PolicySpec)
-        var policies = BuildPolicies(policyTypeSymbols);
 
         // If nothing at all, skip
         var hasAny =
@@ -258,9 +274,12 @@ public sealed class Generator : IIncrementalGenerator
     private static void ExtractFromUseTinyLambda(
         InvocationExpressionSyntax useTinyCall,
         Compilation compilation,
+        string expectedContextFqn,
         List<OrderedEntry> globals,
         List<OrderedPerCommandEntry> perCmd,
-        List<INamedTypeSymbol> policies)
+        List<INamedTypeSymbol> policies,
+        DiagnosticsCatalog diagsCatalog,
+        List<Diagnostic> diags)
     {
         if (useTinyCall.ArgumentList is null)
             return;
@@ -297,10 +316,16 @@ public sealed class Generator : IIncrementalGenerator
             // tiny.UseGlobalMiddleware(typeof(Mw<,>))
             if (string.Equals(methodName, "UseGlobalMiddleware", StringComparison.Ordinal))
             {
-                var mwOpen = TryExtractOpenGenericFromSingleTypeofArgument(inv, model);
+                var mwOpen = TryExtractOpenGenericTypeFromSingleTypeofArgument(inv, model);
                 if (mwOpen is null) continue;
 
-                globals.Add(new OrderedEntry(mwOpen, OrderKey.From(inv)));
+                if (!TryCreateMiddlewareRef(compilation, mwOpen, expectedContextFqn, out var mwRef, out var diag, diagsCatalog))
+                {
+                    if (diag != null) diags.Add(diag);
+                    continue;
+                }
+
+                globals.Add(new OrderedEntry(mwRef, OrderKey.From(inv)));
                 continue;
             }
 
@@ -314,20 +339,32 @@ public sealed class Generator : IIncrementalGenerator
                     var cmdType = model.GetTypeInfo(cmdTypeSyntax).Type;
                     if (cmdType is null) continue;
 
-                    var mwOpen = TryExtractOpenGenericFromSingleTypeofArgument(inv, model);
+                    var mwOpen = TryExtractOpenGenericTypeFromSingleTypeofArgument(inv, model);
                     if (mwOpen is null) continue;
 
+                    if (!TryCreateMiddlewareRef(compilation, mwOpen, expectedContextFqn, out var mwRef, out var diag, diagsCatalog))
+                    {
+                        if (diag != null) diags.Add(diag);
+                        continue;
+                    }
+
                     var cmdFqn = EnsureGlobalPrefix(cmdType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
-                    perCmd.Add(new OrderedPerCommandEntry(cmdFqn, mwOpen, OrderKey.From(inv)));
+                    perCmd.Add(new OrderedPerCommandEntry(cmdFqn, mwRef, OrderKey.From(inv)));
                     continue;
                 }
 
                 // optional: tiny.UseMiddlewareFor(typeof(Command), typeof(Mw<,>))
-                string cmdFqn2, mwOpen2;
-                if (!TryExtractCommandAndMiddlewareFromTwoTypeofArguments(inv, model, out cmdFqn2, out mwOpen2))
+                if (!TryExtractCommandAndMiddlewareFromTwoTypeofArguments(inv, model, out var cmdType2, out var mwOpen2))
                     continue;
 
-                perCmd.Add(new OrderedPerCommandEntry(cmdFqn2, mwOpen2, OrderKey.From(inv)));
+                if (!TryCreateMiddlewareRef(compilation, mwOpen2, expectedContextFqn, out var mwRef2, out var diag2, diagsCatalog))
+                {
+                    if (diag2 != null) diags.Add(diag2);
+                    continue;
+                }
+
+                var cmdFqn2 = EnsureGlobalPrefix(cmdType2.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+                perCmd.Add(new OrderedPerCommandEntry(cmdFqn2, mwRef2, OrderKey.From(inv)));
                 continue;
             }
 
@@ -369,7 +406,7 @@ public sealed class Generator : IIncrementalGenerator
         }
     }
 
-    private static string? TryExtractOpenGenericFromSingleTypeofArgument(
+    private static INamedTypeSymbol? TryExtractOpenGenericTypeFromSingleTypeofArgument(
         InvocationExpressionSyntax inv,
         SemanticModel model)
     {
@@ -381,25 +418,17 @@ public sealed class Generator : IIncrementalGenerator
             return null;
 
         var sym = model.GetSymbolInfo(toe.Type).Symbol as INamedTypeSymbol;
-        if (sym is null)
-            return null;
-
-        var open = sym.OriginalDefinition;
-
-        var fmt = SymbolDisplayFormat.FullyQualifiedFormat
-            .WithGenericsOptions(SymbolDisplayGenericsOptions.None);
-
-        return EnsureGlobalPrefix(open.ToDisplayString(fmt));
+        return sym?.OriginalDefinition;
     }
 
     private static bool TryExtractCommandAndMiddlewareFromTwoTypeofArguments(
         InvocationExpressionSyntax inv,
         SemanticModel model,
-        out string commandFqn,
-        out string middlewareOpenFqn)
+        out ITypeSymbol commandType,
+        out INamedTypeSymbol middlewareOpenType)
     {
-        commandFqn = null!;
-        middlewareOpenFqn = null!;
+        commandType = null!;
+        middlewareOpenType = null!;
 
         if (inv.ArgumentList is null || inv.ArgumentList.Arguments.Count < 2)
             return false;
@@ -416,12 +445,97 @@ public sealed class Generator : IIncrementalGenerator
         if (cmdSym is null || mwSym is null)
             return false;
 
-        commandFqn = EnsureGlobalPrefix(cmdSym.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+        commandType = cmdSym;
+        middlewareOpenType = mwSym.OriginalDefinition;
+        return true;
+    }
 
-        var fmt = SymbolDisplayFormat.FullyQualifiedFormat
+    private static bool TryCreateMiddlewareRef(
+        Compilation compilation,
+        INamedTypeSymbol openMiddlewareType,
+        string expectedContextFqn,
+        out MiddlewareRef middleware,
+        out Diagnostic? diagnostic,
+        DiagnosticsCatalog diagsCatalog)
+    {
+        middleware = default;
+        diagnostic = null;
+
+        if (!openMiddlewareType.IsGenericType || !openMiddlewareType.IsDefinition)
+        {
+            diagnostic = diagsCatalog.CreateError(
+                "DISP301",
+                "Invalid middleware type",
+                $"Middleware '{openMiddlewareType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}' must be an open generic type definition (e.g. typeof(MyMiddleware<,>) or typeof(MyMiddleware<>)).");
+            return false;
+        }
+
+        var arity = openMiddlewareType.Arity;
+
+        if (arity != 1 && arity != 2)
+        {
+            diagnostic = diagsCatalog.CreateError(
+                "DISP302",
+                "Unsupported middleware arity",
+                $"Middleware '{openMiddlewareType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}' must have arity 1 or 2.");
+            return false;
+        }
+
+        var fmtNoGenerics = SymbolDisplayFormat.FullyQualifiedFormat
             .WithGenericsOptions(SymbolDisplayGenericsOptions.None);
 
-        middlewareOpenFqn = EnsureGlobalPrefix(mwSym.OriginalDefinition.ToDisplayString(fmt));
+        var openFqn = EnsureGlobalPrefix(openMiddlewareType.ToDisplayString(fmtNoGenerics));
+
+        if (arity == 2)
+        {
+            middleware = new MiddlewareRef(openFqn, 2);
+            return true;
+        }
+
+        // Arity 1: must implement exactly one ICommandMiddleware<TCommand, TContextClosed>
+        var iface = compilation.GetTypeByMetadataName("TinyDispatcher.ICommandMiddleware`2");
+        if (iface is null)
+        {
+            diagnostic = diagsCatalog.CreateError(
+                "DISP303",
+                "Cannot resolve ICommandMiddleware",
+                "Could not resolve 'TinyDispatcher.ICommandMiddleware`2' from compilation.");
+            return false;
+        }
+
+        var matches = 0;
+
+        foreach (var i in openMiddlewareType.AllInterfaces)
+        {
+            if (!SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, iface))
+                continue;
+
+            if (i.TypeArguments.Length != 2)
+                continue;
+
+            if (i.TypeArguments[0] is not ITypeParameterSymbol tp || tp.Ordinal != 0)
+                continue;
+
+            if (i.TypeArguments[1] is ITypeParameterSymbol)
+                continue;
+
+            var ctxFqn = EnsureGlobalPrefix(i.TypeArguments[1].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+            if (!string.Equals(ctxFqn, expectedContextFqn, StringComparison.Ordinal))
+                continue;
+
+            matches++;
+        }
+
+        if (matches != 1)
+        {
+            diagnostic = diagsCatalog.CreateError(
+                "DISP304",
+                "Invalid context-closed middleware",
+                $"Middleware '{openMiddlewareType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}' must implement exactly one ICommandMiddleware<TCommand, {expectedContextFqn}>.");
+            return false;
+        }
+
+        middleware = new MiddlewareRef(openFqn, 1);
         return true;
     }
 
@@ -429,7 +543,12 @@ public sealed class Generator : IIncrementalGenerator
     // POLICY PARSING (attributes -> PolicySpec map)
     // =====================================================================
 
-    private static ImmutableDictionary<string, PipelineEmitter.PolicySpec> BuildPolicies(List<INamedTypeSymbol> policies)
+    private static ImmutableDictionary<string, PipelineEmitter.PolicySpec> BuildPolicies(
+        Compilation compilation,
+        string expectedContextFqn,
+        List<INamedTypeSymbol> policies,
+        DiagnosticsCatalog diagsCatalog,
+        List<Diagnostic> diags)
     {
         if (policies is null || policies.Count == 0)
             return ImmutableDictionary<string, PipelineEmitter.PolicySpec>.Empty;
@@ -455,7 +574,7 @@ public sealed class Generator : IIncrementalGenerator
                 continue;
 
             // Extract [UseMiddleware(typeof(Mw<,>))] and [ForCommand(typeof(Cmd))]
-            var mids = new List<string>();
+            var mids = new List<MiddlewareRef>();
             var commands = new List<string>();
 
             foreach (var attr in policy.GetAttributes())
@@ -466,13 +585,15 @@ public sealed class Generator : IIncrementalGenerator
                 {
                     if (TryGetTypeofArg(attr, out var mwType) && mwType is INamedTypeSymbol mwNamed)
                     {
-                        // open generic definition, display without generics
-                        var fmt = SymbolDisplayFormat.FullyQualifiedFormat
-                            .WithGenericsOptions(SymbolDisplayGenericsOptions.None);
-
                         var open = mwNamed.OriginalDefinition;
-                        var mwOpenFqn = EnsureGlobalPrefix(open.ToDisplayString(fmt));
-                        mids.Add(mwOpenFqn);
+
+                        if (!TryCreateMiddlewareRef(compilation, open, expectedContextFqn, out var mwRef, out var diag, diagsCatalog))
+                        {
+                            if (diag != null) diags.Add(diag);
+                            continue;
+                        }
+
+                        mids.Add(mwRef);
                     }
                 }
                 else if (attrName == "TinyDispatcher.ForCommandAttribute")
@@ -486,7 +607,7 @@ public sealed class Generator : IIncrementalGenerator
             }
 
             // Distinct middleware (keep declared order)
-            var seenMw = new HashSet<string>(StringComparer.Ordinal);
+            var seenMw = new HashSet<MiddlewareRef>();
             var midsDistinct = mids.Where(x => seenMw.Add(x)).ToImmutableArray();
 
             // Distinct commands (keep declared order)
@@ -538,48 +659,48 @@ public sealed class Generator : IIncrementalGenerator
     // ORDERING + DISTINCT
     // =====================================================================
 
-    private static ImmutableArray<string> OrderAndDistinctGlobals(List<OrderedEntry> items)
+    private static ImmutableArray<MiddlewareRef> OrderAndDistinctGlobals(List<OrderedEntry> items)
     {
         var ordered = items
             .OrderBy(x => x.Order.FilePath, StringComparer.Ordinal)
             .ThenBy(x => x.Order.SpanStart);
 
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-        var list = new List<string>();
+        var seen = new HashSet<MiddlewareRef>();
+        var list = new List<MiddlewareRef>();
 
         foreach (var x in ordered)
         {
-            if (seen.Add(x.MiddlewareOpenFqn))
-                list.Add(x.MiddlewareOpenFqn);
+            if (seen.Add(x.Middleware))
+                list.Add(x.Middleware);
         }
 
         return list.ToImmutableArray();
     }
 
-    private static ImmutableDictionary<string, ImmutableArray<string>> BuildPerCommandMap(List<OrderedPerCommandEntry> items)
+    private static ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> BuildPerCommandMap(List<OrderedPerCommandEntry> items)
     {
         var ordered = items
             .OrderBy(x => x.Order.FilePath, StringComparer.Ordinal)
             .ThenBy(x => x.Order.SpanStart);
 
-        var dict = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        var dict = new Dictionary<string, List<MiddlewareRef>>(StringComparer.Ordinal);
 
         foreach (var e in ordered)
         {
             if (!dict.TryGetValue(e.CommandFqn, out var list))
             {
-                list = new List<string>();
+                list = new List<MiddlewareRef>();
                 dict[e.CommandFqn] = list;
             }
 
-            list.Add(e.MiddlewareOpenFqn);
+            list.Add(e.Middleware);
         }
 
-        var builder = ImmutableDictionary.CreateBuilder<string, ImmutableArray<string>>(StringComparer.Ordinal);
+        var builder = ImmutableDictionary.CreateBuilder<string, ImmutableArray<MiddlewareRef>>(StringComparer.Ordinal);
 
         foreach (var kv in dict)
         {
-            var seen = new HashSet<string>(StringComparer.Ordinal);
+            var seen = new HashSet<MiddlewareRef>();
             var arr = kv.Value.Where(x => seen.Add(x)).ToImmutableArray();
             builder[kv.Key] = arr;
         }
@@ -589,12 +710,12 @@ public sealed class Generator : IIncrementalGenerator
 
     private readonly struct OrderedEntry
     {
-        public readonly string MiddlewareOpenFqn;
+        public readonly MiddlewareRef Middleware;
         public readonly OrderKey Order;
 
-        public OrderedEntry(string middlewareOpenFqn, OrderKey order)
+        public OrderedEntry(MiddlewareRef middleware, OrderKey order)
         {
-            MiddlewareOpenFqn = middlewareOpenFqn;
+            Middleware = middleware;
             Order = order;
         }
     }
@@ -602,13 +723,13 @@ public sealed class Generator : IIncrementalGenerator
     private readonly struct OrderedPerCommandEntry
     {
         public readonly string CommandFqn;
-        public readonly string MiddlewareOpenFqn;
+        public readonly MiddlewareRef Middleware;
         public readonly OrderKey Order;
 
-        public OrderedPerCommandEntry(string commandFqn, string middlewareOpenFqn, OrderKey order)
+        public OrderedPerCommandEntry(string commandFqn, MiddlewareRef middleware, OrderKey order)
         {
             CommandFqn = commandFqn;
-            MiddlewareOpenFqn = middlewareOpenFqn;
+            Middleware = middleware;
             Order = order;
         }
     }

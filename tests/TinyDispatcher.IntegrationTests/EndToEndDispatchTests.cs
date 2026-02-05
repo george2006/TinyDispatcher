@@ -9,6 +9,7 @@ using TinyDispatcher.Dispatching;
 using TinyDispatcher.Internal;
 using Xunit;
 
+namespace TinyDispatcher.IntegrationTests;
 public sealed class EndToEndDispatchTests
 {
     private sealed record CreateThing(string Name) : ICommand;
