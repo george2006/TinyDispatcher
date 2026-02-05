@@ -140,6 +140,49 @@ Per-command middleware:
 ```csharp
 tiny.UseMiddlewareFor<CreateOrder>(typeof(ValidationMiddleware<,>));
 ```
+## Middleware shapes
+
+TinyDispatcher middleware always uses the same runtime interface:
+
+```csharp
+ICommandMiddleware<TCommand, TContext>
+```
+
+Middleware *classes* can be defined in two supported shapes.
+
+### 1) Open middleware class (arity 2)
+
+The middleware is generic over both command and context and can be reused with any context.
+
+```csharp
+public sealed class LoggingMiddleware<TCommand, TContext>
+    : ICommandMiddleware<TCommand, TContext>
+    where TCommand : ICommand
+{
+    // ...
+}
+```
+
+### 2) Context-closed middleware class (arity 1)
+
+The middleware is generic only over the command.
+The context type is fixed in the implemented interface.
+
+```csharp
+public sealed class AuthorizationMiddleware<TCommand>
+    : ICommandMiddleware<TCommand, AppContext>
+    where TCommand : ICommand
+{
+    // ...
+}
+```
+
+Context-closed middleware is validated at **build time**:
+
+- the middleware class must be open generic with arity **1**
+- it must implement **exactly one** `ICommandMiddleware<TCommand, TContext>`
+- `TContext` must exactly match the one configured via `UseTinyDispatcher<TContext>()`
+---
 
 Policies:
 
@@ -155,8 +198,6 @@ public sealed class CheckoutPolicy { }
 ```csharp
 tiny.UsePolicy<CheckoutPolicy>();
 ```
-
----
 
 ## 1.6 Shipped context: add features (optional)
 
@@ -201,50 +242,6 @@ public Task HandleAsync(CreateOrder command, AppContext ctx, CancellationToken c
     return Task.CompletedTask;
 }
 ```
-
-## Middleware shapes
-
-TinyDispatcher middleware always uses the same runtime interface:
-
-```csharp
-ICommandMiddleware<TCommand, TContext>
-```
-
-Middleware *classes* can be defined in two supported shapes.
-
-### 1) Open middleware class (arity 2)
-
-The middleware is generic over both command and context and can be reused with any context.
-
-```csharp
-public sealed class LoggingMiddleware<TCommand, TContext>
-    : ICommandMiddleware<TCommand, TContext>
-    where TCommand : ICommand
-{
-    // ...
-}
-```
-
-### 2) Context-closed middleware class (arity 1)
-
-The middleware is generic only over the command.
-The context type is fixed in the implemented interface.
-
-```csharp
-public sealed class AuthorizationMiddleware<TCommand>
-    : ICommandMiddleware<TCommand, AppContext>
-    where TCommand : ICommand
-{
-    // ...
-}
-```
-
-Context-closed middleware is validated at **build time**:
-
-- the middleware class must be open generic with arity **1**
-- it must implement **exactly one** `ICommandMiddleware<TCommand, TContext>`
-- `TContext` must exactly match the one configured via `UseTinyDispatcher<TContext>()`
-
 
 That’s all you need to use TinyDispatcher.
 
