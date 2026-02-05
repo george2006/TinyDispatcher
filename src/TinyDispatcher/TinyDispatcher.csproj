@@ -46,11 +46,21 @@
   </ItemGroup>
   <PropertyGroup>
     <PackageReleaseNotes>
-      - Added TinyDispatcherGeneratorOptions assembly attribute (preferred over MSBuild properties)
-      - Source generator now reads options from compilation attribute first, MSBuild props fallback
-      - Added unit test covering attribute options resolution when AnalyzerConfigOptionsProvider is null
-      - Configuration is now safer by design: core framework namespace is no longer user-configurable
+      Added support for context-closed middleware.
+
+      Middleware can now be defined in two supported shapes:
+      - ICommandMiddleware&lt;TCommand, TContext&gt; (fully open, classic)
+      - ICommandMiddleware&lt;TCommand&gt; with context inferred at compile time
+
+      Context-closed middleware is strictly validated at build time:
+      - must be open generic with arity 1 or 2
+      - arity-1 middleware must implement exactly one ICommandMiddleware&lt;TCommand, TContext&gt;
+      - context type must exactly match the one configured via UseTinyDispatcher&lt;TContext&gt;
+
+      Generated pipelines correctly close middleware based on arity.
+      No breaking changes. Existing middleware continues to work unchanged.
     </PackageReleaseNotes>
+
   </PropertyGroup>
 
 </Project>
