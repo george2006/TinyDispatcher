@@ -30,184 +30,58 @@ using TinyDispatcher.SourceGen.Internal;
 
 namespace TinyDispatcher.SourceGen;
 
-public readonly record struct MiddlewareRef(string OpenTypeFqn, int Arity);
+// ============================================================================
+// Shared small models/helpers (internal)
+// ============================================================================
 
-[Generator]
-public sealed class Generator : IIncrementalGenerator
+internal static class Fqn
 {
-    public void Initialize(IncrementalGeneratorInitializationContext context)
+    public static string EnsureGlobal(string s)
+        => s.StartsWith("global::", StringComparison.Ordinal) ? s : "global::" + s;
+}
+
+internal readonly struct OrderedEntry
+{
+    public readonly MiddlewareRef Middleware;
+    public readonly OrderKey Order;
+
+    public OrderedEntry(MiddlewareRef middleware, OrderKey order)
+        => (Middleware, Order) = (middleware, order);
+}
+
+internal readonly struct OrderedPerCommandEntry
+{
+    public readonly string CommandFqn;
+    public readonly MiddlewareRef Middleware;
+    public readonly OrderKey Order;
+
+    public OrderedPerCommandEntry(string commandFqn, MiddlewareRef middleware, OrderKey order)
+        => (CommandFqn, Middleware, Order) = (commandFqn, middleware, order);
+}
+
+internal readonly struct OrderKey
+{
+    public readonly string FilePath;
+    public readonly int SpanStart;
+
+    public OrderKey(string filePath, int spanStart)
+        => (FilePath, SpanStart) = (filePath, spanStart);
+
+    public static OrderKey From(SyntaxNode node)
     {
-        // ---------------------------------------------------------------------
-        // Handler candidates (anchor – always produces)
-        // ---------------------------------------------------------------------
-        var handlerCandidates =
-            context.SyntaxProvider
-                .CreateSyntaxProvider(
-                    static (n, _) => n is ClassDeclarationSyntax,
-                    static (ctx, ct) =>
-                    {
-                        var node = (ClassDeclarationSyntax)ctx.Node;
-                        var model = ctx.SemanticModel;
-                        return (INamedTypeSymbol?)model.GetDeclaredSymbol(node, ct);
-                    })
-                .Collect();
-
-        // ---------------------------------------------------------------------
-        // Find UseTinyDispatcher<TContext>(...) calls (SYNTAX-based)
-        // IMPORTANT: do not rely on GetSymbolInfo here.
-        // ---------------------------------------------------------------------
-        var useTinyCalls =
-            context.SyntaxProvider
-                .CreateSyntaxProvider(
-                    static (n, _) => n is InvocationExpressionSyntax,
-                    static (ctx, _) =>
-                    {
-                        var inv = (InvocationExpressionSyntax)ctx.Node;
-                        return IsUseTinyDispatcherInvocation(inv) ? inv : null;
-                    })
-                .Collect();
-
-        var pipeline =
-            context.CompilationProvider
-                .Combine(handlerCandidates)
-                .Combine(useTinyCalls)
-                .Combine(context.AnalyzerConfigOptionsProvider);
-
-        context.RegisterSourceOutput(pipeline, Execute);
+        var tree = node.SyntaxTree;
+        var path = tree != null ? (tree.FilePath ?? string.Empty) : string.Empty;
+        return new OrderKey(path, node.SpanStart);
     }
+}
 
-    // =====================================================================
-    // EXECUTE
-    // =====================================================================
+// ============================================================================
+// Components (composed via `new` inside Execute; no static helpers for behavior)
+// ============================================================================
 
-    private static void Execute(
-        SourceProductionContext spc,
-        (((Compilation Compilation,
-           ImmutableArray<INamedTypeSymbol?> Handlers) Left,
-          ImmutableArray<InvocationExpressionSyntax?> UseTinyCalls) Left,
-         AnalyzerConfigOptionsProvider Options) data)
-    {
-        var compilation = data.Left.Left.Compilation;
-
-        // Filter nullables (broken/partial code scenarios).
-        var handlerSymbols = data.Left.Left.Handlers
-            .Where(static s => s != null)
-            .Select(static s => s!)
-            .ToImmutableArray();
-
-        var useTinyCalls = data.Left.UseTinyCalls
-            .Where(static x => x != null)
-            .Select(static x => x!)
-            .ToImmutableArray();
-
-        var roslynContext = new RoslynGeneratorContext(spc);
-
-        // Base options
-        var baseOptions = CreateGeneratorOptions(compilation, data.Options);
-
-        // Discover handlers
-        var discovery = new RoslynHandlerDiscovery(
-            Known.CoreNamespace,
-            baseOptions.IncludeNamespacePrefix,
-            baseOptions.CommandContextType);
-
-        var discoveryResult = discovery.Discover(compilation, handlerSymbols);
-
-        // Always emit contribution + module initializer (+ empty pipeline contribution)
-        new ModuleInitializerEmitter().Emit(roslynContext, discoveryResult, baseOptions);
-        new ContributionEmitter().Emit(roslynContext, discoveryResult, baseOptions);
-        new EmptyPipelineContributionEmitter().Emit(roslynContext, discoveryResult, baseOptions);
-        // ✅ NEW: emit handler DI registrations (always emits, empty if disabled)
-        new HandlerRegistrationsEmitter().Emit(roslynContext, discoveryResult, baseOptions);
-
-        // -----------------------------------------------------------------
-        // HOST GATE:
-        // If no UseTinyDispatcher calls in this project → do not emit pipelines.
-        // -----------------------------------------------------------------
-        if (useTinyCalls.IsDefaultOrEmpty || useTinyCalls.Length == 0)
-            return;
-
-        // -----------------------------------------------------------------
-        // Infer CommandContextType from UseTinyDispatcher<TContext> (SYNTAX-based)
-        // -----------------------------------------------------------------
-        var inferredCtx = TryInferContextTypeFromUseTinyCalls(useTinyCalls, compilation);
-        var effectiveOptions = baseOptions;
-
-        if (string.IsNullOrWhiteSpace(effectiveOptions.CommandContextType) && !string.IsNullOrWhiteSpace(inferredCtx))
-        {
-            effectiveOptions = new GeneratorOptions(
-                GeneratedNamespace: baseOptions.GeneratedNamespace,
-                EmitDiExtensions: baseOptions.EmitDiExtensions,
-                EmitHandlerRegistrations: baseOptions.EmitHandlerRegistrations,
-                IncludeNamespacePrefix: baseOptions.IncludeNamespacePrefix,
-                CommandContextType: inferredCtx,
-                EmitPipelineMap: baseOptions.EmitPipelineMap,
-                PipelineMapFormat: baseOptions.PipelineMapFormat);
-        }
-
-        // If still no ctx, we cannot generate pipelines (PipelineEmitter requires closed ctx)
-        if (string.IsNullOrWhiteSpace(effectiveOptions.CommandContextType))
-            return;
-
-        // -----------------------------------------------------------------
-        // Middleware + Policy discovery from TinyBootstrap fluent calls
-        // -----------------------------------------------------------------
-        var globalEntries = new List<OrderedEntry>();
-        var perCmdEntries = new List<OrderedPerCommandEntry>();
-
-        // Policy registrations discovered from the lambda (as symbols)
-        var policyTypeSymbols = new List<INamedTypeSymbol>();
-
-        var expectedContextFqn = EnsureGlobalPrefix(effectiveOptions.CommandContextType!);
-        var diagsCatalog = new DiagnosticsCatalog();
-        var diags = new List<Diagnostic>();
-
-        for (var i = 0; i < useTinyCalls.Length; i++)
-        {
-            ExtractFromUseTinyLambda(
-                useTinyCalls[i],
-                compilation,
-                expectedContextFqn,
-                globalEntries,
-                perCmdEntries,
-                policyTypeSymbols,
-                diagsCatalog,
-                diags);
-        }
-
-        // Policies: build PolicySpec map (policyTypeFqn -> PolicySpec)
-        var policies = BuildPolicies(compilation, expectedContextFqn, policyTypeSymbols, diagsCatalog, diags);
-
-        if (diags.Count > 0)
-        {
-            for (var i = 0; i < diags.Count; i++)
-                roslynContext.ReportDiagnostic(diags[i]);
-            return;
-        }
-
-        // Order + distinct middleware
-        var globals = OrderAndDistinctGlobals(globalEntries);
-        var perCmd = BuildPerCommandMap(perCmdEntries);
-
-        // If nothing at all, skip
-        var hasAny =
-            globals.Length > 0 ||
-            perCmd.Count > 0 ||
-            policies.Count > 0;
-
-        if (!hasAny)
-            return;
-
-        // Emit pipelines (UPDATED ctor: policies is PolicySpec map)
-        new PipelineEmitter(globals, perCmd, policies)
-            .Emit(roslynContext, discoveryResult, effectiveOptions);
-    }
-
-    // =====================================================================
-    // SYNTAX DETECTION: UseTinyDispatcher<T>(...)
-    // =====================================================================
-
-    private static bool IsUseTinyDispatcherInvocation(InvocationExpressionSyntax inv)
+internal sealed class UseTinyDispatcherSyntax
+{
+    public bool IsUseTinyDispatcherInvocation(InvocationExpressionSyntax inv)
     {
         // services.UseTinyDispatcher<TContext>(...)
         if (inv.Expression is MemberAccessExpressionSyntax ma)
@@ -230,12 +104,11 @@ public sealed class Generator : IIncrementalGenerator
 
         return false;
     }
+}
 
-    // =====================================================================
-    // CONTEXT INFERENCE (syntax-based)
-    // =====================================================================
-
-    private static string? TryInferContextTypeFromUseTinyCalls(
+internal sealed class ContextInference
+{
+    public string? TryInferContextTypeFromUseTinyCalls(
         ImmutableArray<InvocationExpressionSyntax> calls,
         Compilation compilation)
     {
@@ -261,24 +134,166 @@ public sealed class Generator : IIncrementalGenerator
             if (ctxType == null)
                 continue;
 
-            return EnsureGlobalPrefix(ctxType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+            return Fqn.EnsureGlobal(ctxType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
         }
 
         return null;
     }
+}
 
-    // =====================================================================
-    // MIDDLEWARE + POLICY EXTRACTION (TinyBootstrap surface)
-    // =====================================================================
+internal sealed class GeneratorOptionsFactory
+{
+    private readonly OptionsProvider _optionsProvider;
 
-    private static void ExtractFromUseTinyLambda(
+    public GeneratorOptionsFactory(OptionsProvider optionsProvider)
+        => _optionsProvider = optionsProvider ?? throw new ArgumentNullException(nameof(optionsProvider));
+
+    public GeneratorOptions Create(Compilation compilation, AnalyzerConfigOptionsProvider provider)
+    {
+        // OptionsProvider reads assembly attribute first, then build props fallback.
+        var fromConfig = _optionsProvider.GetOptions(compilation, provider);
+
+        return fromConfig ?? new GeneratorOptions(
+            GeneratedNamespace: "TinyDispatcher.Generated",
+            EmitDiExtensions: true,
+            EmitHandlerRegistrations: true,
+            IncludeNamespacePrefix: null,
+            CommandContextType: null,
+            EmitPipelineMap: true,
+            PipelineMapFormat: "json");
+    }
+
+    public GeneratorOptions ApplyInferredContextIfMissing(GeneratorOptions baseOptions, string? inferredCtx)
+    {
+        if (!string.IsNullOrWhiteSpace(baseOptions.CommandContextType))
+            return baseOptions;
+
+        if (string.IsNullOrWhiteSpace(inferredCtx))
+            return baseOptions;
+
+        return new GeneratorOptions(
+            GeneratedNamespace: baseOptions.GeneratedNamespace,
+            EmitDiExtensions: baseOptions.EmitDiExtensions,
+            EmitHandlerRegistrations: baseOptions.EmitHandlerRegistrations,
+            IncludeNamespacePrefix: baseOptions.IncludeNamespacePrefix,
+            CommandContextType: inferredCtx,
+            EmitPipelineMap: baseOptions.EmitPipelineMap,
+            PipelineMapFormat: baseOptions.PipelineMapFormat);
+    }
+}
+
+internal sealed class MiddlewareRefFactory
+{
+    private readonly DiagnosticsCatalog _diags;
+
+    public MiddlewareRefFactory(DiagnosticsCatalog diags)
+        => _diags = diags ?? throw new ArgumentNullException(nameof(diags));
+
+    public bool TryCreate(
+        Compilation compilation,
+        INamedTypeSymbol openMiddlewareType,
+        string expectedContextFqn,
+        out MiddlewareRef middleware,
+        out Diagnostic? diagnostic)
+    {
+        middleware = default;
+        diagnostic = null;
+
+        if (!openMiddlewareType.IsGenericType || !openMiddlewareType.IsDefinition)
+        {
+            diagnostic = _diags.CreateError(
+                "DISP301",
+                "Invalid middleware type",
+                $"Middleware '{openMiddlewareType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}' must be an open generic type definition (e.g. typeof(MyMiddleware<,>) or typeof(MyMiddleware<>)).");
+            return false;
+        }
+
+        var arity = openMiddlewareType.Arity;
+
+        if (arity != 1 && arity != 2)
+        {
+            diagnostic = _diags.CreateError(
+                "DISP302",
+                "Unsupported middleware arity",
+                $"Middleware '{openMiddlewareType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}' must have arity 1 or 2.");
+            return false;
+        }
+
+        var fmtNoGenerics = SymbolDisplayFormat.FullyQualifiedFormat
+            .WithGenericsOptions(SymbolDisplayGenericsOptions.None);
+
+        var openFqn = Fqn.EnsureGlobal(openMiddlewareType.ToDisplayString(fmtNoGenerics));
+
+        if (arity == 2)
+        {
+            middleware = new MiddlewareRef(openFqn, 2);
+            return true;
+        }
+
+        // Arity 1: must implement exactly one ICommandMiddleware<TCommand, TContextClosed>
+        var iface = compilation.GetTypeByMetadataName("TinyDispatcher.ICommandMiddleware`2");
+        if (iface is null)
+        {
+            diagnostic = _diags.CreateError(
+                "DISP303",
+                "Cannot resolve ICommandMiddleware",
+                "Could not resolve 'TinyDispatcher.ICommandMiddleware`2' from compilation.");
+            return false;
+        }
+
+        var matches = 0;
+
+        foreach (var i in openMiddlewareType.AllInterfaces)
+        {
+            if (!SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, iface))
+                continue;
+
+            if (i.TypeArguments.Length != 2)
+                continue;
+
+            // TCommand must be the middleware generic parameter #0
+            if (i.TypeArguments[0] is not ITypeParameterSymbol tp || tp.Ordinal != 0)
+                continue;
+
+            // TContext must be CLOSED
+            if (i.TypeArguments[1] is ITypeParameterSymbol)
+                continue;
+
+            var ctxFqn = Fqn.EnsureGlobal(i.TypeArguments[1].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+            if (!string.Equals(ctxFqn, expectedContextFqn, StringComparison.Ordinal))
+                continue;
+
+            matches++;
+        }
+
+        if (matches != 1)
+        {
+            diagnostic = _diags.CreateError(
+                "DISP304",
+                "Invalid context-closed middleware",
+                $"Middleware '{openMiddlewareType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}' must implement exactly one ICommandMiddleware<TCommand, {expectedContextFqn}>.");
+            return false;
+        }
+
+        middleware = new MiddlewareRef(openFqn, 1);
+        return true;
+    }
+}
+
+internal sealed class TinyBootstrapInvocationExtractor
+{
+    private readonly MiddlewareRefFactory _mwFactory;
+
+    public TinyBootstrapInvocationExtractor(MiddlewareRefFactory mwFactory)
+        => _mwFactory = mwFactory ?? throw new ArgumentNullException(nameof(mwFactory));
+
+    public void Extract(
         InvocationExpressionSyntax useTinyCall,
         Compilation compilation,
         string expectedContextFqn,
         List<OrderedEntry> globals,
         List<OrderedPerCommandEntry> perCmd,
         List<INamedTypeSymbol> policies,
-        DiagnosticsCatalog diagsCatalog,
         List<Diagnostic> diags)
     {
         if (useTinyCall.ArgumentList is null)
@@ -309,17 +324,13 @@ public sealed class Generator : IIncrementalGenerator
 
             var methodName = ma.Name.Identifier.ValueText;
 
-            // ------------------------------------------------------------
-            // Existing: middleware hooks on TinyBootstrap
-            // ------------------------------------------------------------
-
-            // tiny.UseGlobalMiddleware(typeof(Mw<,>))
+            // tiny.UseGlobalMiddleware(typeof(Mw<>/Mw<,>))
             if (string.Equals(methodName, "UseGlobalMiddleware", StringComparison.Ordinal))
             {
                 var mwOpen = TryExtractOpenGenericTypeFromSingleTypeofArgument(inv, model);
                 if (mwOpen is null) continue;
 
-                if (!TryCreateMiddlewareRef(compilation, mwOpen, expectedContextFqn, out var mwRef, out var diag, diagsCatalog))
+                if (!_mwFactory.TryCreate(compilation, mwOpen, expectedContextFqn, out var mwRef, out var diag))
                 {
                     if (diag != null) diags.Add(diag);
                     continue;
@@ -329,7 +340,7 @@ public sealed class Generator : IIncrementalGenerator
                 continue;
             }
 
-            // tiny.UseMiddlewareFor<TCommand>(typeof(Mw<,>)) OR non-generic overload
+            // tiny.UseMiddlewareFor<TCommand>(typeof(Mw<>/Mw<,>)) OR tiny.UseMiddlewareFor(typeof(cmd), typeof(mw))
             if (string.Equals(methodName, "UseMiddlewareFor", StringComparison.Ordinal))
             {
                 var genericName = ma.Name as GenericNameSyntax;
@@ -342,44 +353,35 @@ public sealed class Generator : IIncrementalGenerator
                     var mwOpen = TryExtractOpenGenericTypeFromSingleTypeofArgument(inv, model);
                     if (mwOpen is null) continue;
 
-                    if (!TryCreateMiddlewareRef(compilation, mwOpen, expectedContextFqn, out var mwRef, out var diag, diagsCatalog))
+                    if (!_mwFactory.TryCreate(compilation, mwOpen, expectedContextFqn, out var mwRef, out var diag))
                     {
                         if (diag != null) diags.Add(diag);
                         continue;
                     }
 
-                    var cmdFqn = EnsureGlobalPrefix(cmdType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+                    var cmdFqn = Fqn.EnsureGlobal(cmdType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
                     perCmd.Add(new OrderedPerCommandEntry(cmdFqn, mwRef, OrderKey.From(inv)));
                     continue;
                 }
 
-                // optional: tiny.UseMiddlewareFor(typeof(Command), typeof(Mw<,>))
                 if (!TryExtractCommandAndMiddlewareFromTwoTypeofArguments(inv, model, out var cmdType2, out var mwOpen2))
                     continue;
 
-                if (!TryCreateMiddlewareRef(compilation, mwOpen2, expectedContextFqn, out var mwRef2, out var diag2, diagsCatalog))
+                if (!_mwFactory.TryCreate(compilation, mwOpen2, expectedContextFqn, out var mwRef2, out var diag2))
                 {
                     if (diag2 != null) diags.Add(diag2);
                     continue;
                 }
 
-                var cmdFqn2 = EnsureGlobalPrefix(cmdType2.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+                var cmdFqn2 = Fqn.EnsureGlobal(cmdType2.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
                 perCmd.Add(new OrderedPerCommandEntry(cmdFqn2, mwRef2, OrderKey.From(inv)));
                 continue;
             }
 
-            // ------------------------------------------------------------
-            // NEW: policy hooks
-            // - tiny.UsePolicy<TPolicy>()
-            // - services.UseTinyPolicy<TPolicy>()
-            // - services.UseTinyPolicy(typeof(TPolicy))
-            // ------------------------------------------------------------
-
-            // Generic: UsePolicy<TPolicy>() OR UseTinyPolicy<TPolicy>()
+            // tiny.UsePolicy<TPolicy>() OR services.UseTinyPolicy<TPolicy>() OR services.UseTinyPolicy(typeof(TPolicy))
             if (string.Equals(methodName, "UsePolicy", StringComparison.Ordinal) ||
                 string.Equals(methodName, "UseTinyPolicy", StringComparison.Ordinal))
             {
-                // Generic form: xxx.UsePolicy<TPolicy>()
                 if (ma.Name is GenericNameSyntax g && g.TypeArgumentList.Arguments.Count == 1)
                 {
                     var policyTypeSyntax = g.TypeArgumentList.Arguments[0];
@@ -390,7 +392,6 @@ public sealed class Generator : IIncrementalGenerator
                     continue;
                 }
 
-                // Non-generic form: xxx.UseTinyPolicy(typeof(TPolicy))
                 if (inv.ArgumentList != null && inv.ArgumentList.Arguments.Count == 1)
                 {
                     var toe = inv.ArgumentList.Arguments[0].Expression as TypeOfExpressionSyntax;
@@ -449,105 +450,19 @@ public sealed class Generator : IIncrementalGenerator
         middlewareOpenType = mwSym.OriginalDefinition;
         return true;
     }
+}
 
-    private static bool TryCreateMiddlewareRef(
-        Compilation compilation,
-        INamedTypeSymbol openMiddlewareType,
-        string expectedContextFqn,
-        out MiddlewareRef middleware,
-        out Diagnostic? diagnostic,
-        DiagnosticsCatalog diagsCatalog)
-    {
-        middleware = default;
-        diagnostic = null;
+internal sealed class PolicySpecBuilder
+{
+    private readonly MiddlewareRefFactory _mwFactory;
 
-        if (!openMiddlewareType.IsGenericType || !openMiddlewareType.IsDefinition)
-        {
-            diagnostic = diagsCatalog.CreateError(
-                "DISP301",
-                "Invalid middleware type",
-                $"Middleware '{openMiddlewareType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}' must be an open generic type definition (e.g. typeof(MyMiddleware<,>) or typeof(MyMiddleware<>)).");
-            return false;
-        }
+    public PolicySpecBuilder(MiddlewareRefFactory mwFactory)
+        => _mwFactory = mwFactory ?? throw new ArgumentNullException(nameof(mwFactory));
 
-        var arity = openMiddlewareType.Arity;
-
-        if (arity != 1 && arity != 2)
-        {
-            diagnostic = diagsCatalog.CreateError(
-                "DISP302",
-                "Unsupported middleware arity",
-                $"Middleware '{openMiddlewareType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}' must have arity 1 or 2.");
-            return false;
-        }
-
-        var fmtNoGenerics = SymbolDisplayFormat.FullyQualifiedFormat
-            .WithGenericsOptions(SymbolDisplayGenericsOptions.None);
-
-        var openFqn = EnsureGlobalPrefix(openMiddlewareType.ToDisplayString(fmtNoGenerics));
-
-        if (arity == 2)
-        {
-            middleware = new MiddlewareRef(openFqn, 2);
-            return true;
-        }
-
-        // Arity 1: must implement exactly one ICommandMiddleware<TCommand, TContextClosed>
-        var iface = compilation.GetTypeByMetadataName("TinyDispatcher.ICommandMiddleware`2");
-        if (iface is null)
-        {
-            diagnostic = diagsCatalog.CreateError(
-                "DISP303",
-                "Cannot resolve ICommandMiddleware",
-                "Could not resolve 'TinyDispatcher.ICommandMiddleware`2' from compilation.");
-            return false;
-        }
-
-        var matches = 0;
-
-        foreach (var i in openMiddlewareType.AllInterfaces)
-        {
-            if (!SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, iface))
-                continue;
-
-            if (i.TypeArguments.Length != 2)
-                continue;
-
-            if (i.TypeArguments[0] is not ITypeParameterSymbol tp || tp.Ordinal != 0)
-                continue;
-
-            if (i.TypeArguments[1] is ITypeParameterSymbol)
-                continue;
-
-            var ctxFqn = EnsureGlobalPrefix(i.TypeArguments[1].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
-            if (!string.Equals(ctxFqn, expectedContextFqn, StringComparison.Ordinal))
-                continue;
-
-            matches++;
-        }
-
-        if (matches != 1)
-        {
-            diagnostic = diagsCatalog.CreateError(
-                "DISP304",
-                "Invalid context-closed middleware",
-                $"Middleware '{openMiddlewareType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}' must implement exactly one ICommandMiddleware<TCommand, {expectedContextFqn}>.");
-            return false;
-        }
-
-        middleware = new MiddlewareRef(openFqn, 1);
-        return true;
-    }
-
-    // =====================================================================
-    // POLICY PARSING (attributes -> PolicySpec map)
-    // =====================================================================
-
-    private static ImmutableDictionary<string, PipelineEmitter.PolicySpec> BuildPolicies(
+    public ImmutableDictionary<string, PipelineEmitter.PolicySpec> Build(
         Compilation compilation,
         string expectedContextFqn,
         List<INamedTypeSymbol> policies,
-        DiagnosticsCatalog diagsCatalog,
         List<Diagnostic> diags)
     {
         if (policies is null || policies.Count == 0)
@@ -557,7 +472,7 @@ public sealed class Generator : IIncrementalGenerator
         var distinct = new Dictionary<string, INamedTypeSymbol>(StringComparer.Ordinal);
         foreach (var p in policies)
         {
-            var key = EnsureGlobalPrefix(p.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+            var key = Fqn.EnsureGlobal(p.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
             if (!distinct.ContainsKey(key))
                 distinct[key] = p;
         }
@@ -573,7 +488,7 @@ public sealed class Generator : IIncrementalGenerator
             if (!HasAttribute(policy, "TinyDispatcher.TinyPolicyAttribute"))
                 continue;
 
-            // Extract [UseMiddleware(typeof(Mw<,>))] and [ForCommand(typeof(Cmd))]
+            // Extract [UseMiddleware(typeof(Mw<>/Mw<,>))] and [ForCommand(typeof(Cmd))]
             var mids = new List<MiddlewareRef>();
             var commands = new List<string>();
 
@@ -587,7 +502,7 @@ public sealed class Generator : IIncrementalGenerator
                     {
                         var open = mwNamed.OriginalDefinition;
 
-                        if (!TryCreateMiddlewareRef(compilation, open, expectedContextFqn, out var mwRef, out var diag, diagsCatalog))
+                        if (!_mwFactory.TryCreate(compilation, open, expectedContextFqn, out var mwRef, out var diag))
                         {
                             if (diag != null) diags.Add(diag);
                             continue;
@@ -600,7 +515,7 @@ public sealed class Generator : IIncrementalGenerator
                 {
                     if (TryGetTypeofArg(attr, out var cmdType) && cmdType != null)
                     {
-                        var cmdFqn = EnsureGlobalPrefix(cmdType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+                        var cmdFqn = Fqn.EnsureGlobal(cmdType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
                         commands.Add(cmdFqn);
                     }
                 }
@@ -654,12 +569,11 @@ public sealed class Generator : IIncrementalGenerator
 
         return false;
     }
+}
 
-    // =====================================================================
-    // ORDERING + DISTINCT
-    // =====================================================================
-
-    private static ImmutableArray<MiddlewareRef> OrderAndDistinctGlobals(List<OrderedEntry> items)
+internal sealed class MiddlewareOrdering
+{
+    public ImmutableArray<MiddlewareRef> OrderAndDistinctGlobals(List<OrderedEntry> items)
     {
         var ordered = items
             .OrderBy(x => x.Order.FilePath, StringComparer.Ordinal)
@@ -677,7 +591,7 @@ public sealed class Generator : IIncrementalGenerator
         return list.ToImmutableArray();
     }
 
-    private static ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> BuildPerCommandMap(List<OrderedPerCommandEntry> items)
+    public ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> BuildPerCommandMap(List<OrderedPerCommandEntry> items)
     {
         var ordered = items
             .OrderBy(x => x.Order.FilePath, StringComparer.Ordinal)
@@ -707,73 +621,181 @@ public sealed class Generator : IIncrementalGenerator
 
         return builder.ToImmutable();
     }
+}
 
-    private readonly struct OrderedEntry
+// ============================================================================
+// Public-ish shared model (used by PipelineEmitter signatures in this branch)
+// ============================================================================
+
+public readonly record struct MiddlewareRef(string OpenTypeFqn, int Arity);
+
+// ============================================================================
+// Generator
+// ============================================================================
+
+[Generator]
+public sealed class Generator : IIncrementalGenerator
+{
+    public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        public readonly MiddlewareRef Middleware;
-        public readonly OrderKey Order;
+        var syntax = new UseTinyDispatcherSyntax();
 
-        public OrderedEntry(MiddlewareRef middleware, OrderKey order)
-        {
-            Middleware = middleware;
-            Order = order;
-        }
-    }
+        // ---------------------------------------------------------------------
+        // Handler candidates (anchor – always produces)
+        // ---------------------------------------------------------------------
+        var handlerCandidates =
+            context.SyntaxProvider
+                .CreateSyntaxProvider(
+                    static (n, _) => n is ClassDeclarationSyntax,
+                    static (ctx, ct) =>
+                    {
+                        var node = (ClassDeclarationSyntax)ctx.Node;
+                        var model = ctx.SemanticModel;
+                        return (INamedTypeSymbol?)model.GetDeclaredSymbol(node, ct);
+                    })
+                .Collect();
 
-    private readonly struct OrderedPerCommandEntry
-    {
-        public readonly string CommandFqn;
-        public readonly MiddlewareRef Middleware;
-        public readonly OrderKey Order;
+        // ---------------------------------------------------------------------
+        // Find UseTinyDispatcher<TContext>(...) calls (SYNTAX-based)
+        // IMPORTANT: do not rely on GetSymbolInfo here.
+        // ---------------------------------------------------------------------
+        var useTinyCalls =
+            context.SyntaxProvider
+                .CreateSyntaxProvider(
+                    static (n, _) => n is InvocationExpressionSyntax,
+                    (ctx, _) =>
+                    {
+                        var inv = (InvocationExpressionSyntax)ctx.Node;
+                        return syntax.IsUseTinyDispatcherInvocation(inv) ? inv : null;
+                    })
+                .Collect();
 
-        public OrderedPerCommandEntry(string commandFqn, MiddlewareRef middleware, OrderKey order)
-        {
-            CommandFqn = commandFqn;
-            Middleware = middleware;
-            Order = order;
-        }
-    }
+        var pipeline =
+            context.CompilationProvider
+                .Combine(handlerCandidates)
+                .Combine(useTinyCalls)
+                .Combine(context.AnalyzerConfigOptionsProvider);
 
-    private readonly struct OrderKey
-    {
-        public readonly string FilePath;
-        public readonly int SpanStart;
-
-        public OrderKey(string filePath, int spanStart)
-        {
-            FilePath = filePath;
-            SpanStart = spanStart;
-        }
-
-        public static OrderKey From(SyntaxNode node)
-        {
-            var tree = node.SyntaxTree;
-            var path = tree != null ? (tree.FilePath ?? string.Empty) : string.Empty;
-            return new OrderKey(path, node.SpanStart);
-        }
+        context.RegisterSourceOutput(pipeline, Execute);
     }
 
     // =====================================================================
-    // OPTIONS
+    // EXECUTE
     // =====================================================================
 
-    private static GeneratorOptions CreateGeneratorOptions(
-        Compilation compilation,
-        AnalyzerConfigOptionsProvider provider)
+    private static void Execute(
+        SourceProductionContext spc,
+        (((Compilation Compilation,
+           ImmutableArray<INamedTypeSymbol?> Handlers) Left,
+          ImmutableArray<InvocationExpressionSyntax?> UseTinyCalls) Left,
+         AnalyzerConfigOptionsProvider Options) data)
     {
-        // OptionsProvider now reads assembly attribute first, then build props fallback.
-        var fromConfig = new OptionsProvider().GetOptions(compilation, provider);
+        var compilation = data.Left.Left.Compilation;
 
-        return fromConfig ?? new GeneratorOptions(
-            GeneratedNamespace: "TinyDispatcher.Generated",
-            EmitDiExtensions: true,
-            EmitHandlerRegistrations: true,
-            IncludeNamespacePrefix: null,
-            CommandContextType: null,
-            EmitPipelineMap: true,
-            PipelineMapFormat: "json");
+        // Filter nullables (broken/partial code scenarios).
+        var handlerSymbols = data.Left.Left.Handlers
+            .Where(static s => s != null)
+            .Select(static s => s!)
+            .ToImmutableArray();
+
+        var useTinyCalls = data.Left.UseTinyCalls
+            .Where(static x => x != null)
+            .Select(static x => x!)
+            .ToImmutableArray();
+
+        var roslynContext = new RoslynGeneratorContext(spc);
+
+        // Compose components (explicit `new`, no DI container)
+        var diagsCatalog = new DiagnosticsCatalog();
+        var optionsFactory = new GeneratorOptionsFactory(new OptionsProvider());
+        var ctxInference = new ContextInference();
+        var mwFactory = new MiddlewareRefFactory(diagsCatalog);
+        var extractor = new TinyBootstrapInvocationExtractor(mwFactory);
+        var policyBuilder = new PolicySpecBuilder(mwFactory);
+        var ordering = new MiddlewareOrdering();
+
+        // Base options
+        var baseOptions = optionsFactory.Create(compilation, data.Options);
+
+        // Discover handlers
+        var discovery = new RoslynHandlerDiscovery(
+            Known.CoreNamespace,
+            baseOptions.IncludeNamespacePrefix,
+            baseOptions.CommandContextType);
+
+        var discoveryResult = discovery.Discover(compilation, handlerSymbols);
+
+        // Always emit contribution + module initializer (+ empty pipeline contribution)
+        new ModuleInitializerEmitter().Emit(roslynContext, discoveryResult, baseOptions);
+        new ContributionEmitter().Emit(roslynContext, discoveryResult, baseOptions);
+        new EmptyPipelineContributionEmitter().Emit(roslynContext, discoveryResult, baseOptions);
+        // always emits (empty if disabled)
+        new HandlerRegistrationsEmitter().Emit(roslynContext, discoveryResult, baseOptions);
+
+        // -----------------------------------------------------------------
+        // HOST GATE:
+        // If no UseTinyDispatcher calls in this project → do not emit pipelines.
+        // -----------------------------------------------------------------
+        if (useTinyCalls.IsDefaultOrEmpty || useTinyCalls.Length == 0)
+            return;
+
+        // -----------------------------------------------------------------
+        // Infer CommandContextType from UseTinyDispatcher<TContext> (SYNTAX-based)
+        // -----------------------------------------------------------------
+        var inferredCtx = ctxInference.TryInferContextTypeFromUseTinyCalls(useTinyCalls, compilation);
+        var effectiveOptions = optionsFactory.ApplyInferredContextIfMissing(baseOptions, inferredCtx);
+
+        // If still no ctx, we cannot generate pipelines (PipelineEmitter requires closed ctx)
+        if (string.IsNullOrWhiteSpace(effectiveOptions.CommandContextType))
+            return;
+
+        var expectedContextFqn = Fqn.EnsureGlobal(effectiveOptions.CommandContextType!);
+
+        // -----------------------------------------------------------------
+        // Middleware + Policy discovery from TinyBootstrap fluent calls
+        // -----------------------------------------------------------------
+        var globalEntries = new List<OrderedEntry>();
+        var perCmdEntries = new List<OrderedPerCommandEntry>();
+        var policyTypeSymbols = new List<INamedTypeSymbol>();
+        var diags = new List<Diagnostic>();
+
+        for (var i = 0; i < useTinyCalls.Length; i++)
+        {
+            extractor.Extract(
+                useTinyCalls[i],
+                compilation,
+                expectedContextFqn,
+                globalEntries,
+                perCmdEntries,
+                policyTypeSymbols,
+                diags);
+        }
+
+        // Policies: build PolicySpec map (policyTypeFqn -> PolicySpec)
+        var policies = policyBuilder.Build(compilation, expectedContextFqn, policyTypeSymbols, diags);
+
+        if (diags.Count > 0)
+        {
+            for (var i = 0; i < diags.Count; i++)
+                roslynContext.ReportDiagnostic(diags[i]);
+            return;
+        }
+
+        // Order + distinct middleware
+        var globals = ordering.OrderAndDistinctGlobals(globalEntries);
+        var perCmd = ordering.BuildPerCommandMap(perCmdEntries);
+
+        // If nothing at all, skip
+        var hasAny =
+            globals.Length > 0 ||
+            perCmd.Count > 0 ||
+            policies.Count > 0;
+
+        if (!hasAny)
+            return;
+
+        // Emit pipelines
+        new PipelineEmitter(globals, perCmd, policies)
+            .Emit(roslynContext, discoveryResult, effectiveOptions);
     }
-
-    private static string EnsureGlobalPrefix(string s)
-        => s.StartsWith("global::", StringComparison.Ordinal) ? s : "global::" + s;
 }
