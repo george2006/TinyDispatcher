@@ -27,53 +27,9 @@ using System.Collections.Immutable;
 using System.Linq;
 using TinyDispatcher.SourceGen.Abstractions;
 using TinyDispatcher.SourceGen.Internal;
+using TinyDispatcher.SourceGen.Generator.Models;
 
-namespace TinyDispatcher.SourceGen;
-
-// ============================================================================
-// Shared small models/helpers (internal)
-// ============================================================================
-
-internal static class Fqn
-{
-    public static string EnsureGlobal(string s)
-        => s.StartsWith("global::", StringComparison.Ordinal) ? s : "global::" + s;
-}
-
-internal readonly struct OrderedEntry
-{
-    public readonly MiddlewareRef Middleware;
-    public readonly OrderKey Order;
-
-    public OrderedEntry(MiddlewareRef middleware, OrderKey order)
-        => (Middleware, Order) = (middleware, order);
-}
-
-internal readonly struct OrderedPerCommandEntry
-{
-    public readonly string CommandFqn;
-    public readonly MiddlewareRef Middleware;
-    public readonly OrderKey Order;
-
-    public OrderedPerCommandEntry(string commandFqn, MiddlewareRef middleware, OrderKey order)
-        => (CommandFqn, Middleware, Order) = (commandFqn, middleware, order);
-}
-
-internal readonly struct OrderKey
-{
-    public readonly string FilePath;
-    public readonly int SpanStart;
-
-    public OrderKey(string filePath, int spanStart)
-        => (FilePath, SpanStart) = (filePath, spanStart);
-
-    public static OrderKey From(SyntaxNode node)
-    {
-        var tree = node.SyntaxTree;
-        var path = tree != null ? (tree.FilePath ?? string.Empty) : string.Empty;
-        return new OrderKey(path, node.SpanStart);
-    }
-}
+namespace TinyDispatcher.SourceGen.Generator;
 
 // ============================================================================
 // Components (composed via `new` inside Execute; no static helpers for behavior)
