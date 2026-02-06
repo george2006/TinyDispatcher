@@ -23,6 +23,7 @@ using System.Linq;
 using System.Text;
 using TinyDispatcher.SourceGen.Abstractions;
 using TinyDispatcher.SourceGen.Generator;
+using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.PipelineMap;
 using TinyDispatcher.SourceGen.PipelineMaps;
 
