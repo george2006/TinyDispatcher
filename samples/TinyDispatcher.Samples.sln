@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyDispatcher.Samples.Cust
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyDispatcher.Samples.CustomContextFactory", "src\TinyDispatcher.Samples.CustomContextFactory\TinyDispatcher.Samples.CustomContextFactory.csproj", "{DDBAB2E8-40F4-4C0E-8566-FBB176A8A46B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyDispatcher.Samples.ClosedContextMiddleware", "src\TinyDispatcher.Samples.ClosedContextMiddleware\TinyDispatcher.Samples.ClosedContextMiddleware.csproj", "{32B0036D-73C5-4EF1-9519-24BCCD606319}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{DDBAB2E8-40F4-4C0E-8566-FBB176A8A46B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DDBAB2E8-40F4-4C0E-8566-FBB176A8A46B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DDBAB2E8-40F4-4C0E-8566-FBB176A8A46B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{32B0036D-73C5-4EF1-9519-24BCCD606319}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{32B0036D-73C5-4EF1-9519-24BCCD606319}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{32B0036D-73C5-4EF1-9519-24BCCD606319}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{32B0036D-73C5-4EF1-9519-24BCCD606319}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
