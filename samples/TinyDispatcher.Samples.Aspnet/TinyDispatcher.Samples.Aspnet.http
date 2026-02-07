@@ -1,0 +1,6 @@
+@TinyDispatcher.Samples.Aspnet_HostAddress = http://localhost:5073
+
+GET {{TinyDispatcher.Samples.Aspnet_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
