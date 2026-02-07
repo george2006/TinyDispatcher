@@ -13,7 +13,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyDispatcher.Samples.Cust
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyDispatcher.Samples.ClosedContextMiddleware", "src\TinyDispatcher.Samples.ClosedContextMiddleware\TinyDispatcher.Samples.ClosedContextMiddleware.csproj", "{32B0036D-73C5-4EF1-9519-24BCCD606319}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyDispatcher.Samples.Aspnet", "TinyDispatcher.Samples.Aspnet\TinyDispatcher.Samples.Aspnet.csproj", "{9DD8603E-2E2C-4F57-867F-86B43D935B26}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyDispatcher.Samples.Aspnet", "src\TinyDispatcher.Samples.Aspnet\TinyDispatcher.Samples.Aspnet.csproj", "{9DD8603E-2E2C-4F57-867F-86B43D935B26}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
