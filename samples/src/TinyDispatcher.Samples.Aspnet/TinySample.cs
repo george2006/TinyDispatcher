@@ -23,9 +23,6 @@ public static class TinySample
         // Needed by the feature initializer (reads current request headers)
         services.AddHttpContextAccessor();
 
-        // Handler
-        services.AddTransient<ICommandHandler<Ping, AppContext>, PingHandler>();
-
         // Middlewares (open generic arity-1; context closed to AppContext)
         services.AddTransient(typeof(RequestIdMiddleware<>));
         services.AddTransient(typeof(TimingMiddleware<>));
