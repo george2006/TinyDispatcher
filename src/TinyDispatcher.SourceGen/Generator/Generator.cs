@@ -128,6 +128,20 @@ public sealed class Generator : IIncrementalGenerator
 
         var discoveryResult = discovery.Discover(compilation, handlerSymbols);
 
+        var dupValidator = new DuplicateHandlerValidator(diagsCatalog);
+        var dupDiags = dupValidator.Validate(discoveryResult);
+
+        if (!dupDiags.IsDefaultOrEmpty)
+        {
+            foreach (var d in dupDiags)
+                roslynContext.ReportDiagnostic(d);
+
+            // Stop generation on errors
+            if (dupDiags.Any(x => x.Severity == DiagnosticSeverity.Error))
+                return;
+        }
+
+
         // Always emit contribution + module initializer (+ empty pipeline contribution)
         new ModuleInitializerEmitter().Emit(roslynContext, discoveryResult, baseOptions);
         new ContributionEmitter().Emit(roslynContext, discoveryResult, baseOptions);
