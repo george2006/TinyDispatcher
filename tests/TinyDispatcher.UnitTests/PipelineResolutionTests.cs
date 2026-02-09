@@ -18,6 +18,13 @@ namespace TinyDispatcher.UnitTets;
 public sealed record TestCommand(string Value) : ICommand;
 public sealed record OtherCommand(string Value) : ICommand;
 
+public sealed record PolicyOnlyCommand(string Value) : ICommand;
+
+[TinyPolicy]
+[UseMiddleware(typeof(PolicyLogMiddleware<,>))]
+[ForCommand(typeof(PolicyOnlyCommand))]
+internal sealed class PolicyOnlyPolicy { }
+
 // -----------------------------------------------------------------------------
 // Test context (we want to assert exact execution order)
 // -----------------------------------------------------------------------------
@@ -46,6 +53,16 @@ internal sealed class OtherCommandHandler : ICommandHandler<OtherCommand, TestCo
         return Task.CompletedTask;
     }
 }
+
+internal sealed class PolicyOnlyCommandHandler : ICommandHandler<PolicyOnlyCommand, TestContext>
+{
+    public Task HandleAsync(PolicyOnlyCommand command, TestContext ctx, CancellationToken ct = default)
+    {
+        ctx.Log.Add("handler:PolicyOnlyCommand");
+        return Task.CompletedTask;
+    }
+}
+
 
 // -----------------------------------------------------------------------------
 // Open-generic middlewares (generator expects open generic types)
@@ -120,6 +137,7 @@ internal static class GeneratedPipelinesHostGate
             tiny.UseGlobalMiddleware(typeof(GlobalLogMiddleware<,>));
             tiny.UseMiddlewareFor<TestCommand>(typeof(PerCommandLogMiddleware<,>));
             tiny.UsePolicy<CheckoutPolicy>();
+            tiny.UsePolicy<PolicyOnlyPolicy>();
         });
     }
 }
@@ -127,7 +145,7 @@ internal static class GeneratedPipelinesHostGate
 // -----------------------------------------------------------------------------
 // Tests
 // -----------------------------------------------------------------------------
-public sealed class PipelineResolutionTests
+public sealed class PipelineResolutionTest
 {
     private sealed class FixedContextFactory : IContextFactory<TestContext>
     {
@@ -142,19 +160,17 @@ public sealed class PipelineResolutionTests
     {
         var services = new ServiceCollection();
 
-        _ = DispatcherBootstrap.BuildRegistry();
-
+        // Middleware implementations used by the generated pipelines
         services.AddTransient(typeof(GlobalLogMiddleware<,>));
         services.AddTransient(typeof(PerCommandLogMiddleware<,>));
         services.AddTransient(typeof(PolicyLogMiddleware<,>));
 
         services.AddSingleton<IContextFactory<TestContext>>(_ => new FixedContextFactory(ctx));
 
-        // Force pipelines + maps for THIS assembly (no module initializer dependency)
         TinyDispatcher.Generated.ThisAssemblyPipelineContribution.Add(services);
-        DispatcherBootstrap.AddContribution(new TinyDispatcher.Generated.ThisAssemblyContribution());
 
-        // ✅ Build registry NOW (drain store NOW), then register instance
+        //DispatcherBootstrap.AddContribution(new TinyDispatcher.Generated.ThisAssemblyContribution());
+
         var registry = DispatcherBootstrap.BuildRegistry();
         services.AddSingleton<IDispatcherRegistry>(registry);
 
@@ -163,6 +179,7 @@ public sealed class PipelineResolutionTests
 
         return services.BuildServiceProvider();
     }
+
 
 
 
@@ -239,6 +256,28 @@ public sealed class PipelineResolutionTests
         // If your precedence is policy > per-command (unlikely), swap expectation.
         Assert.DoesNotContain("mw:policy:before", ctx.Log);
     }
+    [Fact]
+    public async Task Policy_middleware_runs_when_command_has_policy_but_no_per_command_pipeline()
+    {
+        var ctx = new TestContext();
+        using var sp = BuildProvider(ctx);
+
+        var dispatcher = sp.GetRequiredService<IDispatcher<TestContext>>();
+        await dispatcher.DispatchAsync(new PolicyOnlyCommand("x"));
+
+        Assert.Equal(
+            new[]
+            {
+            "mw:global:before",
+            "mw:policy:before",
+            "handler:PolicyOnlyCommand",
+            "mw:policy:after",
+            "mw:global:after",
+            },
+            ctx.Log);
+    }
+
+
 }
 
 
