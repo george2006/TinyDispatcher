@@ -169,8 +169,6 @@ public sealed class PipelineResolutionTest
 
         TinyDispatcher.Generated.ThisAssemblyPipelineContribution.Add(services);
 
-        //DispatcherBootstrap.AddContribution(new TinyDispatcher.Generated.ThisAssemblyContribution());
-
         var registry = DispatcherBootstrap.BuildRegistry();
         services.AddSingleton<IDispatcherRegistry>(registry);
 
