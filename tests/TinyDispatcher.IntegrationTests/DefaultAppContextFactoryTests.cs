@@ -28,9 +28,9 @@ public sealed class DefaultAppContextFactoryTests
         InitB.Calls = 0;
 
         var services = new ServiceCollection();
-        services.AddSingleton<IFeatureInitializer, InitA>();
-        services.AddSingleton<IFeatureInitializer, InitB>();
-        services.AddSingleton<IContextFactory<AppContext>, DefaultAppContextFactory>();
+        services.AddScoped<IFeatureInitializer, InitA>();
+        services.AddScoped<IFeatureInitializer, InitB>();
+        services.AddScoped<IContextFactory<AppContext>, DefaultAppContextFactory>();
 
         using var sp = services.BuildServiceProvider();
 
