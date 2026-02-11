@@ -87,7 +87,7 @@ namespace TinyDispatcher.UnitTets
 
             // Shared fixtures
             services.AddSingleton<CallTracker>();
-            services.AddSingleton<IContextFactory<TestContext>, TestContextFactory>();
+            services.AddScoped<IContextFactory<TestContext>, TestContextFactory>();
             services.AddTransient<TestHandler>();
 
             // Registry: map command -> handler
@@ -103,8 +103,8 @@ namespace TinyDispatcher.UnitTets
             configurePipelines(services);
 
             // Dispatcher
-            services.AddSingleton<IDispatcher<TestContext>>(sp =>
-                new Dispatcher<TestContext>(sp, sp.GetRequiredService<IDispatcherRegistry>()));
+            services.AddScoped<IDispatcher<TestContext>>(sp =>
+                new Dispatcher<TestContext>(sp, sp.GetRequiredService<IDispatcherRegistry>(), sp.GetRequiredService<IContextFactory<TestContext>>()));
 
             return services.BuildServiceProvider();
         }

@@ -165,15 +165,15 @@ public sealed class PipelineResolutionTest
         services.AddTransient(typeof(PerCommandLogMiddleware<,>));
         services.AddTransient(typeof(PolicyLogMiddleware<,>));
 
-        services.AddSingleton<IContextFactory<TestContext>>(_ => new FixedContextFactory(ctx));
+        services.AddScoped<IContextFactory<TestContext>>(_ => new FixedContextFactory(ctx));
 
         TinyDispatcher.Generated.ThisAssemblyPipelineContribution.Add(services);
 
         var registry = DispatcherBootstrap.BuildRegistry();
         services.AddSingleton<IDispatcherRegistry>(registry);
 
-        services.AddSingleton<IDispatcher<TestContext>>(sp =>
-            new Dispatcher<TestContext>(sp, sp.GetRequiredService<IDispatcherRegistry>()));
+        services.AddScoped<IDispatcher<TestContext>>(sp =>
+            new Dispatcher<TestContext>(sp, sp.GetRequiredService<IDispatcherRegistry>(), sp.GetRequiredService<IContextFactory<TestContext>>()));
 
         return services.BuildServiceProvider();
     }

@@ -12,11 +12,11 @@ using Xunit;
 namespace TinyDispatcher.IntegrationTests;
 public sealed class EndToEndDispatchTests
 {
-    private sealed record CreateThing(string Name) : ICommand;
+    public sealed record CreateThing(string Name) : ICommand;
 
-    private sealed class TestContext { public Guid RequestId { get; } = Guid.NewGuid(); }
+    public sealed class TestContext { public Guid RequestId { get; } = Guid.NewGuid(); }
 
-    private sealed class ContextFactory : IContextFactory<TestContext>
+    public sealed class ContextFactory : IContextFactory<TestContext>
     {
         public ValueTask<TestContext> CreateAsync(CancellationToken ct = default)
             => new(new TestContext());

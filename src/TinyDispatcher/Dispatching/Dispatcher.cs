@@ -19,11 +19,13 @@ public sealed class Dispatcher<TContext> : IDispatcher<TContext>
 {
     private readonly IServiceProvider _services;
     private readonly IDispatcherRegistry _registry;
+    private readonly IContextFactory<TContext> _contextFactory;
 
-    public Dispatcher(IServiceProvider services, IDispatcherRegistry registry)
+    public Dispatcher(IServiceProvider services, IDispatcherRegistry registry, IContextFactory<TContext> contextFactory)
     {
         _services = services ?? throw new ArgumentNullException(nameof(services));
         _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+        _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(_contextFactory));
     }
 
     public async Task DispatchAsync<TCommand>(TCommand command, CancellationToken ct = default)
@@ -40,10 +42,8 @@ public sealed class Dispatcher<TContext> : IDispatcher<TContext>
         var handlerObj = _services.GetRequiredService(handlerType);
         var handler = (ICommandHandler<TCommand, TContext>)handlerObj;
 
-        var ctx = await _services.GetRequiredService<IContextFactory<TContext>>()
-            .CreateAsync(ct)
-            .ConfigureAwait(false);
-
+        var ctx = await _contextFactory.CreateAsync(ct).ConfigureAwait(false);
+            
         var pipeline = GetBestPipeline<TCommand>();
         if (pipeline is not null)
         {
@@ -70,17 +70,17 @@ public sealed class Dispatcher<TContext> : IDispatcher<TContext>
     }
 
     private ICommandPipelineInvoker<TCommand, TContext>? GetBestPipeline<TCommand>()
-        where TCommand : ICommand
+    where TCommand : ICommand
     {
-        // 1) per-command override
-        var p1 = _services.GetService<ICommandPipeline<TCommand, TContext>>();
-        if (p1 is not null) return p1;
+        ICommandPipelineInvoker<TCommand, TContext>? p =
+            _services.GetService<ICommandPipeline<TCommand, TContext>>();
 
-        // 2) policy
-        var p2 = _services.GetService<IPolicyCommandPipeline<TCommand, TContext>>();
-        if (p2 is not null) return p2;
+        if (p is null)
+            p = _services.GetService<IPolicyCommandPipeline<TCommand, TContext>>();
 
-        // 3) global
-        return _services.GetService<IGlobalCommandPipeline<TCommand, TContext>>();
+        if (p is null)
+            p = _services.GetService<IGlobalCommandPipeline<TCommand, TContext>>();
+
+        return p;
     }
 }
