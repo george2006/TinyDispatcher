@@ -46,22 +46,22 @@
   </ItemGroup>
   <PropertyGroup>
     <PackageReleaseNotes>
-      Release notes – Duplicate handler validation
-      ✨ New
+      Changed
 
-      Compile-time validation for duplicate handlers
+      Dispatcher&lt;TContext&gt; now requires IContextFactory&lt;TContext&gt; as an explicit constructor dependency.
 
-      Prevents ambiguous dispatch behavior at runtime.
+      The dispatcher no longer resolves IContextFactory&lt;TContext&gt; from IServiceProvider during dispatch.
 
-      Fails fast at compile time with clear diagnostics.
+      Performance
 
-      Enforces a strict one handler per message contract, aligned with TinyDispatcher’s opinionated design.
+      Removed one IServiceProvider.GetRequiredService call from the dispatch hot path.
 
-      Added Source Generator unit tests covering:
+      Breaking change
 
-      Duplicate command handlers
+      If you manually instantiate Dispatcher&lt;TContext&gt;, you must now provide an IContextFactory&lt;TContext&gt;.
 
-      Duplicate query handlers
+      Ensure IContextFactory&lt;TContext&gt; is registered in DI (typically Scoped when TContext depends on request-scoped services like HttpContext).
+
     </PackageReleaseNotes>
 
   </PropertyGroup>
