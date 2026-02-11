@@ -35,11 +35,11 @@ public static class ServiceCollectionExtensions
             EnsureContextFactoryRegistered<TContext>(services);
         }
 
-        // Dispatcher (singleton; resolves IContextFactory<TContext> per dispatch)
         services.AddScoped<IDispatcher<TContext>>(sp =>
             new Dispatcher<TContext>(
                 sp,
-                sp.GetRequiredService<IDispatcherRegistry>()));
+                sp.GetRequiredService<IDispatcherRegistry>(),
+                sp.GetRequiredService<IContextFactory<TContext>>()));
 
         return services;
     }

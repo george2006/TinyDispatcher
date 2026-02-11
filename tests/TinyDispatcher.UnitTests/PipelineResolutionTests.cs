@@ -172,8 +172,8 @@ public sealed class PipelineResolutionTest
         var registry = DispatcherBootstrap.BuildRegistry();
         services.AddSingleton<IDispatcherRegistry>(registry);
 
-        services.AddSingleton<IDispatcher<TestContext>>(sp =>
-            new Dispatcher<TestContext>(sp, sp.GetRequiredService<IDispatcherRegistry>()));
+        services.AddTransient<IDispatcher<TestContext>>(sp =>
+            new Dispatcher<TestContext>(sp, sp.GetRequiredService<IDispatcherRegistry>(), sp.GetRequiredService<IContextFactory<TestContext>>()));
 
         return services.BuildServiceProvider();
     }

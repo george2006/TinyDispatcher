@@ -104,7 +104,7 @@ namespace TinyDispatcher.UnitTets
 
             // Dispatcher
             services.AddSingleton<IDispatcher<TestContext>>(sp =>
-                new Dispatcher<TestContext>(sp, sp.GetRequiredService<IDispatcherRegistry>()));
+                new Dispatcher<TestContext>(sp, sp.GetRequiredService<IDispatcherRegistry>(), sp.GetRequiredService<IContextFactory<TestContext>>()));
 
             return services.BuildServiceProvider();
         }
