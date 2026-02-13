@@ -7,26 +7,19 @@ using Microsoft.Extensions.DependencyInjection;
 using TinyDispatcher;
 using TinyDispatcher.Context;
 using Xunit;
+using static TinyDispatcher.IntegrationTests.EndToEndDispatchTests;
 
 namespace TinyDispatcher.IntegrationTests;
 
 public sealed class ServiceCollectionExtensionsTests
 {
-    private sealed class MyContext { }
-
-    private sealed class MyContextFactory : IContextFactory<MyContext>
-    {
-        public ValueTask<MyContext> CreateAsync(CancellationToken ct = default)
-            => ValueTask.FromResult(new MyContext());
-    }
-
     [Fact]
     public void UseTinyDispatcher_with_custom_context_and_no_factory_throws()
     {
         var services = new ServiceCollection();
 
         var ex = Assert.Throws<InvalidOperationException>(() =>
-            services.UseTinyDispatcher<MyContext>(_ => { }, contextFactory: null));
+            services.UseTinyDispatcher<TestContext>(_ => { }, contextFactory: null));
 
         Assert.Contains("context factory", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -51,19 +44,19 @@ public sealed class ServiceCollectionExtensionsTests
     {
         var services = new ServiceCollection();
 
-        services.AddSingleton<IContextFactory<MyContext>, MyContextFactory>();
-
+        services.AddScoped<IContextFactory<TestContext>, ContextFactory>();
+        services.AddTransient<ICommandHandler<CreateThing, TestContext>, Handler>();
         var called = 0;
 
-        services.AddDispatcher<MyContext>((sp, ct) =>
+        services.AddDispatcher<TestContext>((sp, ct) =>
         {
             called++;
-            return ValueTask.FromResult(new MyContext());
+            return ValueTask.FromResult(new TestContext());
         });
 
         using var sp = services.BuildServiceProvider();
 
-        var factory = sp.GetRequiredService<IContextFactory<MyContext>>();
+        var factory = sp.GetRequiredService<IContextFactory<TestContext>>();
         _ = await factory.CreateAsync();
 
         Assert.Equal(1, called);

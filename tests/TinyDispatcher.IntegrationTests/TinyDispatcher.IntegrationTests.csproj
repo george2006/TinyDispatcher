@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\TinyDispatcher.SourceGen\TinyDispatcher.SourceGen.csproj" />
+    <ProjectReference Include="..\..\src\TinyDispatcher.SourceGen\TinyDispatcher.SourceGen.csproj"/>
     <ProjectReference Include="..\..\src\TinyDispatcher\TinyDispatcher.csproj" />
   </ItemGroup>
 </Project>
