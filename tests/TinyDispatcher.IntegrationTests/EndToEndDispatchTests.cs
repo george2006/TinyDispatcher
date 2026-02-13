@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection.Metadata.Ecma335;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using TinyDispatcher;
 using TinyDispatcher.Context;
 using TinyDispatcher.Dispatching;
-using TinyDispatcher.Internal;
 using Xunit;
 
 namespace TinyDispatcher.IntegrationTests;
@@ -22,9 +22,9 @@ public sealed class EndToEndDispatchTests
             => new(new TestContext());
     }
 
-    private sealed class Handler : ICommandHandler<CreateThing, TestContext>
+    public sealed class Handler : ICommandHandler<CreateThing, TestContext>
     {
-        public static int Calls;
+        public int Calls;
         public Task HandleAsync(CreateThing command, TestContext ctx, CancellationToken ct = default)
         {
             Calls++;
@@ -32,26 +32,19 @@ public sealed class EndToEndDispatchTests
         }
     }
 
-    private sealed class Contribution : IMapContribution
-    {
-        public IEnumerable<KeyValuePair<Type, Type>> CommandHandlers
-            => new[] { new KeyValuePair<Type, Type>(typeof(CreateThing), typeof(Handler)) };
-
-        public IEnumerable<KeyValuePair<Type, Type>> QueryHandlers
-            => Array.Empty<KeyValuePair<Type, Type>>();
-    }
-
     [Fact]
     public async Task UseTinyDispatcher_registers_dispatcher_and_dispatches_command()
     {
         // arrange
-        Handler.Calls = 0;
-        DispatcherBootstrap.AddContribution(new Contribution());
-
+        Handler c = new Handler();
+        c.Calls = 0;
+        
         var services = new ServiceCollection();
         services.AddScoped<IContextFactory<TestContext>, ContextFactory>();
-        services.AddScoped<Handler>();
-
+        services.AddTransient<ICommandHandler<CreateThing,TestContext>>(sp => 
+        {
+            return c;
+        });
         services.UseTinyDispatcher<TestContext>(tiny => { /* no middleware */ });
 
         var sp = services.BuildServiceProvider();
@@ -61,6 +54,6 @@ public sealed class EndToEndDispatchTests
         await dispatcher.DispatchAsync(new CreateThing("x"));
 
         // assert
-        Assert.Equal(1, Handler.Calls);
+        Assert.Equal(1, c.Calls);
     }
 }

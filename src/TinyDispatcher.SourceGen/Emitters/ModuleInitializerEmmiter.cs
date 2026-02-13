@@ -27,10 +27,7 @@ public sealed class ModuleInitializerEmitter : ICodeEmitter
         sb.AppendLine("    [ModuleInitializer]");
         sb.AppendLine("    internal static void Init()");
         sb.AppendLine("    {");
-        sb.AppendLine("      // Contribute this assembly's maps");
-        sb.AppendLine($"      global::{core}.DispatcherBootstrap.AddContribution(new ThisAssemblyContribution());");
-        sb.AppendLine();
-        sb.AppendLine("      // Contribute this assembly's pipeline registrations (safe: contributor always exists)");
+        sb.AppendLine("      // Contribute this assembly's pipeline + handler DI registrations");
         sb.AppendLine($"      global::{core}.DispatcherPipelineBootstrap.AddContribution(");
         sb.AppendLine($"        services => global::{ns}.ThisAssemblyPipelineContribution.Add(services));");
         sb.AppendLine("    }");
@@ -42,3 +39,4 @@ public sealed class ModuleInitializerEmitter : ICodeEmitter
             SourceText.From(sb.ToString(), Encoding.UTF8));
     }
 }
+

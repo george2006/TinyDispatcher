@@ -19,9 +19,6 @@ public static class ServiceCollectionExtensions
     {
         if (services is null) throw new ArgumentNullException(nameof(services));
 
-        // Registry is built from module-initializer contributions.
-        services.AddSingleton<IDispatcherRegistry>(_ => DispatcherBootstrap.BuildRegistry());
-
         // Context factory rules (no guessing).
         if (contextFactory is not null)
         {
@@ -35,11 +32,7 @@ public static class ServiceCollectionExtensions
             EnsureContextFactoryRegistered<TContext>(services);
         }
 
-        services.AddScoped<IDispatcher<TContext>>(sp =>
-            new Dispatcher<TContext>(
-                sp,
-                sp.GetRequiredService<IDispatcherRegistry>(),
-                sp.GetRequiredService<IContextFactory<TContext>>()));
+        services.AddScoped<IDispatcher<TContext>,Dispatcher<TContext>>();
 
         return services;
     }

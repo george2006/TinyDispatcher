@@ -141,21 +141,6 @@ public sealed class Generator : IIncrementalGenerator
                 return;
         }
 
-
-        // Always emit contribution + module initializer (+ empty pipeline contribution)
-        new ModuleInitializerEmitter().Emit(roslynContext, discoveryResult, baseOptions);
-        new ContributionEmitter().Emit(roslynContext, discoveryResult, baseOptions);
-        new EmptyPipelineContributionEmitter().Emit(roslynContext, discoveryResult, baseOptions);
-        // always emits (empty if disabled)
-        new HandlerRegistrationsEmitter().Emit(roslynContext, discoveryResult, baseOptions);
-
-        // -----------------------------------------------------------------
-        // HOST GATE:
-        // If no UseTinyDispatcher calls in this project → do not emit pipelines.
-        // -----------------------------------------------------------------
-        if (useTinyCalls.IsDefaultOrEmpty || useTinyCalls.Length == 0)
-            return;
-
         // -----------------------------------------------------------------
         // Infer CommandContextType from UseTinyDispatcher<TContext> (SYNTAX-based)
         // -----------------------------------------------------------------
@@ -167,6 +152,13 @@ public sealed class Generator : IIncrementalGenerator
             return;
 
         var expectedContextFqn = Fqn.EnsureGlobal(effectiveOptions.CommandContextType!);
+
+
+        // Always emit contribution + module initializer (+ empty pipeline contribution)
+        new ModuleInitializerEmitter().Emit(roslynContext, discoveryResult, effectiveOptions);
+        new EmptyPipelineContributionEmitter().Emit(roslynContext, discoveryResult, effectiveOptions);
+        // always emits (empty if disabled)
+        new HandlerRegistrationsEmitter().Emit(roslynContext, discoveryResult, effectiveOptions);
 
         // -----------------------------------------------------------------
         // Middleware + Policy discovery from TinyBootstrap fluent calls
@@ -187,6 +179,13 @@ public sealed class Generator : IIncrementalGenerator
                 policyTypeSymbols,
                 diags);
         }
+
+        // -----------------------------------------------------------------
+        // HOST GATE:
+        // If no UseTinyDispatcher calls in this project → do not emit pipelines.
+        // -----------------------------------------------------------------
+        if (useTinyCalls.IsDefaultOrEmpty || useTinyCalls.Length == 0)
+            return;
 
         // Policies: build PolicySpec map (policyTypeFqn -> PolicySpec)
         var policies = policyBuilder.Build(compilation, expectedContextFqn, policyTypeSymbols, diags);

@@ -18,13 +18,11 @@ namespace TinyDispatcher;
 public sealed class Dispatcher<TContext> : IDispatcher<TContext>
 {
     private readonly IServiceProvider _services;
-    private readonly IDispatcherRegistry _registry;
     private readonly IContextFactory<TContext> _contextFactory;
 
-    public Dispatcher(IServiceProvider services, IDispatcherRegistry registry, IContextFactory<TContext> contextFactory)
+    public Dispatcher(IServiceProvider services, IContextFactory<TContext> contextFactory)
     {
         _services = services ?? throw new ArgumentNullException(nameof(services));
-        _registry = registry ?? throw new ArgumentNullException(nameof(registry));
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(_contextFactory));
     }
 
@@ -33,14 +31,13 @@ public sealed class Dispatcher<TContext> : IDispatcher<TContext>
     {
         if (command is null) throw new ArgumentNullException(nameof(command));
 
-        if (!_registry.CommandHandlers.TryGetValue(typeof(TCommand), out var handlerType))
+        var handler = _services.GetRequiredService<ICommandHandler<TCommand, TContext>>();
+
+        if (handler == null)
         {
             throw new InvalidOperationException(
                 $"No handler registered for command '{typeof(TCommand).FullName}'.");
         }
-
-        var handlerObj = _services.GetRequiredService(handlerType);
-        var handler = (ICommandHandler<TCommand, TContext>)handlerObj;
 
         var ctx = await _contextFactory.CreateAsync(ct).ConfigureAwait(false);
             
@@ -59,13 +56,12 @@ public sealed class Dispatcher<TContext> : IDispatcher<TContext>
     {
         if (query is null) throw new ArgumentNullException(nameof(query));
 
-        if (!_registry.QueryHandlers.TryGetValue(typeof(TQuery), out var handlerType))
+        var handler = _services.GetRequiredService<IQueryHandler<TQuery, TResult>>();
+        if (handler == null)
         {
             throw new InvalidOperationException(
                 $"No handler registered for query '{typeof(TQuery).FullName}'.");
         }
-
-        var handler = (IQueryHandler<TQuery, TResult>)_services.GetRequiredService(handlerType);
         return handler.HandleAsync(query, ct);
     }
 

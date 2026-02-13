@@ -1,150 +1,17 @@
-﻿using System;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
 using TinyDispatcher.Context;
 using TinyDispatcher.Dispatching;
 using TinyDispatcher.Pipeline;
+using TinyDispatcher.UnitTests;
 using Xunit;
+using static TinyDispatcher.UnitTets.PipelineSelectionTests;
 
 namespace TinyDispatcher.UnitTets;
 
-// -----------------------------------------------------------------------------
-// IMPORTANT:
-// - These message types MUST be top-level (not nested private) because the SourceGen
-//   runs on the UnitTests assembly and generates code that references them.
-// -----------------------------------------------------------------------------
-public sealed record TestCommand(string Value) : ICommand;
-public sealed record OtherCommand(string Value) : ICommand;
-
-public sealed record PolicyOnlyCommand(string Value) : ICommand;
-
-[TinyPolicy]
-[UseMiddleware(typeof(PolicyLogMiddleware<,>))]
-[ForCommand(typeof(PolicyOnlyCommand))]
-internal sealed class PolicyOnlyPolicy { }
-
-// -----------------------------------------------------------------------------
-// Test context (we want to assert exact execution order)
-// -----------------------------------------------------------------------------
-internal sealed class TestContext
-{
-    public List<string> Log { get; } = new();
-}
-
-// -----------------------------------------------------------------------------
-// Handlers
-// -----------------------------------------------------------------------------
-internal sealed class TestCommandHandler : ICommandHandler<TestCommand, TestContext>
-{
-    public Task HandleAsync(TestCommand command, TestContext ctx, CancellationToken ct = default)
-    {
-        ctx.Log.Add("handler:TestCommand");
-        return Task.CompletedTask;
-    }
-}
-
-internal sealed class OtherCommandHandler : ICommandHandler<OtherCommand, TestContext>
-{
-    public Task HandleAsync(OtherCommand command, TestContext ctx, CancellationToken ct = default)
-    {
-        ctx.Log.Add("handler:OtherCommand");
-        return Task.CompletedTask;
-    }
-}
-
-internal sealed class PolicyOnlyCommandHandler : ICommandHandler<PolicyOnlyCommand, TestContext>
-{
-    public Task HandleAsync(PolicyOnlyCommand command, TestContext ctx, CancellationToken ct = default)
-    {
-        ctx.Log.Add("handler:PolicyOnlyCommand");
-        return Task.CompletedTask;
-    }
-}
-
-
-// -----------------------------------------------------------------------------
-// Open-generic middlewares (generator expects open generic types)
-// -----------------------------------------------------------------------------
-internal sealed class GlobalLogMiddleware<TCommand, TContext> : ICommandMiddleware<TCommand, TContext>
-    where TCommand : ICommand
-{
-    public async Task InvokeAsync(
-        TCommand command,
-        TContext ctx,
-        CommandDelegate<TCommand, TContext> next,
-        CancellationToken ct)
-    {
-        ((TestContext)(object)ctx).Log.Add("mw:global:before");
-        await next(command, ctx, ct);
-        ((TestContext)(object)ctx).Log.Add("mw:global:after");
-    }
-}
-
-internal sealed class PerCommandLogMiddleware<TCommand, TContext> : ICommandMiddleware<TCommand, TContext>
-    where TCommand : ICommand
-{
-    public async Task InvokeAsync(
-        TCommand command,
-        TContext ctx,
-        CommandDelegate<TCommand, TContext> next,
-        CancellationToken ct)
-    {
-        ((TestContext)(object)ctx).Log.Add("mw:percmd:before");
-        await next(command, ctx, ct);
-        ((TestContext)(object)ctx).Log.Add("mw:percmd:after");
-    }
-}
-
-internal sealed class PolicyLogMiddleware<TCommand, TContext> : ICommandMiddleware<TCommand, TContext>
-    where TCommand : ICommand
-{
-    public async Task InvokeAsync(
-        TCommand command,
-        TContext ctx,
-        CommandDelegate<TCommand, TContext> next,
-        CancellationToken ct)
-    {
-        ((TestContext)(object)ctx).Log.Add("mw:policy:before");
-        await next(command, ctx, ct);
-        ((TestContext)(object)ctx).Log.Add("mw:policy:after");
-    }
-}
-
-// -----------------------------------------------------------------------------
-// Policy declaration (attributes read by SourceGen)
-// -----------------------------------------------------------------------------
-[TinyPolicy]
-[UseMiddleware(typeof(PolicyLogMiddleware<,>))]
-[ForCommand(typeof(TestCommand))]
-internal sealed class CheckoutPolicy
-{
-}
-
-// -----------------------------------------------------------------------------
-// HOST GATE (compile-time only):
-// This exists so SourceGen sees ALL the configuration up-front and generates pipelines.
-// It is never executed.
-// -----------------------------------------------------------------------------
-internal static class GeneratedPipelinesHostGate
-{
-    // Do not call. Just needs to exist in the compilation.
-    public static void Configure(IServiceCollection services)
-    {
-        services.UseTinyDispatcher<TestContext>(tiny =>
-        {
-            tiny.UseGlobalMiddleware(typeof(GlobalLogMiddleware<,>));
-            tiny.UseMiddlewareFor<TestCommand>(typeof(PerCommandLogMiddleware<,>));
-            tiny.UsePolicy<CheckoutPolicy>();
-            tiny.UsePolicy<PolicyOnlyPolicy>();
-        });
-    }
-}
-
-// -----------------------------------------------------------------------------
-// Tests
-// -----------------------------------------------------------------------------
 public sealed class PipelineResolutionTest
 {
     private sealed class FixedContextFactory : IContextFactory<TestContext>
@@ -164,16 +31,14 @@ public sealed class PipelineResolutionTest
         services.AddTransient(typeof(GlobalLogMiddleware<,>));
         services.AddTransient(typeof(PerCommandLogMiddleware<,>));
         services.AddTransient(typeof(PolicyLogMiddleware<,>));
-
+        services.AddTransient<ICommandHandler<TestCommand, TestContext>, TestHandler>();
+        services.AddSingleton(typeof(CallTracker));
         services.AddScoped<IContextFactory<TestContext>>(_ => new FixedContextFactory(ctx));
 
         TinyDispatcher.Generated.ThisAssemblyPipelineContribution.Add(services);
 
-        var registry = DispatcherBootstrap.BuildRegistry();
-        services.AddSingleton<IDispatcherRegistry>(registry);
-
         services.AddScoped<IDispatcher<TestContext>>(sp =>
-            new Dispatcher<TestContext>(sp, sp.GetRequiredService<IDispatcherRegistry>(), sp.GetRequiredService<IContextFactory<TestContext>>()));
+            new Dispatcher<TestContext>(sp, sp.GetRequiredService<IContextFactory<TestContext>>()));
 
         return services.BuildServiceProvider();
     }
