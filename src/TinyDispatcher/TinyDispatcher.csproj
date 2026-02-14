@@ -43,9 +43,6 @@
   </ItemGroup>
   <PropertyGroup>
     <PackageReleaseNotes>
-      <PropertyGroup>
-        <PackageReleaseNotes>
-          <PackageReleaseNotes>
             Performance: optimized middleware pipeline execution (significantly reduced allocations in the dispatch path).
 
             Breaking: middleware contract updated (see migration below).
@@ -144,11 +141,6 @@
             &lt;li&gt;Pipeline resolution is now deterministic and fully generator-driven.&lt;/li&gt;
             &lt;li&gt;This is part of the final hardening phase toward v1.0.&lt;/li&gt;
             &lt;/ul&gt;
-          </PackageReleaseNotes>
-
-
-        </PackageReleaseNotes>
-      </PropertyGroup>
     </PackageReleaseNotes>
 
   </PropertyGroup>
