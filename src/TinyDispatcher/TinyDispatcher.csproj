@@ -114,12 +114,38 @@
             =&gt; runtime.NextAsync(command, context, ct);
             &lt;/pre&gt;
 
+            &lt;h2&gt;Pipeline Contract Simplification (Breaking)&lt;/h2&gt;
+
+            &lt;p&gt;
+            The dispatcher no longer performs runtime pipeline precedence resolution.
+            Global, Policy, and Per-command pipelines are now unified under a single
+            &lt;code&gt;ICommandPipeline&lt;TCommand,TContext&gt;&lt;/code&gt; contract.
+            &lt;/p&gt;
+
+            &lt;h3&gt;What changed&lt;/h3&gt;
+            &lt;ul&gt;
+            &lt;li&gt;Removed &lt;code&gt;IPolicyCommandPipeline&lt;,&gt;&lt;/code&gt;.&lt;/li&gt;
+            &lt;li&gt;Removed &lt;code&gt;IGlobalCommandPipeline&lt;,&gt;&lt;/code&gt;.&lt;/li&gt;
+            &lt;li&gt;Dispatcher now resolves a single &lt;code&gt;ICommandPipeline&lt;TCommand,TContext&gt;&lt;/code&gt;.&lt;/li&gt;
+            &lt;li&gt;Pipeline precedence (Per-command → Policy → Global) is enforced at compile-time by source generation.&lt;/li&gt;
+            &lt;li&gt;Reduced DI lookups and removed runtime branching in the dispatch path.&lt;/li&gt;
+            &lt;/ul&gt;
+
+            &lt;h3&gt;Migration guide&lt;/h3&gt;
+            &lt;p&gt;
+            If you were implementing &lt;code&gt;IPolicyCommandPipeline&lt;,&gt;&lt;/code&gt; or
+            &lt;code&gt;IGlobalCommandPipeline&lt;,&gt;&lt;/code&gt;, replace them with
+            &lt;code&gt;ICommandPipeline&lt;TCommand,TContext&gt;&lt;/code&gt;.
+            &lt;/p&gt;
+
             &lt;h3&gt;Notes&lt;/h3&gt;
             &lt;ul&gt;
-            &lt;li&gt;This is a prerelease hardening step ahead of v1.0; further cleanup may follow.&lt;/li&gt;
-            &lt;li&gt;If you maintain custom middleware, you must update it to the new runtime-based signature.&lt;/li&gt;
+            &lt;li&gt;This change simplifies the public API surface and reduces runtime complexity.&lt;/li&gt;
+            &lt;li&gt;Pipeline resolution is now deterministic and fully generator-driven.&lt;/li&gt;
+            &lt;li&gt;This is part of the final hardening phase toward v1.0.&lt;/li&gt;
             &lt;/ul&gt;
           </PackageReleaseNotes>
+
 
         </PackageReleaseNotes>
       </PropertyGroup>

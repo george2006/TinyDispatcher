@@ -1,12 +1,14 @@
-﻿// File: src/TinyDispatcher.SourceGen/Emitters/PipelineEmitter.cs
-// FULL REPLACEMENT
-//
+﻿//
 // Fixes:
 // - Correct middleware execution order: Global (outermost) -> Policy -> Per-command -> Handler
 // - Ensures that when a command has BOTH policy + per-command middleware, BOTH run (policy is included inside per-command pipeline)
-// - Avoids modern C# / BCL APIs (no ranges, no Replace(StringComparison), no .. syntax)
 // - Registers open-generic middleware types for ctor injection
 // - Registers pipelines as Scoped (stateful)
+//
+// Contract hardening:
+// - Single pipeline contract only: ICommandPipeline<TCommand,TContext>
+// - Global + Policy pipelines implement ICommandPipeline<TCommand,TContext>
+// - Generator registers exactly one ICommandPipeline<Cmd,Ctx> per command (per-command > policy > global)
 
 #nullable enable
 
@@ -120,7 +122,7 @@ public sealed class PipelineEmitter : ICodeEmitter
         // 1) Global pipeline (open TCommand)
         if (hasGlobal)
         {
-            sb.AppendLine("  internal sealed class TinyDispatcherGlobalPipeline<TCommand> : " + core + ".IGlobalCommandPipeline<TCommand, " + ctx + ">");
+            sb.AppendLine("  internal sealed class TinyDispatcherGlobalPipeline<TCommand> : " + core + ".ICommandPipeline<TCommand, " + ctx + ">");
             sb.AppendLine("      where TCommand : " + core + ".ICommand");
             sb.AppendLine("  {");
 
@@ -199,7 +201,7 @@ public sealed class PipelineEmitter : ICodeEmitter
             var policyMids = NormalizeDistinct(p.Middlewares);
             if (policyMids.Length == 0) continue;
 
-            sb.AppendLine("  internal sealed class " + className + "<TCommand> : " + core + ".IPolicyCommandPipeline<TCommand, " + ctx + ">");
+            sb.AppendLine("  internal sealed class " + className + "<TCommand> : " + core + ".ICommandPipeline<TCommand, " + ctx + ">");
             sb.AppendLine("      where TCommand : " + core + ".ICommand");
             sb.AppendLine("  {");
 
@@ -507,7 +509,7 @@ public sealed class PipelineEmitter : ICodeEmitter
             if (perCmdSet.Contains(cmd)) continue;
 
             var open = cmdToPolicyPipelineOpen[cmd];
-            sb.AppendLine("      services.AddScoped<" + core + ".IPolicyCommandPipeline<" + cmd + ", " + ctx + ">, " + open + "<" + cmd + ">>();");
+            sb.AppendLine("      services.AddScoped<" + core + ".ICommandPipeline<" + cmd + ", " + ctx + ">, " + open + "<" + cmd + ">>();");
         }
 
         // Global pipelines for remaining commands
@@ -523,7 +525,7 @@ public sealed class PipelineEmitter : ICodeEmitter
                 if (perCmdSet.Contains(cmd)) continue;
                 if (policyCmdSet.Contains(cmd)) continue;
 
-                sb.AppendLine("      services.AddScoped<" + core + ".IGlobalCommandPipeline<" + cmd + ", " + ctx + ">, " + genNs + ".TinyDispatcherGlobalPipeline<" + cmd + ">>();");
+                sb.AppendLine("      services.AddScoped<" + core + ".ICommandPipeline<" + cmd + ", " + ctx + ">, " + genNs + ".TinyDispatcherGlobalPipeline<" + cmd + ">>();");
             }
         }
 

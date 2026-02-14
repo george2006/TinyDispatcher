@@ -35,8 +35,8 @@ public sealed class Dispatcher<TContext> : IDispatcher<TContext>
 
         var ctx = await _contextFactory.CreateAsync(ct).ConfigureAwait(false);
             
-        var pipeline = ResolvePipeline<TCommand>();
-        
+        var pipeline = _services.GetService<ICommandPipeline<TCommand, TContext>>();
+
         if (pipeline is null)
         {
             await handler.HandleAsync(command, ctx, ct);
@@ -59,20 +59,5 @@ public sealed class Dispatcher<TContext> : IDispatcher<TContext>
                 $"No handler registered for query '{typeof(TQuery).FullName}'.");
         }
         return handler.HandleAsync(query, ct);
-    }
-
-    private ICommandPipeline<TCommand, TContext>? ResolvePipeline<TCommand>()
-    where TCommand : ICommand
-    {
-        ICommandPipeline<TCommand, TContext>? p =
-            _services.GetService<ICommandPipeline<TCommand, TContext>>();
-
-        if (p is null)
-            p = _services.GetService<IPolicyCommandPipeline<TCommand, TContext>>();
-
-        if (p is null)
-            p = _services.GetService<IGlobalCommandPipeline<TCommand, TContext>>();
-
-        return p;
     }
 }
