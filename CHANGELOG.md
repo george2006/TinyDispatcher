@@ -1,7 +1,16 @@
-## [Unreleased]
-
 ### Added
 - **Pipeline Maps**: explicit, inspectable execution paths for commands.
   - The full middleware + handler execution chain is now deterministic and materialized.
   - Pipelines are generated at compile time via source generators.
   - No reflection or runtime guessing on the hot path.
+
+### Changed
+- Removed runtime pipeline selection.
+- Pipelines are now resolved directly via DI per command.
+
+### Performance
+- Reduced allocations significantly in middleware execution.
+- Improved dispatch throughput in 5-middleware benchmark scenarios.
+
+### Breaking Changes
+- Middleware registration model updated.
