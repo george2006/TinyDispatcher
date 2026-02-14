@@ -33,22 +33,18 @@ public sealed class Dispatcher<TContext> : IDispatcher<TContext>
 
         var handler = _services.GetRequiredService<ICommandHandler<TCommand, TContext>>();
 
-        if (handler == null)
-        {
-            throw new InvalidOperationException(
-                $"No handler registered for command '{typeof(TCommand).FullName}'.");
-        }
-
         var ctx = await _contextFactory.CreateAsync(ct).ConfigureAwait(false);
             
-        var pipeline = GetBestPipeline<TCommand>();
-        if (pipeline is not null)
+        var pipeline = ResolvePipeline<TCommand>();
+        
+        if (pipeline is null)
         {
-            await pipeline.ExecuteAsync(command, ctx, handler, ct).ConfigureAwait(false);
+            await handler.HandleAsync(command, ctx, ct);
             return;
         }
 
-        await handler.HandleAsync(command, ctx, ct).ConfigureAwait(false);
+        await pipeline.ExecuteAsync(command, ctx, handler, ct);
+
     }
 
     public Task<TResult> DispatchAsync<TQuery, TResult>(TQuery query, CancellationToken ct = default)
@@ -65,10 +61,10 @@ public sealed class Dispatcher<TContext> : IDispatcher<TContext>
         return handler.HandleAsync(query, ct);
     }
 
-    private ICommandPipelineInvoker<TCommand, TContext>? GetBestPipeline<TCommand>()
+    private ICommandPipeline<TCommand, TContext>? ResolvePipeline<TCommand>()
     where TCommand : ICommand
     {
-        ICommandPipelineInvoker<TCommand, TContext>? p =
+        ICommandPipeline<TCommand, TContext>? p =
             _services.GetService<ICommandPipeline<TCommand, TContext>>();
 
         if (p is null)

@@ -2,13 +2,11 @@ using TinyDispatcher.Pipeline;
 
 namespace TinyDispatcher;
 
-/// <summary>
-/// Command pipeline override for a specific command.
-/// </summary>
-public interface ICommandPipeline<TCommand, TContext> : ICommandPipelineInvoker<TCommand, TContext>
-    where TCommand : ICommand
+public interface ICommandPipeline<TCommand, TContext> where TCommand : ICommand
 {
+    ValueTask ExecuteAsync(TCommand command, TContext context, ICommandHandler<TCommand, TContext> handler, CancellationToken ct = default);
 }
+
 
 /// <summary>
 /// Policy pipeline for a command. Lower precedence than ICommandPipeline, higher than global.

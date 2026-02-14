@@ -8,6 +8,7 @@ using TinyDispatcher.SourceGen.Generator;
 using Xunit;
 
 namespace TinyDispatcher.UnitTest.SourceGen;
+
 public sealed class ContextClosedMiddlewareTests
 {
     [Fact]
@@ -24,26 +25,41 @@ namespace TinyDispatcher
 {
     public interface ICommand { }
 
-    public delegate Task CommandDelegate<TCommand, TContext>(TCommand cmd, TContext ctx, CancellationToken ct);
-
     public interface ICommandHandler<TCommand, TContext> where TCommand : ICommand
     {
         Task HandleAsync(TCommand command, TContext context, CancellationToken ct);
     }
 
+    namespace Pipeline
+    {
+        public interface ICommandPipelineRuntime<TCommand, TContext> where TCommand : ICommand
+        {
+            ValueTask NextAsync(TCommand command, TContext ctx, CancellationToken ct = default);
+        }
+
+        public interface ICommandPipelineInvoker<TCommand, TContext> where TCommand : ICommand
+        {
+            ValueTask ExecuteAsync(TCommand command, TContext ctx, ICommandHandler<TCommand, TContext> handler, CancellationToken ct = default);
+        }
+    }
+
     public interface ICommandMiddleware<TCommand, TContext> where TCommand : ICommand
     {
-        Task InvokeAsync(TCommand cmd, TContext ctx, CommandDelegate<TCommand, TContext> next, CancellationToken ct);
+        ValueTask InvokeAsync(
+            TCommand cmd,
+            TContext ctx,
+            Pipeline.ICommandPipelineRuntime<TCommand, TContext> runtime,
+            CancellationToken ct);
     }
 
-    public interface ICommandPipelineInvoker<TCommand, TContext> where TCommand : ICommand
-    {
-        Task ExecuteAsync(TCommand command, TContext ctx, ICommandHandler<TCommand, TContext> handler, CancellationToken ct = default);
-    }
+    public interface IGlobalCommandPipeline<TCommand, TContext> : Pipeline.ICommandPipelineInvoker<TCommand, TContext>
+        where TCommand : ICommand { }
 
-    public interface IGlobalCommandPipeline<TCommand, TContext> : ICommandPipelineInvoker<TCommand, TContext> where TCommand : ICommand { }
-    public interface IPolicyCommandPipeline<TCommand, TContext> : ICommandPipelineInvoker<TCommand, TContext> where TCommand : ICommand { }
-    public interface ICommandPipeline<TCommand, TContext> : ICommandPipelineInvoker<TCommand, TContext> where TCommand : ICommand { }
+    public interface IPolicyCommandPipeline<TCommand, TContext> : Pipeline.ICommandPipelineInvoker<TCommand, TContext>
+        where TCommand : ICommand { }
+
+    public interface ICommandPipeline<TCommand, TContext> : Pipeline.ICommandPipelineInvoker<TCommand, TContext>
+        where TCommand : ICommand { }
 
     public sealed class TinyBootstrapp
     {
@@ -56,7 +72,9 @@ namespace Microsoft.Extensions.DependencyInjection
 {
     public static class ServiceCollectionExtensions
     {
-        public static IServiceCollection UseTinyDispatcher<TContext>(this IServiceCollection services, Action<TinyDispatcher.TinyBootstrapp> tiny)
+        public static IServiceCollection UseTinyDispatcher<TContext>(
+            this IServiceCollection services,
+            Action<TinyDispatcher.TinyBootstrapp> tiny)
             => services;
     }
 }
@@ -76,16 +94,24 @@ namespace ConsoleApp
     public sealed class OpenMw<TCommand, TContext> : TinyDispatcher.ICommandMiddleware<TCommand, TContext>
         where TCommand : TinyDispatcher.ICommand
     {
-        public Task InvokeAsync(TCommand cmd, TContext ctx, TinyDispatcher.CommandDelegate<TCommand, TContext> next, CancellationToken ct)
-            => next(cmd, ctx, ct);
+        public ValueTask InvokeAsync(
+            TCommand cmd,
+            TContext ctx,
+            TinyDispatcher.Pipeline.ICommandPipelineRuntime<TCommand, TContext> runtime,
+            CancellationToken ct)
+            => runtime.NextAsync(cmd, ctx, ct);
     }
 
     // arity-1 middleware (context-closed)
     public sealed class ClosedMw<TCommand> : TinyDispatcher.ICommandMiddleware<TCommand, MyTestContext>
         where TCommand : TinyDispatcher.ICommand
     {
-        public Task InvokeAsync(TCommand cmd, MyTestContext ctx, TinyDispatcher.CommandDelegate<TCommand, MyTestContext> next, CancellationToken ct)
-            => next(cmd, ctx, ct);
+        public ValueTask InvokeAsync(
+            TCommand cmd,
+            MyTestContext ctx,
+            TinyDispatcher.Pipeline.ICommandPipelineRuntime<TCommand, MyTestContext> runtime,
+            CancellationToken ct)
+            => runtime.NextAsync(cmd, ctx, ct);
     }
 
     public static class Startup
@@ -112,10 +138,10 @@ namespace ConsoleApp
         var generated = GetGeneratedSource(driver, "TinyDispatcherPipeline.g.cs");
 
         // Assert: per-command middleware (ClosedMw<>) must be closed as ClosedMw<Ping>
-        Assert.Contains("GetRequiredService<global::ConsoleApp.ClosedMw<global::ConsoleApp.Ping>>()", generated);
+        Assert.Contains("global::ConsoleApp.ClosedMw<global::ConsoleApp.Ping>", generated);
 
         // Assert: global middleware (OpenMw<,>) must be closed as OpenMw<Ping, MyTestContext>
-        Assert.Contains("GetRequiredService<global::ConsoleApp.OpenMw<global::ConsoleApp.Ping, global::ConsoleApp.MyTestContext>>()", generated);
+        Assert.Contains("global::ConsoleApp.OpenMw<global::ConsoleApp.Ping, global::ConsoleApp.MyTestContext>", generated);
     }
 
     [Fact]
@@ -131,11 +157,21 @@ namespace TinyDispatcher
 {
     public interface ICommand { }
 
-    public delegate Task CommandDelegate<TCommand, TContext>(TCommand cmd, TContext ctx, System.Threading.CancellationToken ct);
+    namespace Pipeline
+    {
+        public interface ICommandPipelineRuntime<TCommand, TContext> where TCommand : ICommand
+        {
+            ValueTask NextAsync(TCommand command, TContext ctx, System.Threading.CancellationToken ct = default);
+        }
+    }
 
     public interface ICommandMiddleware<TCommand, TContext> where TCommand : ICommand
     {
-        Task InvokeAsync(TCommand cmd, TContext ctx, CommandDelegate<TCommand, TContext> next, System.Threading.CancellationToken ct);
+        ValueTask InvokeAsync(
+            TCommand cmd,
+            TContext ctx,
+            Pipeline.ICommandPipelineRuntime<TCommand, TContext> runtime,
+            System.Threading.CancellationToken ct);
     }
 
     public sealed class TinyBootstrapp
@@ -148,7 +184,9 @@ namespace Microsoft.Extensions.DependencyInjection
 {
     public static class ServiceCollectionExtensions
     {
-        public static IServiceCollection UseTinyDispatcher<TContext>(this IServiceCollection services, Action<TinyDispatcher.TinyBootstrapp> tiny)
+        public static IServiceCollection UseTinyDispatcher<TContext>(
+            this IServiceCollection services,
+            Action<TinyDispatcher.TinyBootstrapp> tiny)
             => services;
     }
 }
@@ -161,8 +199,12 @@ namespace ConsoleApp
     public sealed class BadClosedMw<TCommand> : TinyDispatcher.ICommandMiddleware<TCommand, OtherContext>
         where TCommand : TinyDispatcher.ICommand
     {
-        public Task InvokeAsync(TCommand cmd, OtherContext ctx, TinyDispatcher.CommandDelegate<TCommand, OtherContext> next, System.Threading.CancellationToken ct)
-            => next(cmd, ctx, ct);
+        public ValueTask InvokeAsync(
+            TCommand cmd,
+            OtherContext ctx,
+            TinyDispatcher.Pipeline.ICommandPipelineRuntime<TCommand, OtherContext> runtime,
+            System.Threading.CancellationToken ct)
+            => runtime.NextAsync(cmd, ctx, ct);
     }
 
     public static class Startup
@@ -211,11 +253,18 @@ namespace ConsoleApp
     private static string GetGeneratedSource(GeneratorDriver driver, string hintName)
     {
         var run = driver.GetRunResult();
+
+        // If generator threw, fail loudly with the actual exception.
+        var ex = run.Results.Select(r => r.Exception).FirstOrDefault(e => e != null);
+        Assert.True(ex is null, ex?.ToString());
+
         var generated = run.Results
             .SelectMany(r => r.GeneratedSources)
             .FirstOrDefault(s => string.Equals(s.HintName, hintName, StringComparison.Ordinal));
 
-        Assert.False(generated.Equals(default), $"Generated source '{hintName}' not found.");
-        return generated.SourceText.ToString();
+        // GeneratedSourceResult is a struct; SourceText == null is the robust "not found" check.
+        Assert.True(generated.SourceText != null, $"Generated source '{hintName}' not found.");
+
+        return generated.SourceText!.ToString();
     }
 }

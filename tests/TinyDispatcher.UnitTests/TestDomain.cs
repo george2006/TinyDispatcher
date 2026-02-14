@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using TinyDispatcher.Context;
+using TinyDispatcher.Pipeline;
 
 namespace TinyDispatcher.UnitTests
 {
@@ -60,14 +61,14 @@ namespace TinyDispatcher.UnitTests
     internal sealed class GlobalLogMiddleware<TCommand, TContext> : ICommandMiddleware<TCommand, TContext>
         where TCommand : ICommand
     {
-        public async Task InvokeAsync(
+        public async ValueTask InvokeAsync(
             TCommand command,
             TContext ctx,
-            CommandDelegate<TCommand, TContext> next,
+            ICommandPipelineRuntime<TCommand, TContext> runtime,
             CancellationToken ct)
         {
             ((TestContext)(object)ctx).Log.Add("mw:global:before");
-            await next(command, ctx, ct);
+            await runtime.NextAsync(command, ctx, ct);
             ((TestContext)(object)ctx).Log.Add("mw:global:after");
         }
     }
@@ -75,14 +76,14 @@ namespace TinyDispatcher.UnitTests
     internal sealed class PerCommandLogMiddleware<TCommand, TContext> : ICommandMiddleware<TCommand, TContext>
         where TCommand : ICommand
     {
-        public async Task InvokeAsync(
+        public async ValueTask InvokeAsync(
             TCommand command,
             TContext ctx,
-            CommandDelegate<TCommand, TContext> next,
+            ICommandPipelineRuntime<TCommand, TContext> runtime,
             CancellationToken ct)
         {
             ((TestContext)(object)ctx).Log.Add("mw:percmd:before");
-            await next(command, ctx, ct);
+            await runtime.NextAsync(command, ctx, ct);
             ((TestContext)(object)ctx).Log.Add("mw:percmd:after");
         }
     }
@@ -112,16 +113,17 @@ namespace TinyDispatcher.UnitTests
 
         public CommandPipeline(CallTracker tracker) => _tracker = tracker;
 
-        public Task ExecuteAsync(
+        public ValueTask ExecuteAsync(
             TestCommand command,
             TestContext ctx,
             ICommandHandler<TestCommand, TestContext> handler,
             CancellationToken ct = default)
         {
             _tracker.CommandPipelineCalled = true;
-            return handler.HandleAsync(command, ctx, ct);
+            return new ValueTask(handler.HandleAsync(command, ctx, ct));
         }
     }
+
 
     public sealed class PolicyPipeline : IPolicyCommandPipeline<TestCommand, TestContext>
     {
@@ -129,16 +131,17 @@ namespace TinyDispatcher.UnitTests
 
         public PolicyPipeline(CallTracker tracker) => _tracker = tracker;
 
-        public Task ExecuteAsync(
+        public ValueTask ExecuteAsync(
             TestCommand command,
             TestContext ctx,
             ICommandHandler<TestCommand, TestContext> handler,
             CancellationToken ct = default)
         {
             _tracker.PolicyPipelineCalled = true;
-            return handler.HandleAsync(command, ctx, ct);
+            return new ValueTask(handler.HandleAsync(command, ctx, ct));
         }
     }
+
 
     public sealed class GlobalPipeline : IGlobalCommandPipeline<TestCommand, TestContext>
     {
@@ -146,31 +149,33 @@ namespace TinyDispatcher.UnitTests
 
         public GlobalPipeline(CallTracker tracker) => _tracker = tracker;
 
-        public Task ExecuteAsync(
+        public ValueTask ExecuteAsync(
             TestCommand command,
             TestContext ctx,
             ICommandHandler<TestCommand, TestContext> handler,
             CancellationToken ct = default)
         {
             _tracker.GlobalPipelineCalled = true;
-            return handler.HandleAsync(command, ctx, ct);
+            return new ValueTask(handler.HandleAsync(command, ctx, ct));
         }
     }
 
+
     internal sealed class PolicyLogMiddleware<TCommand, TContext> : ICommandMiddleware<TCommand, TContext>
-        where TCommand : ICommand
+    where TCommand : ICommand
     {
-        public async Task InvokeAsync(
+        public async ValueTask InvokeAsync(
             TCommand command,
             TContext ctx,
-            CommandDelegate<TCommand, TContext> next,
+            ICommandPipelineRuntime<TCommand, TContext> runtime,
             CancellationToken ct)
         {
             ((TestContext)(object)ctx).Log.Add("mw:policy:before");
-            await next(command, ctx, ct);
+            await runtime.NextAsync(command, ctx, ct);
             ((TestContext)(object)ctx).Log.Add("mw:policy:after");
         }
     }
+
 
     // -----------------------------------------------------------------------------
     // Policy declaration (attributes read by SourceGen)

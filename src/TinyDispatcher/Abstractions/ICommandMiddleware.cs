@@ -4,12 +4,12 @@ using TinyDispatcher.Pipeline;
 
 namespace TinyDispatcher;
 
-public interface ICommandMiddleware<TCommand, TContext>
-    where TCommand : ICommand
+public interface ICommandMiddleware<TCommand, TContext> where TCommand : ICommand
 {
-    Task InvokeAsync(
+    ValueTask InvokeAsync(
         TCommand command,
-        TContext ctx,
-        CommandDelegate<TCommand, TContext> next,
-        CancellationToken ct);
+        TContext context,
+        ICommandPipelineRuntime<TCommand, TContext> runtime,
+        CancellationToken ct = default);
 }
+

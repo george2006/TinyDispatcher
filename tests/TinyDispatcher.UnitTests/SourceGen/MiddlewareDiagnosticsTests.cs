@@ -16,17 +16,46 @@ public sealed class MiddlewareDiagnosticsTests
     {
         var (_, diags) = Run(CreateCompilationAllRefs(@"
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace TinyDispatcher
 {
   public interface ICommand { }
-  public delegate System.Threading.Tasks.Task CommandDelegate<TCommand, TContext>(TCommand c, TContext ctx, System.Threading.CancellationToken ct);
+
+  namespace Pipeline
+  {
+    public interface ICommandPipelineRuntime<TCommand, TContext> where TCommand : ICommand
+    {
+      ValueTask NextAsync(TCommand command, TContext ctx, CancellationToken ct = default);
+    }
+  }
+
   public interface ICommandMiddleware<TCommand,TContext> where TCommand : ICommand
   {
-    System.Threading.Tasks.Task InvokeAsync(TCommand c, TContext ctx, CommandDelegate<TCommand, TContext> next, System.Threading.CancellationToken ct);
+    ValueTask InvokeAsync(
+      TCommand c,
+      TContext ctx,
+      Pipeline.ICommandPipelineRuntime<TCommand, TContext> runtime,
+      CancellationToken ct);
   }
-  public sealed class TinyBootstrapp { public void UseGlobalMiddleware(Type t) { } }
+
+  public sealed class TinyBootstrapp
+  {
+    public void UseGlobalMiddleware(Type t) { }
+  }
+}
+
+namespace Microsoft.Extensions.DependencyInjection
+{
+  public static class ServiceCollectionExtensions
+  {
+    public static IServiceCollection UseTinyDispatcher<TContext>(
+      this IServiceCollection services,
+      Action<TinyDispatcher.TinyBootstrapp> tiny)
+      => services;
+  }
 }
 
 namespace ConsoleApp
@@ -37,8 +66,12 @@ namespace ConsoleApp
   // NON-GENERIC middleware => should trigger DISP301
   public sealed class NotOpenGenericMw : TinyDispatcher.ICommandMiddleware<Cmd, Ctx>
   {
-    public System.Threading.Tasks.Task InvokeAsync(Cmd c, Ctx ctx, TinyDispatcher.CommandDelegate<Cmd, Ctx> next, System.Threading.CancellationToken ct)
-      => next(c, ctx, ct);
+    public ValueTask InvokeAsync(
+      Cmd c,
+      Ctx ctx,
+      TinyDispatcher.Pipeline.ICommandPipelineRuntime<Cmd, Ctx> runtime,
+      CancellationToken ct)
+      => runtime.NextAsync(c, ctx, ct);
   }
 
   public static class Startup
@@ -51,6 +84,7 @@ namespace ConsoleApp
 
         Assert.Contains(diags, d => d.Id == "DISP301");
     }
+
 
 
     [Fact]

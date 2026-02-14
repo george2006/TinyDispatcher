@@ -41,7 +41,7 @@ public sealed class EndToEndDispatchTests
         
         var services = new ServiceCollection();
         services.AddScoped<IContextFactory<TestContext>, ContextFactory>();
-        services.AddTransient<ICommandHandler<CreateThing,TestContext>>(sp => 
+        services.AddScoped<ICommandHandler<CreateThing,TestContext>>(sp => 
         {
             return c;
         });

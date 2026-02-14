@@ -1,21 +1,18 @@
-﻿// File: PipelineEmitter.cs
-// ------------------------------------------------------------
-// Emits into the CONSUMER project:
+﻿// File: src/TinyDispatcher.SourceGen/Emitters/PipelineEmitter.cs
+// FULL REPLACEMENT
 //
-// - TinyDispatcherGlobalPipeline<TCommand>                     [if global middleware exists]
-// - TinyDispatcherPipeline_<Command>                           [if per-command middleware exists]
-// - TinyDispatcherPolicyPipeline_<Policy><TCommand>            [if policy exists]
-// - Implements: ThisAssemblyPipelineContribution.AddGeneratedPipelines(IServiceCollection)
-//
-// IMPORTANT:
-// - The wrapper ThisAssemblyPipelineContribution.Add(IServiceCollection) is emitted ONLY
-//   by EmptyPipelineContributionEmitter to avoid duplicate type emission.
-// - This emitter ONLY provides the partial method implementation.
-// ------------------------------------------------------------
+// Fixes:
+// - Correct middleware execution order: Global (outermost) -> Policy -> Per-command -> Handler
+// - Ensures that when a command has BOTH policy + per-command middleware, BOTH run (policy is included inside per-command pipeline)
+// - Avoids modern C# / BCL APIs (no ranges, no Replace(StringComparison), no .. syntax)
+// - Registers open-generic middleware types for ctor injection
+// - Registers pipelines as Scoped (stateful)
 
 #nullable enable
 
 using Microsoft.CodeAnalysis.Text;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -24,22 +21,20 @@ using System.Text;
 using TinyDispatcher.SourceGen.Abstractions;
 using TinyDispatcher.SourceGen.Generator;
 using TinyDispatcher.SourceGen.Generator.Models;
-using TinyDispatcher.SourceGen.PipelineMap;
-using TinyDispatcher.SourceGen.PipelineMaps;
 
-namespace TinyDispatcher.SourceGen;
+namespace TinyDispatcher.SourceGen.Emitters;
 
 public sealed class PipelineEmitter : ICodeEmitter
 {
     public sealed record PolicySpec(
         string PolicyTypeFqn,
-        ImmutableArray<MiddlewareRef> Middlewares, // open generic middleware fqns
-        ImmutableArray<string> Commands     // command fqns
+        ImmutableArray<MiddlewareRef> Middlewares,
+        ImmutableArray<string> Commands
     );
 
-    private readonly ImmutableArray<MiddlewareRef> _globalMiddlewares; // open generic fqn
-    private readonly ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> _perCommand; // cmd fqn -> [open generic fqn]
-    private readonly ImmutableDictionary<string, PolicySpec> _policies; // policy fqn -> spec
+    private readonly ImmutableArray<MiddlewareRef> _globalMiddlewares;
+    private readonly ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> _perCommand;
+    private readonly ImmutableDictionary<string, PolicySpec> _policies;
 
     public PipelineEmitter(
         ImmutableArray<MiddlewareRef> globalMiddlewares,
@@ -53,58 +48,28 @@ public sealed class PipelineEmitter : ICodeEmitter
 
     public void Emit(IGeneratorContext context, DiscoveryResult result, GeneratorOptions options)
     {
-        if (string.IsNullOrWhiteSpace(options.CommandContextType))
-            return;
+        if (options == null) return;
+        if (string.IsNullOrWhiteSpace(options.CommandContextType)) return;
 
         var hasAny =
             (!_globalMiddlewares.IsDefaultOrEmpty && _globalMiddlewares.Length > 0) ||
             (_perCommand.Count > 0) ||
             (_policies.Count > 0);
 
-        // IMPORTANT: if nothing exists, we emit NOTHING.
-        // The always-emitted EmptyPipelineContributionEmitter provides the no-op.
-        if (!hasAny)
-            return;
+        // If nothing exists, we emit nothing.
+        // (Your EmptyPipelineContributionEmitter should still emit the host/wrapper.)
+        if (!hasAny) return;
 
-        var source = BuildSourceWithPipelines(result, options);
-
-        if (options.EmitPipelineMap)
-        {
-            // For each discovered command handler, generate a map.
-            // (If you prefer: only map commands that actually have any middleware/policy.)
-            foreach (var c in result.Commands)
-            {
-                var resolved = ResolvePipelineForCommand(
-                    commandFqn: c.MessageTypeFqn,
-                    ctxFqn: options.CommandContextType!,
-                    handlerFqn: c.HandlerTypeFqn);
-
-                var descriptor = ToDescriptor(resolved);
-
-                // Format gate: json
-                if ((options.PipelineMapFormat ?? "json")
-                    .IndexOf("json", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    PipelineMapJsonEmitter.Emit(context, descriptor);
-                }
-                if ((options.PipelineMapFormat ?? "")
-                    .IndexOf("mermaid", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    PipelineMapMermaidEmitter.Emit(context, descriptor);
-                }
-            }
-        }
+        var source = BuildSource(result, options);
 
         context.AddSource(
             hintName: "TinyDispatcherPipeline.g.cs",
             sourceText: SourceText.From(source, Encoding.UTF8));
-
-
     }
 
-    private string BuildSourceWithPipelines(DiscoveryResult result, GeneratorOptions options)
+    private string BuildSource(DiscoveryResult result, GeneratorOptions options)
     {
-        var sb = new StringBuilder(64_000);
+        var sb = new StringBuilder(96_000);
 
         sb.AppendLine("// <auto-generated/>");
         sb.AppendLine("#nullable enable");
@@ -112,230 +77,346 @@ public sealed class PipelineEmitter : ICodeEmitter
         sb.AppendLine("using System.Threading;");
         sb.AppendLine("using System.Threading.Tasks;");
         sb.AppendLine("using Microsoft.Extensions.DependencyInjection;");
+        sb.AppendLine("using Microsoft.Extensions.DependencyInjection.Extensions;");
         sb.AppendLine();
 
-        // Pipelines go under GeneratedNamespace
-        sb.AppendLine($"namespace {options.GeneratedNamespace}");
+        sb.AppendLine("namespace " + options.GeneratedNamespace);
         sb.AppendLine("{");
-        AppendPipelines(sb, options);
-        sb.AppendLine("}");
-        sb.AppendLine();
 
-        // Partial hook implementation MUST be in SAME namespace/type as empty emitter.
-        // EmptyPipelineContributionEmitter emits:
-        //   namespace TinyDispatcher.Generated { internal static partial class ThisAssemblyPipelineContribution { ... } }
-        AppendContributionPartialImplementation(sb, result, options);
+        AppendPipelines(sb, result, options);
+        sb.AppendLine("}");
+
+        sb.AppendLine();
+        AppendContributionPartial(sb, result, options);
 
         return sb.ToString();
     }
 
     // ============================================================
-    // PIPELINES
+    // Pipelines
     // ============================================================
 
-    private void AppendPipelines(StringBuilder sb, GeneratorOptions options)
+    private void AppendPipelines(StringBuilder sb, DiscoveryResult result, GeneratorOptions options)
     {
-        var core = $"global::{Known.CoreNamespace}";
-        var ctx = options.CommandContextType!;
+        var core = "global::TinyDispatcher";
+        var ctx = NormalizeFullyQualifiedType(options.CommandContextType!);
 
-        var globals = NormalizeDistinct(_globalMiddlewares);
-        var hasGlobal = globals.Length > 0;
+        var globalMids = NormalizeDistinct(_globalMiddlewares);
+        var hasGlobal = globalMids.Length > 0;
 
-        var perCmd = _perCommand
-            .Where(kv => !string.IsNullOrWhiteSpace(kv.Key) && !kv.Value.IsDefaultOrEmpty)
-            .ToDictionary(
-                kv => NormalizeFullyQualifiedType(kv.Key),
-                kv => NormalizeDistinct(kv.Value),
-                StringComparer.Ordinal);
+        // Normalize per-command map keys
+        var perCmd = new Dictionary<string, MiddlewareRef[]>(StringComparer.Ordinal);
+        foreach (var kv in _perCommand)
+        {
+            var cmd = NormalizeFullyQualifiedType(kv.Key);
+            var mids = NormalizeDistinct(kv.Value);
+            if (string.IsNullOrWhiteSpace(cmd) || mids.Length == 0) continue;
+            perCmd[cmd] = mids;
+        }
 
-        // -------------------------
-        // 1) Global pipeline (open)
-        // -------------------------
+        // Build command -> policy middleware mapping (FIRST matching policy wins deterministically)
+        var cmdToPolicyMids = BuildCommandToPolicyMiddlewares();
+
+        // 1) Global pipeline (open TCommand)
         if (hasGlobal)
         {
-            sb.AppendLine("  internal sealed class TinyDispatcherGlobalPipeline<TCommand> : " +
-                          $"{core}.IGlobalCommandPipeline<TCommand, {ctx}>");
-            sb.AppendLine($"      where TCommand : {core}.ICommand");
+            sb.AppendLine("  internal sealed class TinyDispatcherGlobalPipeline<TCommand> : " + core + ".IGlobalCommandPipeline<TCommand, " + ctx + ">");
+            sb.AppendLine("      where TCommand : " + core + ".ICommand");
             sb.AppendLine("  {");
-            sb.AppendLine("    private readonly IServiceProvider _sp;");
+
+            for (int i = 0; i < globalMids.Length; i++)
+            {
+                var mw = globalMids[i];
+                sb.AppendLine("    private readonly " + CloseMiddleware(mw, "TCommand", ctx) + " " + FieldName(mw) + ";");
+            }
+
+            sb.AppendLine("    private int _index;");
+            sb.AppendLine("    private " + core + ".ICommandHandler<TCommand, " + ctx + ">? _handler;");
+            sb.AppendLine("    private readonly Runtime _runtime;");
             sb.AppendLine();
-            sb.AppendLine("    public TinyDispatcherGlobalPipeline(IServiceProvider sp) => _sp = sp ?? throw new ArgumentNullException(nameof(sp));");
-            sb.AppendLine();
-            sb.AppendLine("    public Task ExecuteAsync(");
-            sb.AppendLine("        TCommand command,");
-            sb.AppendLine($"        {ctx} ctxValue,");
-            sb.AppendLine($"        {core}.ICommandHandler<TCommand, {ctx}> handler,");
-            sb.AppendLine("        CancellationToken ct = default)");
+
+            sb.AppendLine("    public TinyDispatcherGlobalPipeline(");
+            for (int i = 0; i < globalMids.Length; i++)
+            {
+                var mw = globalMids[i];
+                var comma = (i == globalMids.Length - 1) ? "" : ",";
+                sb.AppendLine("        " + CloseMiddleware(mw, "TCommand", ctx) + " " + CtorParamName(mw) + comma);
+            }
+            sb.AppendLine("    )");
             sb.AppendLine("    {");
-            sb.AppendLine("      if (command is null) throw new ArgumentNullException(nameof(command));");
-            sb.AppendLine("      if (handler is null) throw new ArgumentNullException(nameof(handler));");
-            sb.AppendLine();
-            sb.AppendLine($"      {core}.CommandDelegate<TCommand, {ctx}> next = handler.HandleAsync;");
-            sb.AppendLine();
-            sb.AppendLine("      // Global middleware (outer)");
-            foreach (var mwOpen in globals)
-                sb.AppendLine($"      next = {StepName(mwOpen.OpenTypeFqn)}(next);");
-            sb.AppendLine();
-            sb.AppendLine("      return next(command, ctxValue, ct);");
+            for (int i = 0; i < globalMids.Length; i++)
+            {
+                var mw = globalMids[i];
+                sb.AppendLine("      " + FieldName(mw) + " = " + CtorParamName(mw) + ";");
+            }
+            sb.AppendLine("      _runtime = new Runtime(this);");
             sb.AppendLine("    }");
             sb.AppendLine();
 
-            foreach (var mwOpen in globals)
+            sb.AppendLine("    public ValueTask ExecuteAsync(TCommand command, " + ctx + " ctxValue, " + core + ".ICommandHandler<TCommand, " + ctx + "> handler, CancellationToken ct = default)");
+            sb.AppendLine("    {");
+            sb.AppendLine("      if (command is null) throw new ArgumentNullException(nameof(command));");
+            sb.AppendLine("      if (handler is null) throw new ArgumentNullException(nameof(handler));");
+            sb.AppendLine("      _handler = handler;");
+            sb.AppendLine("      _index = 0;");
+            sb.AppendLine("      return NextAsync(command, ctxValue, ct);");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+
+            sb.AppendLine("    private ValueTask NextAsync(TCommand command, " + ctx + " ctxValue, CancellationToken ct)");
+            sb.AppendLine("    {");
+            sb.AppendLine("      switch (_index++)");
+            sb.AppendLine("      {");
+            for (int i = 0; i < globalMids.Length; i++)
             {
-                var step = StepName(mwOpen.OpenTypeFqn);
-                sb.AppendLine($"    private {core}.CommandDelegate<TCommand, {ctx}> {step}({core}.CommandDelegate<TCommand, {ctx}> inner)");
-                sb.AppendLine("    {");
-                sb.AppendLine($"      return (cmd, ctxValue, ct) => _sp.GetRequiredService<{CloseMiddleware(mwOpen, "TCommand", ctx)}>()");
-                sb.AppendLine("        .InvokeAsync(cmd, ctxValue, inner, ct);");
-                sb.AppendLine("    }");
-                sb.AppendLine();
+                var mw = globalMids[i];
+                sb.AppendLine("        case " + i + ": return " + FieldName(mw) + ".InvokeAsync(command, ctxValue, _runtime, ct);");
             }
+            sb.AppendLine("        default: return new ValueTask(_handler!.HandleAsync(command, ctxValue, ct));");
+            sb.AppendLine("      }");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+
+            sb.AppendLine("    private sealed class Runtime : " + core + ".Pipeline.ICommandPipelineRuntime<TCommand, " + ctx + ">");
+            sb.AppendLine("    {");
+            sb.AppendLine("      private readonly TinyDispatcherGlobalPipeline<TCommand> _p;");
+            sb.AppendLine("      public Runtime(TinyDispatcherGlobalPipeline<TCommand> p) { _p = p; }");
+            sb.AppendLine("      public ValueTask NextAsync(TCommand command, " + ctx + " ctxValue, CancellationToken ct = default)");
+            sb.AppendLine("        { return _p.NextAsync(command, ctxValue, ct); }");
+            sb.AppendLine("    }");
 
             sb.AppendLine("  }");
             sb.AppendLine();
         }
 
-        // -------------------------
-        // 2) Policy pipelines (open per policy, reusable across many commands)
-        //    Name is based on POLICY, not command.
-        // -------------------------
-        foreach (var p in _policies.Values.OrderBy(x => x.PolicyTypeFqn, StringComparer.Ordinal))
+        // 2) Policy pipelines (open per policy)
+        // IMPORTANT ORDER INSIDE POLICY PIPELINE: Global -> Policy -> Handler
+        foreach (var p in _policies.Values.OrderBy(x => NormalizeFullyQualifiedType(x.PolicyTypeFqn), StringComparer.Ordinal))
         {
             var policyName = SanitizePolicyName(p.PolicyTypeFqn);
-            var className = $"TinyDispatcherPolicyPipeline_{policyName}";
-            var mids = NormalizeDistinct(p.Middlewares);
+            var className = "TinyDispatcherPolicyPipeline_" + policyName;
 
-            sb.AppendLine($"  internal sealed class {className}<TCommand> : {core}.IPolicyCommandPipeline<TCommand, {ctx}>");
-            sb.AppendLine($"      where TCommand : {core}.ICommand");
+            var policyMids = NormalizeDistinct(p.Middlewares);
+            if (policyMids.Length == 0) continue;
+
+            sb.AppendLine("  internal sealed class " + className + "<TCommand> : " + core + ".IPolicyCommandPipeline<TCommand, " + ctx + ">");
+            sb.AppendLine("      where TCommand : " + core + ".ICommand");
             sb.AppendLine("  {");
-            sb.AppendLine("    private readonly IServiceProvider _sp;");
-            sb.AppendLine();
-            sb.AppendLine($"    public {className}(IServiceProvider sp) => _sp = sp ?? throw new ArgumentNullException(nameof(sp));");
-            sb.AppendLine();
-            sb.AppendLine("    public Task ExecuteAsync(");
-            sb.AppendLine("        TCommand command,");
-            sb.AppendLine($"        {ctx} ctxValue,");
-            sb.AppendLine($"        {core}.ICommandHandler<TCommand, {ctx}> handler,");
-            sb.AppendLine("        CancellationToken ct = default)");
-            sb.AppendLine("    {");
-            sb.AppendLine("      if (command is null) throw new ArgumentNullException(nameof(command));");
-            sb.AppendLine("      if (handler is null) throw new ArgumentNullException(nameof(handler));");
-            sb.AppendLine();
-            sb.AppendLine($"      {core}.CommandDelegate<TCommand, {ctx}> next = handler.HandleAsync;");
-            sb.AppendLine();
-            sb.AppendLine("      // Policy middleware (inner)");
-            foreach (var mwOpen in mids)
-                sb.AppendLine($"      next = {StepName(mwOpen.OpenTypeFqn)}(next);");
 
+            // fields: global first, then policy
             if (hasGlobal)
             {
-                sb.AppendLine();
-                sb.AppendLine("      // Global middleware (outer)");
-                foreach (var mwOpen in globals)
-                    sb.AppendLine($"      next = {StepName(mwOpen.OpenTypeFqn)}(next);");
+                for (int i = 0; i < globalMids.Length; i++)
+                {
+                    var mw = globalMids[i];
+                    sb.AppendLine("    private readonly " + CloseMiddleware(mw, "TCommand", ctx) + " " + FieldName(mw) + ";");
+                }
+            }
+            for (int i = 0; i < policyMids.Length; i++)
+            {
+                var mw = policyMids[i];
+                sb.AppendLine("    private readonly " + CloseMiddleware(mw, "TCommand", ctx) + " " + FieldName(mw) + ";");
             }
 
+            sb.AppendLine("    private int _index;");
+            sb.AppendLine("    private " + core + ".ICommandHandler<TCommand, " + ctx + ">? _handler;");
+            sb.AppendLine("    private readonly Runtime _runtime;");
             sb.AppendLine();
-            sb.AppendLine("      return next(command, ctxValue, ct);");
+
+            // ctor params in same order: global then policy (any order fine, but keep stable)
+            sb.AppendLine("    public " + className + "(");
+            var ctorList = new List<MiddlewareRef>();
+            if (hasGlobal) ctorList.AddRange(globalMids);
+            ctorList.AddRange(policyMids);
+
+            for (int i = 0; i < ctorList.Count; i++)
+            {
+                var mw = ctorList[i];
+                var comma = (i == ctorList.Count - 1) ? "" : ",";
+                sb.AppendLine("        " + CloseMiddleware(mw, "TCommand", ctx) + " " + CtorParamName(mw) + comma);
+            }
+            sb.AppendLine("    )");
+            sb.AppendLine("    {");
+            for (int i = 0; i < ctorList.Count; i++)
+            {
+                var mw = ctorList[i];
+                sb.AppendLine("      " + FieldName(mw) + " = " + CtorParamName(mw) + ";");
+            }
+            sb.AppendLine("      _runtime = new Runtime(this);");
             sb.AppendLine("    }");
             sb.AppendLine();
 
-            foreach (var mwOpen in mids)
-            {
-                var step = StepName(mwOpen.OpenTypeFqn);
-                sb.AppendLine($"    private {core}.CommandDelegate<TCommand, {ctx}> {step}({core}.CommandDelegate<TCommand, {ctx}> inner)");
-                sb.AppendLine("    {");
-                sb.AppendLine($"      return (cmd, ctxValue, ct) => _sp.GetRequiredService<{CloseMiddleware(mwOpen, "TCommand", ctx)}>()");
-                sb.AppendLine("        .InvokeAsync(cmd, ctxValue, inner, ct);");
-                sb.AppendLine("    }");
-                sb.AppendLine();
-            }
+            sb.AppendLine("    public ValueTask ExecuteAsync(TCommand command, " + ctx + " ctxValue, " + core + ".ICommandHandler<TCommand, " + ctx + "> handler, CancellationToken ct = default)");
+            sb.AppendLine("    {");
+            sb.AppendLine("      if (command is null) throw new ArgumentNullException(nameof(command));");
+            sb.AppendLine("      if (handler is null) throw new ArgumentNullException(nameof(handler));");
+            sb.AppendLine("      _handler = handler;");
+            sb.AppendLine("      _index = 0;");
+            sb.AppendLine("      return NextAsync(command, ctxValue, ct);");
+            sb.AppendLine("    }");
+            sb.AppendLine();
 
+            sb.AppendLine("    private ValueTask NextAsync(TCommand command, " + ctx + " ctxValue, CancellationToken ct)");
+            sb.AppendLine("    {");
+            sb.AppendLine("      switch (_index++)");
+            sb.AppendLine("      {");
+            int idx = 0;
+
+            // ORDER: global outermost
             if (hasGlobal)
             {
-                foreach (var mwOpen in globals)
+                for (int i = 0; i < globalMids.Length; i++)
                 {
-                    var step = StepName(mwOpen.OpenTypeFqn);
-                    sb.AppendLine($"    private {core}.CommandDelegate<TCommand, {ctx}> {step}({core}.CommandDelegate<TCommand, {ctx}> inner)");
-                    sb.AppendLine("    {");
-                    sb.AppendLine($"      return (cmd, ctxValue, ct) => _sp.GetRequiredService<{CloseMiddleware(mwOpen, "TCommand", ctx)}>()");
-                    sb.AppendLine("        .InvokeAsync(cmd, ctxValue, inner, ct);");
-                    sb.AppendLine("    }");
-                    sb.AppendLine();
+                    var mw = globalMids[i];
+                    sb.AppendLine("        case " + (idx++) + ": return " + FieldName(mw) + ".InvokeAsync(command, ctxValue, _runtime, ct);");
                 }
             }
 
+            // then policy
+            for (int i = 0; i < policyMids.Length; i++)
+            {
+                var mw = policyMids[i];
+                sb.AppendLine("        case " + (idx++) + ": return " + FieldName(mw) + ".InvokeAsync(command, ctxValue, _runtime, ct);");
+            }
+
+            sb.AppendLine("        default: return new ValueTask(_handler!.HandleAsync(command, ctxValue, ct));");
+            sb.AppendLine("      }");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+
+            sb.AppendLine("    private sealed class Runtime : " + core + ".Pipeline.ICommandPipelineRuntime<TCommand, " + ctx + ">");
+            sb.AppendLine("    {");
+            sb.AppendLine("      private readonly " + className + "<TCommand> _p;");
+            sb.AppendLine("      public Runtime(" + className + "<TCommand> p) { _p = p; }");
+            sb.AppendLine("      public ValueTask NextAsync(TCommand command, " + ctx + " ctxValue, CancellationToken ct = default)");
+            sb.AppendLine("        { return _p.NextAsync(command, ctxValue, ct); }");
+            sb.AppendLine("    }");
+
             sb.AppendLine("  }");
             sb.AppendLine();
         }
 
-        // -------------------------
-        // 3) Per-command pipelines (closed, highest precedence)
-        // -------------------------
+        // 3) Per-command pipelines (closed command type)
+        // IMPORTANT:
+        // - Order: Global -> Policy -> Per-command -> Handler
+        // - Includes policy middleware if the command is in a policy
         foreach (var kv in perCmd.OrderBy(k => k.Key, StringComparer.Ordinal))
         {
             var cmdFqn = kv.Key;
-            var mids = kv.Value;
+            var perCmdMids = kv.Value;
+
+            MiddlewareRef[] policyMidsForCommand;
+            if (!cmdToPolicyMids.TryGetValue(cmdFqn, out policyMidsForCommand))
+                policyMidsForCommand = Array.Empty<MiddlewareRef>();
+
             var className = "TinyDispatcherPipeline_" + SanitizeCommandName(cmdFqn);
 
-            sb.AppendLine($"  internal sealed class {className} : {core}.ICommandPipeline<{cmdFqn}, {ctx}>");
+            sb.AppendLine("  internal sealed class " + className + " : " + core + ".ICommandPipeline<" + cmdFqn + ", " + ctx + ">");
             sb.AppendLine("  {");
-            sb.AppendLine("    private readonly IServiceProvider _sp;");
-            sb.AppendLine();
-            sb.AppendLine($"    public {className}(IServiceProvider sp) => _sp = sp ?? throw new ArgumentNullException(nameof(sp));");
-            sb.AppendLine();
-            sb.AppendLine("    public Task ExecuteAsync(");
-            sb.AppendLine($"        {cmdFqn} command,");
-            sb.AppendLine($"        {ctx} ctxValue,");
-            sb.AppendLine($"        {core}.ICommandHandler<{cmdFqn}, {ctx}> handler,");
-            sb.AppendLine("        CancellationToken ct = default)");
-            sb.AppendLine("    {");
-            sb.AppendLine("      if (command is null) throw new ArgumentNullException(nameof(command));");
-            sb.AppendLine("      if (handler is null) throw new ArgumentNullException(nameof(handler));");
-            sb.AppendLine();
-            sb.AppendLine($"      {core}.CommandDelegate<{cmdFqn}, {ctx}> next = handler.HandleAsync;");
-            sb.AppendLine();
-            sb.AppendLine("      // Per-command middleware (inner)");
-            foreach (var mwOpen in mids)
-                sb.AppendLine($"      next = {StepName(mwOpen.OpenTypeFqn)}(next);");
 
+            // fields: global first, then policy, then per-command
             if (hasGlobal)
             {
-                sb.AppendLine();
-                sb.AppendLine("      // Global middleware (outer)");
-                foreach (var mwOpen in globals)
-                    sb.AppendLine($"      next = {StepName(mwOpen.OpenTypeFqn)}(next);");
+                for (int i = 0; i < globalMids.Length; i++)
+                {
+                    var mw = globalMids[i];
+                    sb.AppendLine("    private readonly " + CloseMiddleware(mw, cmdFqn, ctx) + " " + FieldName(mw) + ";");
+                }
             }
 
+            for (int i = 0; i < policyMidsForCommand.Length; i++)
+            {
+                var mw = policyMidsForCommand[i];
+                sb.AppendLine("    private readonly " + CloseMiddleware(mw, cmdFqn, ctx) + " " + FieldName(mw) + ";");
+            }
+
+            for (int i = 0; i < perCmdMids.Length; i++)
+            {
+                var mw = perCmdMids[i];
+                sb.AppendLine("    private readonly " + CloseMiddleware(mw, cmdFqn, ctx) + " " + FieldName(mw) + ";");
+            }
+
+            sb.AppendLine("    private int _index;");
+            sb.AppendLine("    private " + core + ".ICommandHandler<" + cmdFqn + ", " + ctx + ">? _handler;");
+            sb.AppendLine("    private readonly Runtime _runtime;");
             sb.AppendLine();
-            sb.AppendLine("      return next(command, ctxValue, ct);");
+
+            // ctor: global + policy + per-command
+            sb.AppendLine("    public " + className + "(");
+
+            var ctorAll = new List<MiddlewareRef>();
+            if (hasGlobal) ctorAll.AddRange(globalMids);
+            ctorAll.AddRange(policyMidsForCommand);
+            ctorAll.AddRange(perCmdMids);
+
+            for (int i = 0; i < ctorAll.Count; i++)
+            {
+                var mw = ctorAll[i];
+                var comma = (i == ctorAll.Count - 1) ? "" : ",";
+                sb.AppendLine("        " + CloseMiddleware(mw, cmdFqn, ctx) + " " + CtorParamName(mw) + comma);
+            }
+
+            sb.AppendLine("    )");
+            sb.AppendLine("    {");
+            for (int i = 0; i < ctorAll.Count; i++)
+            {
+                var mw = ctorAll[i];
+                sb.AppendLine("      " + FieldName(mw) + " = " + CtorParamName(mw) + ";");
+            }
+            sb.AppendLine("      _runtime = new Runtime(this);");
             sb.AppendLine("    }");
             sb.AppendLine();
 
-            foreach (var mwOpen in mids)
-            {
-                var step = StepName(mwOpen.OpenTypeFqn);
-                sb.AppendLine($"    private {core}.CommandDelegate<{cmdFqn}, {ctx}> {step}({core}.CommandDelegate<{cmdFqn}, {ctx}> inner)");
-                sb.AppendLine("    {");
-                sb.AppendLine($"      return (cmd, ctxValue, ct) => _sp.GetRequiredService<{CloseMiddleware(mwOpen, cmdFqn, ctx)}>()");
-                sb.AppendLine("        .InvokeAsync(cmd, ctxValue, inner, ct);");
-                sb.AppendLine("    }");
-                sb.AppendLine();
-            }
+            sb.AppendLine("    public ValueTask ExecuteAsync(" + cmdFqn + " command, " + ctx + " ctxValue, " + core + ".ICommandHandler<" + cmdFqn + ", " + ctx + "> handler, CancellationToken ct = default)");
+            sb.AppendLine("    {");
+            sb.AppendLine("      if (command is null) throw new ArgumentNullException(nameof(command));");
+            sb.AppendLine("      if (handler is null) throw new ArgumentNullException(nameof(handler));");
+            sb.AppendLine("      _handler = handler;");
+            sb.AppendLine("      _index = 0;");
+            sb.AppendLine("      return NextAsync(command, ctxValue, ct);");
+            sb.AppendLine("    }");
+            sb.AppendLine();
 
+            sb.AppendLine("    private ValueTask NextAsync(" + cmdFqn + " command, " + ctx + " ctxValue, CancellationToken ct)");
+            sb.AppendLine("    {");
+            sb.AppendLine("      switch (_index++)");
+            sb.AppendLine("      {");
+            int stepIndex = 0;
+
+            // ORDER: global -> policy -> per-command
             if (hasGlobal)
             {
-                foreach (var mwOpen in globals)
+                for (int i = 0; i < globalMids.Length; i++)
                 {
-                    var step = StepName(mwOpen.OpenTypeFqn);
-                    sb.AppendLine($"    private {core}.CommandDelegate<{cmdFqn}, {ctx}> {step}({core}.CommandDelegate<{cmdFqn}, {ctx}> inner)");
-                    sb.AppendLine("    {");
-                    sb.AppendLine($"      return (cmd, ctxValue, ct) => _sp.GetRequiredService<{CloseMiddleware(mwOpen, cmdFqn, ctx)}>()");
-                    sb.AppendLine("        .InvokeAsync(cmd, ctxValue, inner, ct);");
-                    sb.AppendLine("    }");
-                    sb.AppendLine();
+                    var mw = globalMids[i];
+                    sb.AppendLine("        case " + (stepIndex++) + ": return " + FieldName(mw) + ".InvokeAsync(command, ctxValue, _runtime, ct);");
                 }
             }
+
+            for (int i = 0; i < policyMidsForCommand.Length; i++)
+            {
+                var mw = policyMidsForCommand[i];
+                sb.AppendLine("        case " + (stepIndex++) + ": return " + FieldName(mw) + ".InvokeAsync(command, ctxValue, _runtime, ct);");
+            }
+
+            for (int i = 0; i < perCmdMids.Length; i++)
+            {
+                var mw = perCmdMids[i];
+                sb.AppendLine("        case " + (stepIndex++) + ": return " + FieldName(mw) + ".InvokeAsync(command, ctxValue, _runtime, ct);");
+            }
+
+            sb.AppendLine("        default: return new ValueTask(_handler!.HandleAsync(command, ctxValue, ct));");
+            sb.AppendLine("      }");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+
+            sb.AppendLine("    private sealed class Runtime : " + core + ".Pipeline.ICommandPipelineRuntime<" + cmdFqn + ", " + ctx + ">");
+            sb.AppendLine("    {");
+            sb.AppendLine("      private readonly " + className + " _p;");
+            sb.AppendLine("      public Runtime(" + className + " p) { _p = p; }");
+            sb.AppendLine("      public ValueTask NextAsync(" + cmdFqn + " command, " + ctx + " ctxValue, CancellationToken ct = default)");
+            sb.AppendLine("        { return _p.NextAsync(command, ctxValue, ct); }");
+            sb.AppendLine("    }");
 
             sb.AppendLine("  }");
             sb.AppendLine();
@@ -343,39 +424,57 @@ public sealed class PipelineEmitter : ICodeEmitter
     }
 
     // ============================================================
-    // PARTIAL CONTRIBUTION IMPLEMENTATION (NO DUPLICATE TYPES!)
+    // Contribution registrations
     // ============================================================
 
-    private void AppendContributionPartialImplementation(StringBuilder sb, DiscoveryResult result, GeneratorOptions options)
+    private void AppendContributionPartial(StringBuilder sb, DiscoveryResult result, GeneratorOptions options)
     {
-        var core = $"global::{Known.CoreNamespace}";
-        var ctx = options.CommandContextType!;
-        var generatedNsFqn = "global::" + options.GeneratedNamespace;
+        var core = "global::TinyDispatcher";
+        var ctx = NormalizeFullyQualifiedType(options.CommandContextType!);
+        var genNs = "global::" + options.GeneratedNamespace;
 
-        var hasGlobal = NormalizeDistinct(_globalMiddlewares).Length > 0;
+        var globalMids = NormalizeDistinct(_globalMiddlewares);
+        var hasGlobal = globalMids.Length > 0;
 
-        var perCmdSet = new HashSet<string>(_perCommand.Keys.Select(NormalizeFullyQualifiedType), StringComparer.Ordinal);
+        // Normalize per-command set
+        var perCmdSet = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var k in _perCommand.Keys)
+        {
+            var cmd = NormalizeFullyQualifiedType(k);
+            if (!string.IsNullOrWhiteSpace(cmd)) perCmdSet.Add(cmd);
+        }
 
-        // Build command -> policyPipelineType mapping (closed by command, but pipeline is open per policy)
-        var cmdToPolicyPipeline = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var p in _policies.Values)
+        // command -> policy pipeline type open (first match wins)
+        var cmdToPolicyPipelineOpen = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var p in _policies.Values.OrderBy(x => NormalizeFullyQualifiedType(x.PolicyTypeFqn), StringComparer.Ordinal))
         {
             var policyName = SanitizePolicyName(p.PolicyTypeFqn);
-            var policyPipelineOpen = $"{generatedNsFqn}.TinyDispatcherPolicyPipeline_{policyName}";
+            var policyPipelineOpen = genNs + ".TinyDispatcherPolicyPipeline_" + policyName;
 
-            foreach (var cmd in p.Commands.Select(NormalizeFullyQualifiedType))
+            for (int i = 0; i < p.Commands.Length; i++)
             {
-                // If multiple policies claim same command, first wins deterministically by policy order at call site.
-                // (You can later add explicit ordering rules if needed.)
-                if (!cmdToPolicyPipeline.ContainsKey(cmd))
-                    cmdToPolicyPipeline[cmd] = policyPipelineOpen;
+                var cmd = NormalizeFullyQualifiedType(p.Commands[i]);
+                if (string.IsNullOrWhiteSpace(cmd)) continue;
+                if (!cmdToPolicyPipelineOpen.ContainsKey(cmd))
+                    cmdToPolicyPipelineOpen[cmd] = policyPipelineOpen;
             }
         }
 
-        var policyCmdSet = new HashSet<string>(cmdToPolicyPipeline.Keys, StringComparer.Ordinal);
+        var policyCmdSet = new HashSet<string>(cmdToPolicyPipelineOpen.Keys, StringComparer.Ordinal);
 
-        // IMPORTANT: same namespace/type as EmptyPipelineContributionEmitter
-        sb.AppendLine($"namespace {options.GeneratedNamespace}");
+        // Collect all middleware open generics for registration
+        var allMw = new List<MiddlewareRef>();
+        allMw.AddRange(globalMids);
+
+        foreach (var kv in _perCommand)
+            allMw.AddRange(NormalizeDistinct(kv.Value));
+
+        foreach (var p in _policies.Values)
+            allMw.AddRange(NormalizeDistinct(p.Middlewares));
+
+        var allDistinct = NormalizeDistinct(allMw.ToImmutableArray());
+
+        sb.AppendLine("namespace " + options.GeneratedNamespace);
         sb.AppendLine("{");
         sb.AppendLine("  internal static partial class ThisAssemblyPipelineContribution");
         sb.AppendLine("  {");
@@ -384,43 +483,47 @@ public sealed class PipelineEmitter : ICodeEmitter
         sb.AppendLine("      if (services is null) throw new ArgumentNullException(nameof(services));");
         sb.AppendLine();
 
-        // 1) Per-command pipelines
+        if (allDistinct.Length > 0)
+        {
+            sb.AppendLine("      // Middleware open-generic registrations (required for generated pipelines ctor injection)");
+            for (int i = 0; i < allDistinct.Length; i++)
+            {
+                var mw = allDistinct[i];
+                sb.AppendLine("      services.TryAddTransient(typeof(" + OpenGenericTypeof(mw) + "));");
+            }
+            sb.AppendLine();
+        }
+
+        // Per-command pipelines (Scoped)
         foreach (var cmd in perCmdSet.OrderBy(x => x, StringComparer.Ordinal))
         {
             var className = "TinyDispatcherPipeline_" + SanitizeCommandName(cmd);
-            sb.AppendLine($"      services.AddTransient<{core}.ICommandPipeline<{cmd}, {ctx}>, {generatedNsFqn}.{className}>();");
+            sb.AppendLine("      services.AddScoped<" + core + ".ICommandPipeline<" + cmd + ", " + ctx + ">, " + genNs + "." + className + ">();");
         }
 
-        // 2) Policy pipelines (commands without per-command override)
+        // Policy pipelines ONLY for commands without per-command pipeline
         foreach (var cmd in policyCmdSet.OrderBy(x => x, StringComparer.Ordinal))
         {
-            if (perCmdSet.Contains(cmd))
-                continue;
+            if (perCmdSet.Contains(cmd)) continue;
 
-            var policyPipelineOpen = cmdToPolicyPipeline[cmd];
-            sb.AppendLine(
-                $"      services.AddTransient<{core}.IPolicyCommandPipeline<{cmd}, {ctx}>, {policyPipelineOpen}<{cmd}> >();"
-                .Replace("> >", ">>"));
+            var open = cmdToPolicyPipelineOpen[cmd];
+            sb.AppendLine("      services.AddScoped<" + core + ".IPolicyCommandPipeline<" + cmd + ", " + ctx + ">, " + open + "<" + cmd + ">>();");
         }
 
-        // 3) Global pipelines for remaining commands
-        if (hasGlobal && result.Commands.Length > 0)
+        // Global pipelines for remaining commands
+        if (hasGlobal && result != null && result.Commands.Length > 0)
         {
             sb.AppendLine();
             sb.AppendLine("      // Global pipeline registrations (commands without per-command overrides or policy pipelines)");
-            foreach (var c in result.Commands)
+            for (int i = 0; i < result.Commands.Length; i++)
             {
-                var cmd = NormalizeFullyQualifiedType(c.MessageTypeFqn);
+                var cmd = NormalizeFullyQualifiedType(result.Commands[i].MessageTypeFqn);
+                if (string.IsNullOrWhiteSpace(cmd)) continue;
 
-                if (perCmdSet.Contains(cmd))
-                    continue;
+                if (perCmdSet.Contains(cmd)) continue;
+                if (policyCmdSet.Contains(cmd)) continue;
 
-                if (policyCmdSet.Contains(cmd))
-                    continue;
-
-                sb.AppendLine(
-                    $"      services.AddTransient<{core}.IGlobalCommandPipeline<{cmd}, {ctx}>, {generatedNsFqn}.TinyDispatcherGlobalPipeline<{cmd}> >();"
-                    .Replace("> >", ">>"));
+                sb.AppendLine("      services.AddScoped<" + core + ".IGlobalCommandPipeline<" + cmd + ", " + ctx + ">, " + genNs + ".TinyDispatcherGlobalPipeline<" + cmd + ">>();");
             }
         }
 
@@ -429,149 +532,124 @@ public sealed class PipelineEmitter : ICodeEmitter
         sb.AppendLine("}");
     }
 
-    private ResolvedPipeline ResolvePipelineForCommand(
-    string commandFqn,
-    string ctxFqn,
-    string handlerFqn)
+    // ============================================================
+    // Helper: build per-command policy middleware map
+    // ============================================================
+
+    private Dictionary<string, MiddlewareRef[]> BuildCommandToPolicyMiddlewares()
     {
-        var cmd = NormalizeFullyQualifiedType(commandFqn);
-        var ctx = NormalizeFullyQualifiedType(ctxFqn);
-        var handler = NormalizeFullyQualifiedType(handlerFqn);
+        var map = new Dictionary<string, MiddlewareRef[]>(StringComparer.Ordinal);
 
-        var globals = NormalizeDistinct(_globalMiddlewares);
-        var perCmd = _perCommand.TryGetValue(cmd, out var perCmdMids)
-            ? NormalizeDistinct(perCmdMids)
-            : Array.Empty<MiddlewareRef>();
-
-        // Determine policy (if any) that claims this command (deterministic order by policy fqn)
-        PolicySpec? policy = null;
-
-        foreach (var p in _policies.Values.OrderBy(x => x.PolicyTypeFqn, StringComparer.Ordinal))
+        foreach (var p in _policies.Values.OrderBy(x => NormalizeFullyQualifiedType(x.PolicyTypeFqn), StringComparer.Ordinal))
         {
-            if (p.Commands.Any(c => string.Equals(NormalizeFullyQualifiedType(c), cmd, StringComparison.Ordinal)))
+            var mids = NormalizeDistinct(p.Middlewares);
+            if (mids.Length == 0) continue;
+
+            for (int i = 0; i < p.Commands.Length; i++)
             {
-                policy = p;
-                break;
+                var cmd = NormalizeFullyQualifiedType(p.Commands[i]);
+                if (string.IsNullOrWhiteSpace(cmd)) continue;
+
+                if (!map.ContainsKey(cmd))
+                    map[cmd] = mids; // first wins
             }
         }
 
-        var appliedPolicies = policy is null
-            ? ImmutableArray<string>.Empty
-            : ImmutableArray.Create(NormalizeFullyQualifiedType(policy.PolicyTypeFqn));
-
-        // Effective middleware order as executed:
-        // - Global (outer)
-        // - Policy (inner) (if any)
-        // - Per-command (inner-most among middleware)
-        // - Handler final
-        //
-        // NOTE: Your generated pipelines currently do:
-        // per-command: per-command inner, then global outer
-        // policy: policy inner, then global outer
-        // So in *execution order* the global runs first, then policy/command, then handler.
-        var list = ImmutableArray.CreateBuilder<ResolvedMiddleware>();
-
-        // global (outer)
-        foreach (var mw in globals)
-            list.Add(new ResolvedMiddleware(mw, "Global"));
-
-        // policy (middle)
-        if (policy is not null)
-        {
-            foreach (var mw in NormalizeDistinct(policy.Middlewares))
-                list.Add(new ResolvedMiddleware(mw, $"Policy:{NormalizeFullyQualifiedType(policy.PolicyTypeFqn)}"));
-        }
-
-        // per-command (inner-most)
-        foreach (var mw in perCmd)
-            list.Add(new ResolvedMiddleware(mw, $"Command:{cmd}"));
-
-        return new ResolvedPipeline(
-            CommandFqn: cmd,
-            ContextFqn: ctx,
-            HandlerFqn: handler,
-            Middlewares: list.ToImmutable(),
-            PoliciesApplied: appliedPolicies);
+        return map;
     }
-    private static PipelineDescriptor ToDescriptor(ResolvedPipeline p)
-    {
-        var mids = p.Middlewares
-            .Select(m => new MiddlewareDescriptor(
-                MiddlewareFullName: m.Middleware.OpenTypeFqn,
-                Source: m.Source))
-            .ToArray();
-
-        return new PipelineDescriptor(
-            CommandFullName: p.CommandFqn,
-            ContextFullName: p.ContextFqn,
-            HandlerFullName: p.HandlerFqn,
-            Middlewares: mids,
-            PoliciesApplied: p.PoliciesApplied.ToArray());
-    }
-
-
 
     // ============================================================
-    // HELPERS
+    // Helpers (C#7 / netstandard2-safe)
     // ============================================================
 
     private static MiddlewareRef[] NormalizeDistinct(ImmutableArray<MiddlewareRef> items)
-        => items
-            .Where(x => !string.IsNullOrWhiteSpace(x.OpenTypeFqn))
-            .Select(x => new MiddlewareRef(NormalizeFullyQualifiedType(x.OpenTypeFqn), x.Arity))
-            .Distinct()
+    {
+        if (items.IsDefaultOrEmpty) return Array.Empty<MiddlewareRef>();
+
+        var list = new List<MiddlewareRef>(items.Length);
+        for (int i = 0; i < items.Length; i++)
+        {
+            var x = items[i];
+            if (x == null) continue;
+
+            var fqn = x.OpenTypeFqn;
+            if (string.IsNullOrWhiteSpace(fqn)) continue;
+
+            list.Add(new MiddlewareRef(NormalizeFullyQualifiedType(fqn), x.Arity));
+        }
+
+        // Distinct by (OpenTypeFqn, Arity)
+        var distinct = list
+            .GroupBy(m => m.OpenTypeFqn + "|" + m.Arity.ToString(), StringComparer.Ordinal)
+            .Select(g => g.First())
+            .OrderBy(m => m.OpenTypeFqn, StringComparer.Ordinal)
             .ToArray();
 
-    private static string[] NormalizeDistinct(ImmutableArray<string> items)
-        => items
-            .Where(s => !string.IsNullOrWhiteSpace(s))
-            .Select(NormalizeFullyQualifiedType)
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
+        return distinct;
+    }
 
     private static string NormalizeFullyQualifiedType(string typeName)
     {
+        if (string.IsNullOrWhiteSpace(typeName))
+            return string.Empty;
+
         var trimmed = typeName.Trim();
+
         if (!trimmed.StartsWith("global::", StringComparison.Ordinal))
             trimmed = "global::" + trimmed;
 
-        return trimmed.StartsWith("global::global::", StringComparison.Ordinal)
-            ? "global::" + trimmed.Substring("global::global::".Length)
-            : trimmed;
+        if (trimmed.StartsWith("global::global::", StringComparison.Ordinal))
+            trimmed = "global::" + trimmed.Substring("global::global::".Length);
+
+        return trimmed;
     }
 
-    private static string CloseMiddleware(MiddlewareRef mw, string cmdType, string ctxType)
-        => mw.Arity == 2
-            ? $"{mw.OpenTypeFqn}<{cmdType}, {ctxType}>"
-            : $"{mw.OpenTypeFqn}<{cmdType}>";
-
-    private static string StepName(string openMiddlewareFqn)
+    private static string CloseMiddleware(MiddlewareRef mw, string cmd, string ctx)
     {
-        var s = openMiddlewareFqn.StartsWith("global::", StringComparison.Ordinal)
-            ? openMiddlewareFqn.Substring("global::".Length)
-            : openMiddlewareFqn;
+        if (mw.Arity == 2) return mw.OpenTypeFqn + "<" + cmd + ", " + ctx + ">";
+        return mw.OpenTypeFqn + "<" + cmd + ">";
+    }
 
-        var lastDot = s.LastIndexOf('.');
-        var name = lastDot >= 0 ? s.Substring(lastDot + 1) : s;
+    private static string OpenGenericTypeof(MiddlewareRef mw)
+    {
+        if (mw.Arity == 2) return mw.OpenTypeFqn + "<,>";
+        return mw.OpenTypeFqn + "<>";
+    }
 
-        const string suffix = "Middleware";
-        if (name.EndsWith(suffix, StringComparison.Ordinal) && name.Length > suffix.Length)
-            name = name.Substring(0, name.Length - suffix.Length);
+    private static string FieldName(MiddlewareRef mw)
+    {
+        return "_" + CtorParamName(mw);
+    }
 
-        if (string.IsNullOrWhiteSpace(name))
-            name = "Step";
+    private static string CtorParamName(MiddlewareRef mw)
+    {
+        var open = mw.OpenTypeFqn ?? string.Empty;
 
-        if (!char.IsLetter(name[0]) && name[0] != '_')
-            name = "_" + name;
+        var lastDot = open.LastIndexOf('.');
+        var shortName = lastDot >= 0 ? open.Substring(lastDot + 1) : open;
 
-        return name;
+        // strip `2
+        var tick = shortName.IndexOf('`');
+        if (tick >= 0)
+            shortName = shortName.Substring(0, tick);
+
+        if (shortName.EndsWith("Middleware", StringComparison.Ordinal))
+            shortName = shortName.Substring(0, shortName.Length - "Middleware".Length);
+
+        if (string.IsNullOrWhiteSpace(shortName))
+            shortName = "Middleware";
+
+        if (shortName.Length == 1)
+            return char.ToLowerInvariant(shortName[0]).ToString();
+
+        return char.ToLowerInvariant(shortName[0]) + shortName.Substring(1);
     }
 
     private static string SanitizeCommandName(string cmdFqn)
     {
-        var s = cmdFqn.StartsWith("global::", StringComparison.Ordinal)
-            ? cmdFqn.Substring("global::".Length)
-            : cmdFqn;
+        var s = cmdFqn;
+        if (s.StartsWith("global::", StringComparison.Ordinal))
+            s = s.Substring("global::".Length);
 
         var lastDot = s.LastIndexOf('.');
         var name = lastDot >= 0 ? s.Substring(lastDot + 1) : s;
@@ -582,23 +660,11 @@ public sealed class PipelineEmitter : ICodeEmitter
 
     private static string SanitizePolicyName(string policyTypeFqn)
     {
-        // "global::ConsoleApp11.CheckoutPolicy" -> "ConsoleApp11_CheckoutPolicy"
-        var s = policyTypeFqn.StartsWith("global::", StringComparison.Ordinal)
-            ? policyTypeFqn.Substring("global::".Length)
-            : policyTypeFqn;
+        var s = policyTypeFqn;
+        if (s.StartsWith("global::", StringComparison.Ordinal))
+            s = s.Substring("global::".Length);
 
         var chars = s.Select(c => char.IsLetterOrDigit(c) ? c : '_').ToArray();
         return new string(chars);
     }
-
-    private sealed record ResolvedPipeline(
-        string CommandFqn,
-        string ContextFqn,
-        string HandlerFqn,
-        ImmutableArray<ResolvedMiddleware> Middlewares,
-        ImmutableArray<string> PoliciesApplied);
-
-    private sealed record ResolvedMiddleware(
-        MiddlewareRef Middleware,
-        string Source);
 }
