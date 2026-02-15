@@ -1,16 +1,4 @@
-﻿//
-// Fixes:
-// - Correct middleware execution order: Global (outermost) -> Policy -> Per-command -> Handler
-// - Ensures that when a command has BOTH policy + per-command middleware, BOTH run (policy is included inside per-command pipeline)
-// - Registers open-generic middleware types for ctor injection
-// - Registers pipelines as Scoped (stateful)
-//
-// Contract hardening:
-// - Single pipeline contract only: ICommandPipeline<TCommand,TContext>
-// - Global + Policy pipelines implement ICommandPipeline<TCommand,TContext>
-// - Generator registers exactly one ICommandPipeline<Cmd,Ctx> per command (per-command > policy > global)
-
-#nullable enable
+﻿#nullable enable
 
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,12 +16,6 @@ namespace TinyDispatcher.SourceGen.Emitters;
 
 public sealed class PipelineEmitter : ICodeEmitter
 {
-    public sealed record PolicySpec(
-        string PolicyTypeFqn,
-        ImmutableArray<MiddlewareRef> Middlewares,
-        ImmutableArray<string> Commands
-    );
-
     private readonly ImmutableArray<MiddlewareRef> _globalMiddlewares;
     private readonly ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> _perCommand;
     private readonly ImmutableDictionary<string, PolicySpec> _policies;

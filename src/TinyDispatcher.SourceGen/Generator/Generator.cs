@@ -212,7 +212,7 @@ public sealed class Generator : IIncrementalGenerator
             return;
 
         // Emit pipelines
-        new PipelineEmitter(globals, perCmd, policies)
+        new PipelineEmitterRefactored(globals, perCmd, policies)
             .Emit(roslynContext, discoveryResult, effectiveOptions);
     }
 }

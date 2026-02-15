@@ -16,14 +16,14 @@ internal sealed class PolicySpecBuilder
     public PolicySpecBuilder(MiddlewareRefFactory mwFactory)
         => _mwFactory = mwFactory ?? throw new ArgumentNullException(nameof(mwFactory));
 
-    public ImmutableDictionary<string, PipelineEmitter.PolicySpec> Build(
+    public ImmutableDictionary<string, PolicySpec> Build(
         Compilation compilation,
         string expectedContextFqn,
         List<INamedTypeSymbol> policies,
         List<Diagnostic> diags)
     {
         if (policies is null || policies.Count == 0)
-            return ImmutableDictionary<string, PipelineEmitter.PolicySpec>.Empty;
+            return ImmutableDictionary<string, PolicySpec>.Empty;
 
         // Distinct policy symbols
         var distinct = new Dictionary<string, INamedTypeSymbol>(StringComparer.Ordinal);
@@ -34,7 +34,7 @@ internal sealed class PolicySpecBuilder
                 distinct[key] = p;
         }
 
-        var builder = ImmutableDictionary.CreateBuilder<string, PipelineEmitter.PolicySpec>(StringComparer.Ordinal);
+        var builder = ImmutableDictionary.CreateBuilder<string, PolicySpec>(StringComparer.Ordinal);
 
         foreach (var kv in distinct)
         {
@@ -89,7 +89,7 @@ internal sealed class PolicySpecBuilder
             if (midsDistinct.Length == 0 || cmdsDistinct.Length == 0)
                 continue;
 
-            builder[policyTypeFqn] = new PipelineEmitter.PolicySpec(
+            builder[policyTypeFqn] = new PolicySpec(
                 PolicyTypeFqn: policyTypeFqn,
                 Middlewares: midsDistinct,
                 Commands: cmdsDistinct);
