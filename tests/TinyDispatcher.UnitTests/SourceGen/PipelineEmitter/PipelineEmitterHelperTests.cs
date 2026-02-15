@@ -4,18 +4,18 @@ using System;
 using System.Collections.Immutable;
 using System.Linq;
 using TinyDispatcher.SourceGen.Abstractions;
-using TinyDispatcher.SourceGen.Emitters;
+using TinyDispatcher.SourceGen.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 using Xunit;
 
-namespace TinyDispatcher.UnitTests.PipelineEmitter;
+namespace TinyDispatcher.UnitTests.SourceGen.PipelineEmitter;
 
 public sealed class PipelineEmitterHelpersTests
 {
     [Fact]
     public void Normalize_fqn_adds_global_prefix_when_missing()
     {
-        var result = PipelineEmitterRefactored.TypeNames.NormalizeFqn("MyApp.Foo");
+        var result = TypeNames.NormalizeFqn("MyApp.Foo");
 
         Assert.Equal("global::MyApp.Foo", result);
     }
@@ -23,7 +23,7 @@ public sealed class PipelineEmitterHelpersTests
     [Fact]
     public void Normalize_fqn_deduplicates_double_global_prefix()
     {
-        var result = PipelineEmitterRefactored.TypeNames.NormalizeFqn("global::global::MyApp.Foo");
+        var result = TypeNames.NormalizeFqn("global::global::MyApp.Foo");
 
         Assert.Equal("global::MyApp.Foo", result);
     }
@@ -33,7 +33,7 @@ public sealed class PipelineEmitterHelpersTests
     {
         var mw = new MiddlewareRef("global::MyApp.Mw", 2);
 
-        var closed = PipelineEmitterRefactored.TypeNames.CloseMiddleware(mw, "TCommand", "global::MyApp.Ctx");
+        var closed = TypeNames.CloseMiddleware(mw, "TCommand", "global::MyApp.Ctx");
 
         Assert.Equal("global::MyApp.Mw<TCommand, global::MyApp.Ctx>", closed);
     }
@@ -43,7 +43,7 @@ public sealed class PipelineEmitterHelpersTests
     {
         var mw = new MiddlewareRef("global::MyApp.Mw", 1);
 
-        var closed = PipelineEmitterRefactored.TypeNames.CloseMiddleware(mw, "TCommand", "global::MyApp.Ctx");
+        var closed = TypeNames.CloseMiddleware(mw, "TCommand", "global::MyApp.Ctx");
 
         Assert.Equal("global::MyApp.Mw<TCommand>", closed);
     }
@@ -53,7 +53,7 @@ public sealed class PipelineEmitterHelpersTests
     {
         var mw = new MiddlewareRef("global::MyApp.Mw", 2);
 
-        var open = PipelineEmitterRefactored.TypeNames.OpenGenericTypeof(mw);
+        var open = TypeNames.OpenGenericTypeof(mw);
 
         Assert.Equal("global::MyApp.Mw<,>", open);
     }
@@ -63,7 +63,7 @@ public sealed class PipelineEmitterHelpersTests
     {
         var mw = new MiddlewareRef("global::MyApp.Mw", 1);
 
-        var open = PipelineEmitterRefactored.TypeNames.OpenGenericTypeof(mw);
+        var open = TypeNames.OpenGenericTypeof(mw);
 
         Assert.Equal("global::MyApp.Mw<>", open);
     }
@@ -78,7 +78,7 @@ public sealed class PipelineEmitterHelpersTests
             new MiddlewareRef("global::A.Mw", 1)  // not dup (different arity)
         );
 
-        var distinct = PipelineEmitterRefactored.MiddlewareSets.NormalizeDistinct(items);
+        var distinct = MiddlewareSets.NormalizeDistinct(items);
 
         Assert.Equal(3, distinct.Length);
 
@@ -98,7 +98,7 @@ public sealed class PipelineEmitterHelpersTests
     {
         var mw = new MiddlewareRef("global::MyApp.Logging.GlobalLogMiddleware`2", 2);
 
-        var name = PipelineEmitterRefactored.NameFactory.CtorParamName(mw);
+        var name = NameFactory.CtorParamName(mw);
 
         Assert.Equal("globalLog", name);
     }
@@ -108,7 +108,7 @@ public sealed class PipelineEmitterHelpersTests
     {
         var mw = new MiddlewareRef("global::MyApp.XMiddleware", 1);
 
-        var name = PipelineEmitterRefactored.NameFactory.CtorParamName(mw);
+        var name = NameFactory.CtorParamName(mw);
 
         Assert.Equal("x", name);
     }
@@ -118,7 +118,7 @@ public sealed class PipelineEmitterHelpersTests
     {
         var mw = new MiddlewareRef("global::MyApp.GlobalLogMiddleware", 2);
 
-        var field = PipelineEmitterRefactored.NameFactory.FieldName(mw);
+        var field = NameFactory.FieldName(mw);
 
         Assert.Equal("_globalLog", field);
     }
@@ -128,7 +128,7 @@ public sealed class PipelineEmitterHelpersTests
     {
         var cmd = "global::MyApp.Commands.Do-Thing+Inner";
 
-        var name = PipelineEmitterRefactored.NameFactory.SanitizeCommandName(cmd);
+        var name = NameFactory.SanitizeCommandName(cmd);
 
         Assert.Equal("Do_Thing_Inner", name);
     }
@@ -138,7 +138,7 @@ public sealed class PipelineEmitterHelpersTests
     {
         var policy = "global::MyApp.Policies.CheckoutPolicy+Nested";
 
-        var name = PipelineEmitterRefactored.NameFactory.SanitizePolicyName(policy);
+        var name = NameFactory.SanitizePolicyName(policy);
 
         Assert.Equal("MyApp_Policies_CheckoutPolicy_Nested", name);
     }

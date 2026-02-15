@@ -4,12 +4,12 @@ using System;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text.RegularExpressions;
-using TinyDispatcher.SourceGen.Emitters;
+using TinyDispatcher.SourceGen.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 using Xunit;
-using static TinyDispatcher.SourceGen.Emitters.PipelineEmitterRefactored;
+using static TinyDispatcher.SourceGen.Emitters.Pipelines.PipelineEmitter;
 
-namespace TinyDispatcher.UnitTests.PipelineEmitter;
+namespace TinyDispatcher.UnitTests.SourceGen.PipelineEmitter;
 
 public sealed class PipelineSourceWriterTests
 {
@@ -24,7 +24,7 @@ public sealed class PipelineSourceWriterTests
                 steps: new[] { new MiddlewareRef("global::MyApp.GlobalLogMiddleware", 2) }
             ));
 
-        var source = PipelineEmitterRefactored.PipelineSourceWriter.Write(plan);
+        var source = PipelineSourceWriter.Write(plan);
 
         Assert.Contains("internal sealed class TinyDispatcherGlobalPipeline<TCommand>", source, StringComparison.Ordinal);
         Assert.Contains("where TCommand : global::TinyDispatcher.ICommand", source, StringComparison.Ordinal);
@@ -54,7 +54,7 @@ public sealed class PipelineSourceWriterTests
                     new[] { new MiddlewareRef("global::MyApp.P1", 2) })
             });
 
-        var source = PipelineEmitterRefactored.PipelineSourceWriter.Write(plan);
+        var source = PipelineSourceWriter.Write(plan);
 
         // It MUST exist (nested inside pipeline types)
         Assert.Contains("private sealed class Runtime", source, StringComparison.Ordinal);
@@ -77,7 +77,7 @@ public sealed class PipelineSourceWriterTests
                 "TCommand",
                 new[] { new MiddlewareRef("global::MyApp.G1", 2) }));
 
-        var source = PipelineEmitterRefactored.PipelineSourceWriter.Write(plan);
+        var source = PipelineSourceWriter.Write(plan);
 
         Assert.Contains("public TinyDispatcherGlobalPipeline(", source, StringComparison.Ordinal);
         Assert.DoesNotContain("public TinyDispatcherGlobalPipeline<TCommand>(", source, StringComparison.Ordinal);
@@ -99,7 +99,7 @@ public sealed class PipelineSourceWriterTests
 
         var plan = Create_plan(perCommandPipelines: new[] { pipeline });
 
-        var source = PipelineEmitterRefactored.PipelineSourceWriter.Write(plan);
+        var source = PipelineSourceWriter.Write(plan);
 
         var case0 = source.IndexOf("case 0:", StringComparison.Ordinal);
         var case1 = source.IndexOf("case 1:", StringComparison.Ordinal);
@@ -136,7 +136,7 @@ public sealed class PipelineSourceWriterTests
                     new[] { new MiddlewareRef("global::MyApp.C1", 2) })
             });
 
-        var source = PipelineEmitterRefactored.PipelineSourceWriter.Write(plan);
+        var source = PipelineSourceWriter.Write(plan);
 
         Assert.Equal(Count(source, "{"), Count(source, "}"));
     }
@@ -145,21 +145,21 @@ public sealed class PipelineSourceWriterTests
     // Plan builders
     // ------------------------------------------------------------
 
-    private static PipelineEmitterRefactored.PipelinePlan Create_plan(
-        PipelineEmitterRefactored.PipelineDefinition? globalPipeline = null,
-        PipelineEmitterRefactored.PipelineDefinition[]? policyPipelines = null,
-        PipelineEmitterRefactored.PipelineDefinition[]? perCommandPipelines = null)
+    private static PipelinePlan Create_plan(
+        PipelineDefinition? globalPipeline = null,
+        PipelineDefinition[]? policyPipelines = null,
+        PipelineDefinition[]? perCommandPipelines = null)
     {
-        return new PipelineEmitterRefactored.PipelinePlan(
+        return new PipelinePlan(
             GeneratedNamespace: "MyApp.Generated",
             ContextFqn: "global::MyApp.AppContext",
             CoreFqn: "global::TinyDispatcher",
             ShouldEmit: true,
             GlobalPipeline: globalPipeline,
-            PolicyPipelines: (policyPipelines ?? Array.Empty<PipelineEmitterRefactored.PipelineDefinition>()).ToImmutableArray(),
-            PerCommandPipelines: (perCommandPipelines ?? Array.Empty<PipelineEmitterRefactored.PipelineDefinition>()).ToImmutableArray(),
-            OpenGenericMiddlewareRegistrations: ImmutableArray<PipelineEmitterRefactored.OpenGenericRegistration>.Empty,
-            ServiceRegistrations: ImmutableArray<PipelineEmitterRefactored.ServiceRegistration>.Empty
+            PolicyPipelines: (policyPipelines ?? Array.Empty<PipelineDefinition>()).ToImmutableArray(),
+            PerCommandPipelines: (perCommandPipelines ?? Array.Empty<PipelineDefinition>()).ToImmutableArray(),
+            OpenGenericMiddlewareRegistrations: ImmutableArray<OpenGenericRegistration>.Empty,
+            ServiceRegistrations: ImmutableArray<ServiceRegistration>.Empty
         );
     }
 
@@ -169,11 +169,11 @@ public sealed class PipelineSourceWriterTests
         string commandType,
         MiddlewareRef[] steps)
     {
-        return new PipelineEmitterRefactored.PipelineDefinition(
+        return new PipelineDefinition(
             ClassName: className,
             IsOpenGeneric: isOpenGeneric,
             CommandType: commandType,
-            Steps: steps.Select(m => new PipelineEmitterRefactored.MiddlewareStep(m)).ToImmutableArray()
+            Steps: steps.Select(m => new MiddlewareStep(m)).ToImmutableArray()
         );
     }
 

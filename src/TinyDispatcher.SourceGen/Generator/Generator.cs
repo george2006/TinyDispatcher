@@ -30,6 +30,7 @@ using TinyDispatcher.SourceGen.Internal;
 using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Discovery;
 using TinyDispatcher.SourceGen.Emitters;
+using TinyDispatcher.SourceGen.Emitters.Pipelines;
 
 namespace TinyDispatcher.SourceGen.Generator;
 
@@ -212,7 +213,7 @@ public sealed class Generator : IIncrementalGenerator
             return;
 
         // Emit pipelines
-        new PipelineEmitterRefactored(globals, perCmd, policies)
+        new PipelineEmitter(globals, perCmd, policies)
             .Emit(roslynContext, discoveryResult, effectiveOptions);
     }
 }

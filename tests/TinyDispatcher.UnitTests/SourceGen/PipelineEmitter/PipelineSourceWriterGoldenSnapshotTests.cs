@@ -5,11 +5,11 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using TinyDispatcher.SourceGen.Abstractions;
-using TinyDispatcher.SourceGen.Emitters;
+using TinyDispatcher.SourceGen.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 using Xunit;
 
-namespace TinyDispatcher.UnitTests.PipelineEmitter;
+namespace TinyDispatcher.UnitTests.SourceGen.PipelineEmitter;
 
 public sealed class PipelineSourceWriterGoldenSnapshotTests
 {
@@ -18,7 +18,7 @@ public sealed class PipelineSourceWriterGoldenSnapshotTests
     {
         var plan = Create_plan();
 
-        var source = PipelineEmitterRefactored.PipelineSourceWriter.Write(plan);
+        var source = PipelineSourceWriter.Write(plan);
 
         var snapshot = Create_snapshot(source);
 
@@ -58,64 +58,64 @@ public sealed class PipelineSourceWriterGoldenSnapshotTests
         Assert.Equal(expected, snapshot);
     }
 
-    private static PipelineEmitterRefactored.PipelinePlan Create_plan()
+    private static PipelinePlan Create_plan()
     {
         var genNs = "MyApp.Generated";
         var ctx = "global::MyApp.AppContext";
         var core = "global::TinyDispatcher";
 
         // Global: applies to all commands without per-command and without policy
-        var globalPipeline = new PipelineEmitterRefactored.PipelineDefinition(
+        var globalPipeline = new PipelineDefinition(
             ClassName: "TinyDispatcherGlobalPipeline",
             IsOpenGeneric: true,
             CommandType: "TCommand",
             Steps: ImmutableArray.Create(
-                new PipelineEmitterRefactored.MiddlewareStep(new MiddlewareRef("global::MyApp.GlobalLogMiddleware", 2)))
+                new MiddlewareStep(new MiddlewareRef("global::MyApp.GlobalLogMiddleware", 2)))
         );
 
         // Policy: applies to CmdB (CmdA has per-command, so DI registration should prefer per-command)
-        var policyPipeline = new PipelineEmitterRefactored.PipelineDefinition(
+        var policyPipeline = new PipelineDefinition(
             ClassName: "TinyDispatcherPolicyPipeline_MyApp_CheckoutPolicy",
             IsOpenGeneric: true,
             CommandType: "TCommand",
             Steps: ImmutableArray.Create(
-                new PipelineEmitterRefactored.MiddlewareStep(new MiddlewareRef("global::MyApp.GlobalLogMiddleware", 2)),
-                new PipelineEmitterRefactored.MiddlewareStep(new MiddlewareRef("global::MyApp.PolicyLogMiddleware", 2)))
+                new MiddlewareStep(new MiddlewareRef("global::MyApp.GlobalLogMiddleware", 2)),
+                new MiddlewareStep(new MiddlewareRef("global::MyApp.PolicyLogMiddleware", 2)))
         );
 
         // Per-command: CmdA includes global + policy + per-command
-        var perCommandPipeline = new PipelineEmitterRefactored.PipelineDefinition(
+        var perCommandPipeline = new PipelineDefinition(
             ClassName: "TinyDispatcherPipeline_CmdA",
             IsOpenGeneric: false,
             CommandType: "global::MyApp.CmdA",
             Steps: ImmutableArray.Create(
-                new PipelineEmitterRefactored.MiddlewareStep(new MiddlewareRef("global::MyApp.GlobalLogMiddleware", 2)),
-                new PipelineEmitterRefactored.MiddlewareStep(new MiddlewareRef("global::MyApp.PolicyLogMiddleware", 2)),
-                new PipelineEmitterRefactored.MiddlewareStep(new MiddlewareRef("global::MyApp.PerCommandLogMiddleware", 2)))
+                new MiddlewareStep(new MiddlewareRef("global::MyApp.GlobalLogMiddleware", 2)),
+                new MiddlewareStep(new MiddlewareRef("global::MyApp.PolicyLogMiddleware", 2)),
+                new MiddlewareStep(new MiddlewareRef("global::MyApp.PerCommandLogMiddleware", 2)))
         );
 
         var mwRegs = ImmutableArray.Create(
-            new PipelineEmitterRefactored.OpenGenericRegistration("global::MyApp.GlobalLogMiddleware<,>"),
-            new PipelineEmitterRefactored.OpenGenericRegistration("global::MyApp.PerCommandLogMiddleware<,>"),
-            new PipelineEmitterRefactored.OpenGenericRegistration("global::MyApp.PolicyLogMiddleware<,>")
+            new OpenGenericRegistration("global::MyApp.GlobalLogMiddleware<,>"),
+            new OpenGenericRegistration("global::MyApp.PerCommandLogMiddleware<,>"),
+            new OpenGenericRegistration("global::MyApp.PolicyLogMiddleware<,>")
         );
 
         var svcRegs = ImmutableArray.Create(
-            new PipelineEmitterRefactored.ServiceRegistration(
+            new ServiceRegistration(
                 ServiceTypeExpression: $"{core}.ICommandPipeline<global::MyApp.CmdA, {ctx}>",
                 ImplementationTypeExpression: $"global::{genNs}.TinyDispatcherPipeline_CmdA"
             ),
-            new PipelineEmitterRefactored.ServiceRegistration(
+            new ServiceRegistration(
                 ServiceTypeExpression: $"{core}.ICommandPipeline<global::MyApp.CmdB, {ctx}>",
                 ImplementationTypeExpression: $"global::{genNs}.TinyDispatcherPolicyPipeline_MyApp_CheckoutPolicy<global::MyApp.CmdB>"
             ),
-            new PipelineEmitterRefactored.ServiceRegistration(
+            new ServiceRegistration(
                 ServiceTypeExpression: $"{core}.ICommandPipeline<global::MyApp.CmdC, {ctx}>",
                 ImplementationTypeExpression: $"global::{genNs}.TinyDispatcherGlobalPipeline<global::MyApp.CmdC>"
             )
         );
 
-        return new PipelineEmitterRefactored.PipelinePlan(
+        return new PipelinePlan(
             GeneratedNamespace: genNs,
             ContextFqn: ctx,
             CoreFqn: core,

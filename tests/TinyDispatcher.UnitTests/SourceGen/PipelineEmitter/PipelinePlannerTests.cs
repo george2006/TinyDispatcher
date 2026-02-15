@@ -6,11 +6,11 @@ using System.Collections.Immutable;
 using System.Linq;
 using TinyDispatcher.SourceGen;
 using TinyDispatcher.SourceGen.Abstractions;
-using TinyDispatcher.SourceGen.Emitters;
+using TinyDispatcher.SourceGen.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 using Xunit;
 
-namespace TinyDispatcher.UnitTests.PipelineEmitter;
+namespace TinyDispatcher.UnitTests.SourceGen.PipelineEmitter;
 
 public sealed class PipelinePlannerTests
 {
@@ -29,7 +29,7 @@ public sealed class PipelinePlannerTests
 
         var options = FakeOptions("MyApp.Generated", "global::MyApp.AppContext");
 
-        var plan = PipelineEmitterRefactored.PipelinePlanner.Build(global, perCommand, policies, discovery, options);
+        var plan = PipelinePlanner.Build(global, perCommand, policies, discovery, options);
 
         Assert.True(plan.ShouldEmit);
         Assert.NotNull(plan.GlobalPipeline);
@@ -62,7 +62,7 @@ public sealed class PipelinePlannerTests
         var discovery = FakeDiscovery("global::MyApp.CmdA", "global::MyApp.CmdB");
         var options = FakeOptions("MyApp.Generated", "global::MyApp.AppContext");
 
-        var plan = PipelineEmitterRefactored.PipelinePlanner.Build(global, perCommand, policies, discovery, options);
+        var plan = PipelinePlanner.Build(global, perCommand, policies, discovery, options);
 
         Assert.True(plan.ShouldEmit);
         Assert.Null(plan.GlobalPipeline);
@@ -97,7 +97,7 @@ public sealed class PipelinePlannerTests
         var discovery = FakeDiscovery("global::MyApp.CmdA");
         var options = FakeOptions("MyApp.Generated", "global::MyApp.AppContext");
 
-        var plan = PipelineEmitterRefactored.PipelinePlanner.Build(global, perCommand, policies, discovery, options);
+        var plan = PipelinePlanner.Build(global, perCommand, policies, discovery, options);
 
         Assert.Single(plan.PerCommandPipelines);
 
@@ -134,7 +134,7 @@ public sealed class PipelinePlannerTests
         var discovery = FakeDiscovery("global::MyApp.CmdA");
         var options = FakeOptions("MyApp.Generated", "global::MyApp.AppContext");
 
-        var plan = PipelineEmitterRefactored.PipelinePlanner.Build(global, perCommand, policies, discovery, options);
+        var plan = PipelinePlanner.Build(global, perCommand, policies, discovery, options);
 
         var reg = plan.ServiceRegistrations.Single(r =>
             r.ServiceTypeExpression.Contains("ICommandPipeline<global::MyApp.CmdA", StringComparison.Ordinal));

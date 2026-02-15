@@ -1,15 +1,16 @@
-﻿using global::TinyDispatcher.SourceGen.Emitters;
+﻿using TinyDispatcher.SourceGen.Emitters;
 using System;
+using TinyDispatcher.SourceGen.Emitters.Pipelines;
 using Xunit;
 
-namespace TinyDispatcher.UnitTests.PipelineEmitter;
+namespace TinyDispatcher.UnitTests.SourceGen.PipelineEmitter;
 
 public sealed class CodeWriterTests
 {
     [Fact]
     public void End_block_without_begin_throws()
     {
-        var w = new PipelineEmitterRefactored.CodeWriter();
+        var w = new CodeWriter();
 
         var ex = Assert.Throws<InvalidOperationException>(() => w.EndBlock());
 
@@ -19,7 +20,7 @@ public sealed class CodeWriterTests
     [Fact]
     public void Ensure_all_blocks_closed_throws_when_unclosed()
     {
-        var w = new PipelineEmitterRefactored.CodeWriter();
+        var w = new CodeWriter();
 
         w.BeginBlock("namespace X");
 
@@ -32,7 +33,7 @@ public sealed class CodeWriterTests
     [Fact]
     public void Blocks_are_closed_and_braces_match()
     {
-        var w = new PipelineEmitterRefactored.CodeWriter();
+        var w = new CodeWriter();
 
         w.BeginBlock("namespace X");
         w.BeginBlock("internal sealed class A");
