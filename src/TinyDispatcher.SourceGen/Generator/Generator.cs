@@ -30,6 +30,7 @@ using TinyDispatcher.SourceGen.Internal;
 using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Discovery;
 using TinyDispatcher.SourceGen.Emitters;
+using TinyDispatcher.SourceGen.Emitters.Pipelines;
 
 namespace TinyDispatcher.SourceGen.Generator;
 
