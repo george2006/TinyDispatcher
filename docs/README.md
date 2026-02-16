@@ -1,12 +1,13 @@
-# Docs index
+# Documentation
 
-- getting-started.md
-- architecture.md
-- source-generator.md
-- middleware.md
-- pipelines.md
-- context.md
-- pipeline-maps.md
-- performance.md
-- migration.md
-- design-decisions.md
+- [Getting Started](getting-started.md)
+- [Architecture](architecture.md)
+- [Source Generator](source-generator.md)
+- [Middleware](middleware.md)
+- [Pipelines & Layering](pipelines.md)
+- [Context & Features](context.md)
+- [Pipeline Maps](pipeline-maps.md)
+- [Performance Notes](performance.md)
+- [Migration Guide](migration.md)
+- [Design Decisions](design-decisions.md)
+
