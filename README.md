@@ -50,15 +50,16 @@ await dispatcher.DispatchAsync(new CreateOrder("123"), ct);
 
 ## Documentation
 
-- **Getting Started**: docs/getting-started.md  
-- **Middleware**: docs/middleware.md  
-- **Pipelines & layering**: docs/pipelines.md  
-- **Context & features**: docs/context.md  
-- **Source generator & options**: docs/source-generator.md  
-- **Pipeline maps**: docs/pipeline-maps.md  
-- **Performance notes**: docs/performance.md  
-- **Migration notes**: docs/migration.md  
-- **Design decisions**: docs/design-decisions.md  
+- [Getting Started](docs/getting-started.md)
+- [Architecture](docs/architecture.md)
+- [Middleware](docs/middleware.md)
+- [Pipelines & Layering](docs/pipelines.md)
+- [Context & Features](docs/context.md)
+- [Source Generator](docs/source-generator.md)
+- [Pipeline Maps](docs/pipeline-maps.md)
+- [Performance Notes](docs/performance.md)
+- [Migration Guide](docs/migration.md)
+- [Design Decisions](docs/design-decisions.md)
 
 ## When to use
 
