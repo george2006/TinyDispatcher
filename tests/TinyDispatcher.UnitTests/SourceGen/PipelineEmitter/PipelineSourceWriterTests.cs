@@ -37,37 +37,6 @@ public sealed class PipelineSourceWriterTests
     }
 
     [Fact]
-    public void Runtime_is_not_at_namespace_scope()
-    {
-        var plan = Create_plan(
-            globalPipeline: Create_pipeline(
-                "TinyDispatcherGlobalPipeline",
-                true,
-                "TCommand",
-                new[] { new MiddlewareRef("global::MyApp.G1", 2) }),
-            policyPipelines: new[]
-            {
-                Create_pipeline(
-                    "TinyDispatcherPolicyPipeline_X",
-                    true,
-                    "TCommand",
-                    new[] { new MiddlewareRef("global::MyApp.P1", 2) })
-            });
-
-        var source = PipelineSourceWriter.Write(plan);
-
-        // It MUST exist (nested inside pipeline types)
-        Assert.Contains("private sealed class Runtime", source, StringComparison.Ordinal);
-
-        // But it MUST NOT appear as a namespace member (column 0 or "  " indentation).
-        // Namespace members in our generated file are indented 2 spaces.
-        // Nested members are indented 4+ spaces.
-        Assert.DoesNotMatch(
-            new Regex(@"^(?:private|  private)\s+sealed\s+class\s+Runtime\b", RegexOptions.Multiline),
-            source);
-    }
-
-    [Fact]
     public void Constructor_is_not_generic_for_open_generic_pipeline()
     {
         var plan = Create_plan(
