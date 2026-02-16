@@ -26,11 +26,12 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using TinyDispatcher.SourceGen.Abstractions;
-using TinyDispatcher.SourceGen.Internal;
-using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Discovery;
 using TinyDispatcher.SourceGen.Emitters;
 using TinyDispatcher.SourceGen.Emitters.Pipelines;
+using TinyDispatcher.SourceGen.Generator.Models;
+using TinyDispatcher.SourceGen.Internal;
+using TinyDispatcher.SourceGen.Validation;
 
 namespace TinyDispatcher.SourceGen.Generator;
 
@@ -146,6 +147,23 @@ public sealed class Generator : IIncrementalGenerator
         // -----------------------------------------------------------------
         // Infer CommandContextType from UseTinyDispatcher<TContext> (SYNTAX-based)
         // -----------------------------------------------------------------
+        var useTinyDispatcherInvocations = UseTinyDispatcherInvocationExtractor.FindAllUseTinyDispatcherCalls(compilation);
+        var allCtxCalls = ctxInference.ResolveAllUseTinyDispatcherContexts(useTinyDispatcherInvocations, compilation);
+
+        var ctxDiags = ContextConsistencyValidator.Validate(
+            diagsCatalog,
+            allCtxCalls,
+            contextIsRequired: !useTinyCalls.IsDefaultOrEmpty && useTinyCalls.Length > 0);
+
+        if (!ctxDiags.IsDefaultOrEmpty)
+        {
+            foreach (var d in ctxDiags)
+                roslynContext.ReportDiagnostic(d);
+
+            if (ctxDiags.Any(x => x.Severity == DiagnosticSeverity.Error))
+                return;
+        }
+  
         var inferredCtx = ctxInference.TryInferContextTypeFromUseTinyCalls(useTinyCalls, compilation);
         var effectiveOptions = optionsFactory.ApplyInferredContextIfMissing(baseOptions, inferredCtx);
 
