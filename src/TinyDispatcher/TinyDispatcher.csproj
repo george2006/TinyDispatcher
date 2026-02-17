@@ -41,57 +41,19 @@
   </ItemGroup>
   <PropertyGroup>
     <PackageReleaseNotes>
-      Performance: optimized middleware pipeline execution (significantly reduced allocations in the dispatch path).
+      Introduced unified validation layer for TinyDispatcher source generator.
 
-      BREAKING: middleware contract updated (see migration below).
+      - Added IGeneratorValidator, GeneratorValidationContext, DiagnosticBag
+      - Added PipelineDiagnosticsValidator
+      - Enforced single UseTinyDispatcher&lt;TContext&gt; call per host project
+      - Added pipeline diagnostics:
+      * Middleware targeting unknown command (warning)
+      * Policy targeting unknown command (warning)
+      * Multiple policies targeting same command (warning)
+      - Migrated duplicate handler validation to unified validation system
+      - Internal generator cleanup and consistency improvements
 
-      PIPELINE HARDENING &amp; PERFORMANCE REFACTOR (BREAKING)
-      - Replaced delegate-chaining pipelines with switch-based generated pipelines (runtime runner).
-      - Middleware is now constructor-injected into generated pipelines (DI-friendly, more readable code).
-      - Deterministic middleware layering is enforced: Global -&gt; Policy -&gt; Per-command -&gt; Handler.
-      - Benchmarks updated and validated in Release mode.
-
-      BREAKING: MIDDLEWARE API
-
-      Old signature:
-      Task InvokeAsync(
-      TCommand command,
-      TContext context,
-      CommandDelegate&lt;TCommand,TContext&gt; next,
-      CancellationToken ct);
-
-      New signature:
-      ValueTask InvokeAsync(
-      TCommand command,
-      TContext context,
-      Pipeline.ICommandPipelineRuntime&lt;TCommand,TContext&gt; runtime,
-      CancellationToken ct);
-
-      Migration:
-      Replace:
-      await next(command, context, ct);
-
-      With:
-      await runtime.NextAsync(command, context, ct);
-
-      If your middleware only forwards execution:
-      public ValueTask InvokeAsync(
-      TCommand command,
-      TContext context,
-      Pipeline.ICommandPipelineRuntime&lt;TCommand,TContext&gt; runtime,
-      CancellationToken ct)
-      =&gt; runtime.NextAsync(command, context, ct);
-
-      PIPELINE CONTRACT SIMPLIFICATION (BREAKING)
-      - Dispatcher no longer performs runtime pipeline precedence resolution.
-      - Unified pipeline contract: ICommandPipeline&lt;TCommand,TContext&gt;.
-      - Removed: IPolicyCommandPipeline&lt;,&gt; and IGlobalCommandPipeline&lt;,&gt;.
-      - Pipeline precedence (Per-command -&gt; Policy -&gt; Global) is enforced at compile-time by source generation.
-      - Reduced DI lookups and removed runtime branching in the dispatch path.
-
-      Notes:
-      - Prerelease hardening step ahead of v1.0; further cleanup may follow.
-      - If you maintain custom middleware or pipelines, update to the new contracts.
+      No breaking API changes.
     </PackageReleaseNotes>
 
 
