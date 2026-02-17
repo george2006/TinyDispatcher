@@ -225,15 +225,8 @@ public sealed class Generator : IIncrementalGenerator
 
         new PipelineDiagnosticsValidator().Validate(vctx, bag);
 
-        if (bag.Count > 0)
-        {
-            var arr = bag.ToImmutable();
-            for (var i = 0; i < arr.Length; i++)
-                roslynContext.ReportDiagnostic(arr[i]);
-
-            if (bag.HasErrors)
-                return;
-        }
+        if (ReportAndHasErrors(roslynContext, bag))
+            return;
 
         // If nothing at all, skip
         var hasAny =
