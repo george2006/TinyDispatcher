@@ -41,6 +41,9 @@
   </ItemGroup>
   <PropertyGroup>
     <PackageReleaseNotes>
+
+      Removed CS1066 warning from generated pipeline code.
+      
       Introduced unified validation layer for TinyDispatcher source generator.
 
       - Added IGeneratorValidator, GeneratorValidationContext, DiagnosticBag
