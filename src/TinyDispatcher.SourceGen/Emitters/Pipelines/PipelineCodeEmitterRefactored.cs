@@ -14,7 +14,7 @@ using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen.Emitters.Pipelines;
 
-public sealed class PipelineEmitter : ICodeEmitter
+internal sealed class PipelineEmitter : ICodeEmitter
 {
     private readonly ImmutableArray<MiddlewareRef> _globalMiddlewares;
     private readonly ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> _perCommand;

@@ -1,10 +1,16 @@
-﻿using Microsoft.CodeAnalysis;
+﻿#nullable enable
+
+using System;
 using System.Collections.Immutable;
-using TinyDispatcher.SourceGen.Abstractions;
+using Microsoft.CodeAnalysis;
 using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen.Validation;
 
+/// <summary>
+/// Shared context object for generator validators.
+/// Keeps validation APIs stable as the generator grows.
+/// </summary>
 internal sealed class GeneratorValidationContext
 {
     public GeneratorValidationContext(
@@ -16,13 +22,13 @@ internal sealed class GeneratorValidationContext
         ImmutableDictionary<string, PolicySpec> policies,
         DiagnosticsCatalog diagnostics)
     {
-        Compilation = compilation;
-        DiscoveryResult = discoveryResult;
-        ExpectedContextFqn = expectedContextFqn;
+        Compilation = compilation ?? throw new ArgumentNullException(nameof(compilation));
+        DiscoveryResult = discoveryResult ?? throw new ArgumentNullException(nameof(discoveryResult));
+        ExpectedContextFqn = expectedContextFqn ?? throw new ArgumentNullException(nameof(expectedContextFqn));
         Globals = globals;
-        PerCommand = perCommand;
-        Policies = policies;
-        Diagnostics = diagnostics;
+        PerCommand = perCommand ?? throw new ArgumentNullException(nameof(perCommand));
+        Policies = policies ?? throw new ArgumentNullException(nameof(policies));
+        Diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
     }
 
     public Compilation Compilation { get; }
@@ -34,5 +40,23 @@ internal sealed class GeneratorValidationContext
     public ImmutableDictionary<string, PolicySpec> Policies { get; }
 
     public DiagnosticsCatalog Diagnostics { get; }
-}
 
+    /// <summary>
+    /// Creates a context for validators that only need discovery results and diagnostics.
+    /// This avoids breaking the main constructor contract while enabling "early" validation.
+    /// </summary>
+    public static GeneratorValidationContext ForDiscoveryOnly(
+        Compilation compilation,
+        DiscoveryResult discoveryResult,
+        DiagnosticsCatalog diagnostics)
+    {
+        return new GeneratorValidationContext(
+            compilation: compilation,
+            discoveryResult: discoveryResult,
+            expectedContextFqn: string.Empty,
+            globals: ImmutableArray<MiddlewareRef>.Empty,
+            perCommand: ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
+            policies: ImmutableDictionary<string, PolicySpec>.Empty,
+            diagnostics: diagnostics);
+    }
+}

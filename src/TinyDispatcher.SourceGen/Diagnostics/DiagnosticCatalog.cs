@@ -7,7 +7,7 @@ namespace TinyDispatcher.SourceGen
     /// <summary>
     /// Central catalog of diagnostics emitted by the TinyDispatcher source generator.
     /// </summary>
-    public sealed class DiagnosticsCatalog : IDiagnostics
+    public sealed class DiagnosticsCatalog 
     {
         private const string Category = "Dispatcher";
 

@@ -7,10 +7,11 @@
 using System.Text;
 using Microsoft.CodeAnalysis.Text;
 using TinyDispatcher.SourceGen.Abstractions;
+using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen;
 
-public sealed class EmptyPipelineContributionEmitter : ICodeEmitter
+internal sealed class EmptyPipelineContributionEmitter : ICodeEmitter
 {
     public void Emit(IGeneratorContext context, DiscoveryResult result, GeneratorOptions options)
     {

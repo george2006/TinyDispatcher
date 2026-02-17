@@ -2,10 +2,11 @@
 using System.Text;
 using Microsoft.CodeAnalysis.Text;
 using TinyDispatcher.SourceGen.Abstractions;
+using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen;
 
-public sealed class ModuleInitializerEmitter : ICodeEmitter
+internal sealed class ModuleInitializerEmitter : ICodeEmitter
 {
     public void Emit(IGeneratorContext context, DiscoveryResult result, GeneratorOptions options)
     {

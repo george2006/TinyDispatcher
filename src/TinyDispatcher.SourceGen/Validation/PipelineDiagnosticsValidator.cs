@@ -5,6 +5,7 @@ using System.Linq;
 using TinyDispatcher.SourceGen.Abstractions;
 using TinyDispatcher.SourceGen.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator;
+using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen.Validation;
 

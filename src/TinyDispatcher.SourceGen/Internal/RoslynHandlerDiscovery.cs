@@ -2,13 +2,14 @@
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using TinyDispatcher.SourceGen.Abstractions;
+using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen
 {
     /// <summary>
     /// Uses Roslyn to discover TinyDispatcher command and query handlers in a given compilation.
     /// </summary>
-    public sealed class RoslynHandlerDiscovery : IHandlerDiscovery
+    internal sealed class RoslynHandlerDiscovery : IHandlerDiscovery
     {
         private readonly string _coreNamespace;
         private readonly string? _namespacePrefixFilter;
