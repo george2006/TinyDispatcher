@@ -1,23 +1,21 @@
 ﻿#nullable enable
 
 using System;
-using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
-using TinyDispatcher.SourceGen.Abstractions;
+using TinyDispatcher.SourceGen.Validation;
 
-namespace TinyDispatcher.SourceGen;
+namespace TinyDispatcher.SourceGen.Validation;
 
-public sealed class DuplicateHandlerValidator : IValidator
+internal sealed class DuplicateHandlerValidator : IGeneratorValidator
 {
-    private readonly DiagnosticsCatalog _diags;
-
-    public DuplicateHandlerValidator(DiagnosticsCatalog diags)
-        => _diags = diags ?? throw new ArgumentNullException(nameof(diags));
-
-    public ImmutableArray<Diagnostic> Validate(DiscoveryResult result)
+    public void Validate(GeneratorValidationContext context, DiagnosticBag diags)
     {
-        var builder = ImmutableArray.CreateBuilder<Diagnostic>();
+        if (context is null) throw new ArgumentNullException(nameof(context));
+        if (diags is null) throw new ArgumentNullException(nameof(diags));
+
+        var result = context.DiscoveryResult;
+        var catalog = context.Diagnostics;
 
         // Commands: duplicate by MessageTypeFqn
         foreach (var g in result.Commands.GroupBy(x => x.MessageTypeFqn))
@@ -27,10 +25,10 @@ public sealed class DuplicateHandlerValidator : IValidator
             var first = g.ElementAt(0).HandlerTypeFqn;
             var second = g.ElementAt(1).HandlerTypeFqn;
 
-            builder.Add(_diags.Create(_diags.DuplicateCommand, g.Key, first, second));
+            diags.Add(catalog.Create(catalog.DuplicateCommand, g.Key, first, second));
         }
 
-        // Queries: duplicate by QueryTypeFqn (result type is already part of the contract, but query type is the key)
+        // Queries: duplicate by QueryTypeFqn
         foreach (var g in result.Queries.GroupBy(x => x.QueryTypeFqn))
         {
             if (g.Count() <= 1) continue;
@@ -38,9 +36,7 @@ public sealed class DuplicateHandlerValidator : IValidator
             var first = g.ElementAt(0).HandlerTypeFqn;
             var second = g.ElementAt(1).HandlerTypeFqn;
 
-            builder.Add(_diags.Create(_diags.DuplicateQuery, g.Key, first, second));
+            diags.Add(catalog.Create(catalog.DuplicateQuery, g.Key, first, second));
         }
-
-        return builder.ToImmutable();
     }
 }

@@ -130,20 +130,13 @@ public sealed class Generator : IIncrementalGenerator
             baseOptions.CommandContextType);
 
         var discoveryResult = discovery.Discover(compilation, handlerSymbols);
-
-        var dupValidator = new DuplicateHandlerValidator(diagsCatalog);
-        var dupDiags = dupValidator.Validate(discoveryResult);
-
-        if (!dupDiags.IsDefaultOrEmpty)
-        {
-            foreach (var d in dupDiags)
-                roslynContext.ReportDiagnostic(d);
-
-            // Stop generation on errors
-            if (dupDiags.Any(x => x.Severity == DiagnosticSeverity.Error))
-                return;
-        }
-
+        
+        var bag = new DiagnosticBag();
+        var baseCtx = GeneratorValidationContext.ForDiscoveryOnly(compilation, discoveryResult, diagsCatalog);
+        new DuplicateHandlerValidator().Validate(baseCtx, bag);
+        
+        if (ReportAndHasErrors(roslynContext, bag))
+            return;
         // -----------------------------------------------------------------
         // Infer CommandContextType from UseTinyDispatcher<TContext> (SYNTAX-based)
         // -----------------------------------------------------------------
@@ -221,6 +214,27 @@ public sealed class Generator : IIncrementalGenerator
         var globals = ordering.OrderAndDistinctGlobals(globalEntries);
         var perCmd = ordering.BuildPerCommandMap(perCmdEntries);
 
+        var vctx = new GeneratorValidationContext(
+            compilation,
+            discoveryResult,
+            expectedContextFqn,
+            globals,
+            perCmd,
+            policies,
+            diagsCatalog);
+
+        new PipelineDiagnosticsValidator().Validate(vctx, bag);
+
+        if (bag.Count > 0)
+        {
+            var arr = bag.ToImmutable();
+            for (var i = 0; i < arr.Length; i++)
+                roslynContext.ReportDiagnostic(arr[i]);
+
+            if (bag.HasErrors)
+                return;
+        }
+
         // If nothing at all, skip
         var hasAny =
             globals.Length > 0 ||
@@ -233,5 +247,16 @@ public sealed class Generator : IIncrementalGenerator
         // Emit pipelines
         new PipelineEmitter(globals, perCmd, policies)
             .Emit(roslynContext, discoveryResult, effectiveOptions);
+    }
+    static bool ReportAndHasErrors(RoslynGeneratorContext ctx, DiagnosticBag bag)
+    {
+        if (bag.Count == 0) 
+            return false;
+
+        var arr = bag.ToImmutable();
+        for (var i = 0; i < arr.Length; i++)
+            ctx.ReportDiagnostic(arr[i]);
+
+        return bag.HasErrors;
     }
 }

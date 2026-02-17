@@ -4,7 +4,7 @@ using TinyDispatcher.SourceGen;
 using TinyDispatcher.SourceGen.Abstractions;
 using TinyDispatcher.SourceGen.Generator.Models;
 
-public sealed class HandlerRegistrationsEmitter : ICodeEmitter
+internal sealed class HandlerRegistrationsEmitter : ICodeEmitter
 {
     public void Emit(IGeneratorContext context, DiscoveryResult result, GeneratorOptions options)
     {

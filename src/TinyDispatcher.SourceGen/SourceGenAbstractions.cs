@@ -3,6 +3,7 @@
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
+using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen.Abstractions
 {
@@ -18,7 +19,7 @@ namespace TinyDispatcher.SourceGen.Abstractions
     // ---------------------------------------------------------------------
     // Emitter abstraction (ModuleInitializerEmitter, ContributionEmitter, etc.)
     // ---------------------------------------------------------------------
-    public interface ICodeEmitter
+    internal interface ICodeEmitter
     {
         void Emit(IGeneratorContext context, DiscoveryResult result, GeneratorOptions options);
     }
@@ -26,42 +27,8 @@ namespace TinyDispatcher.SourceGen.Abstractions
     // ---------------------------------------------------------------------
     // Handler discovery abstraction (RoslynHandlerDiscovery implements this)
     // ---------------------------------------------------------------------
-    public interface IHandlerDiscovery
+    internal interface IHandlerDiscovery
     {
         DiscoveryResult Discover(Compilation compilation, ImmutableArray<INamedTypeSymbol> candidates);
     }
-
-    // ---------------------------------------------------------------------
-    // Validation abstraction (DuplicateHandlerValidator implements this)
-    // ---------------------------------------------------------------------
-    public interface IValidator
-    {
-        ImmutableArray<Diagnostic> Validate(DiscoveryResult result);
-    }
-
-    // ---------------------------------------------------------------------
-    // Diagnostics "catalog" abstraction (DiagnosticsCatalog implements this)
-    // NOTE: Your code uses _diagnostics.DuplicateCommand / DuplicateQuery
-    // ---------------------------------------------------------------------
-    public interface IDiagnostics
-    {
-        DiagnosticDescriptor DuplicateCommand { get; }
-        DiagnosticDescriptor DuplicateQuery { get; }
-    }
-
-    // ---------------------------------------------------------------------
-    // Contracts produced by discovery and consumed by emitters/validators
-    // ---------------------------------------------------------------------
-    public sealed record HandlerContract(
-        string MessageTypeFqn,
-        string HandlerTypeFqn);
-
-    public sealed record QueryHandlerContract(
-        string QueryTypeFqn,
-        string ResultTypeFqn,
-        string HandlerTypeFqn);
-
-    public sealed record DiscoveryResult(
-        ImmutableArray<HandlerContract> Commands,
-        ImmutableArray<QueryHandlerContract> Queries);
 }
