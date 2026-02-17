@@ -221,6 +221,28 @@ public sealed class Generator : IIncrementalGenerator
         var globals = ordering.OrderAndDistinctGlobals(globalEntries);
         var perCmd = ordering.BuildPerCommandMap(perCmdEntries);
 
+        var bag = new DiagnosticBag();
+        var vctx = new GeneratorValidationContext(
+            compilation,
+            discoveryResult,
+            expectedContextFqn,
+            globals,
+            perCmd,
+            policies,
+            diagsCatalog);
+
+        new PipelineDiagnosticsValidator().Validate(vctx, bag);
+
+        if (bag.Count > 0)
+        {
+            var arr = bag.ToImmutable();
+            for (var i = 0; i < arr.Length; i++)
+                roslynContext.ReportDiagnostic(arr[i]);
+
+            if (bag.HasErrors)
+                return;
+        }
+
         // If nothing at all, skip
         var hasAny =
             globals.Length > 0 ||
