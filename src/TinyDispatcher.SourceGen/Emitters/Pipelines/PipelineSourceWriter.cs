@@ -133,7 +133,13 @@ internal static class PipelineSourceWriter
 
         var cmdSig = def.IsOpenGeneric ? "TCommand" : def.CommandType;
 
-        w.BeginBlock($"public ValueTask ExecuteAsync({cmdSig} command, {ctx} ctxValue, {handlerType} handler, CancellationToken ct = default)");
+        w.BeginBlock($"public ValueTask ExecuteAsync({cmdSig} command, {ctx} ctxValue, {handlerType} handler)");
+        w.Line("return ExecuteAsync(command, ctxValue, handler, default);");
+        w.EndBlock();
+        w.Line();
+
+        // Main method: keep ct parameter (optional default here is fine, but not required anymore)
+        w.BeginBlock($"public ValueTask ExecuteAsync({cmdSig} command, {ctx} ctxValue, {handlerType} handler, CancellationToken ct)");
         w.Line("if (command is null) throw new ArgumentNullException(nameof(command));");
         w.Line("if (handler is null) throw new ArgumentNullException(nameof(handler));");
         w.Line("_handler = handler;");
@@ -168,8 +174,9 @@ internal static class PipelineSourceWriter
         var core = plan.CoreFqn;
         var ctx = plan.ContextFqn;
 
+        // IMPORTANT: explicit interface implementation must not use optional arguments (avoids CS1066)
         w.BeginBlock(
-            $"ValueTask {core}.Pipeline.ICommandPipelineRuntime<{cmdType}, {ctx}>.NextAsync({cmdType} command, {ctx} ctxValue, CancellationToken ct = default)");
+            $"ValueTask {core}.Pipeline.ICommandPipelineRuntime<{cmdType}, {ctx}>.NextAsync({cmdType} command, {ctx} ctxValue, CancellationToken ct)");
         w.Line("return NextAsyncInternal(command, ctxValue, ct);");
         w.EndBlock();
         w.Line();
