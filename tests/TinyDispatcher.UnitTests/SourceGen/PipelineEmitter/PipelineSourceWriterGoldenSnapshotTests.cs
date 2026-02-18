@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using Microsoft.CodeAnalysis;
 using TinyDispatcher.SourceGen.Abstractions;
 using TinyDispatcher.SourceGen.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
@@ -13,6 +14,9 @@ namespace TinyDispatcher.UnitTests.SourceGen.PipelineEmitter;
 
 public sealed class PipelineSourceWriterGoldenSnapshotTests
 {
+    private static MiddlewareRef Mw(string openTypeFqn, int arity)
+        => new MiddlewareRef(OpenTypeSymbol: default!, OpenTypeFqn: openTypeFqn, Arity: arity);
+
     [Fact]
     public void Write_golden_snapshot_global_policy_per_command_matches_expected()
     {
@@ -23,45 +27,44 @@ public sealed class PipelineSourceWriterGoldenSnapshotTests
         var snapshot = Create_snapshot(source);
 
         var expected = string.Join(
-        "\n",
-        new[]
-        {
-            // Global
-            "internal sealed class TinyDispatcherGlobalPipeline<TCommand> : global::TinyDispatcher.ICommandPipeline<TCommand, global::MyApp.AppContext>, global::TinyDispatcher.Pipeline.ICommandPipelineRuntime<TCommand, global::MyApp.AppContext>",
-            "where TCommand : global::TinyDispatcher.ICommand",
-            "public TinyDispatcherGlobalPipeline(",
-            "case 0: return _globalLog.InvokeAsync(command, ctxValue, this, ct);",
-            "default: return new ValueTask(_handler!.HandleAsync(command, ctxValue, ct));",
+            "\n",
+            new[]
+            {
+                // Global
+                "internal sealed class TinyDispatcherGlobalPipeline<TCommand> : global::TinyDispatcher.ICommandPipeline<TCommand, global::MyApp.AppContext>, global::TinyDispatcher.Pipeline.ICommandPipelineRuntime<TCommand, global::MyApp.AppContext>",
+                "where TCommand : global::TinyDispatcher.ICommand",
+                "public TinyDispatcherGlobalPipeline(",
+                "case 0: return _globalLog.InvokeAsync(command, ctxValue, this, ct);",
+                "default: return new ValueTask(_handler!.HandleAsync(command, ctxValue, ct));",
 
-            // Policy
-            "internal sealed class TinyDispatcherPolicyPipeline_MyApp_CheckoutPolicy<TCommand> : global::TinyDispatcher.ICommandPipeline<TCommand, global::MyApp.AppContext>, global::TinyDispatcher.Pipeline.ICommandPipelineRuntime<TCommand, global::MyApp.AppContext>",
-            "where TCommand : global::TinyDispatcher.ICommand",
-            "public TinyDispatcherPolicyPipeline_MyApp_CheckoutPolicy(",
-            "case 0: return _globalLog.InvokeAsync(command, ctxValue, this, ct);",
-            "case 1: return _policyLog.InvokeAsync(command, ctxValue, this, ct);",
-            "default: return new ValueTask(_handler!.HandleAsync(command, ctxValue, ct));",
+                // Policy
+                "internal sealed class TinyDispatcherPolicyPipeline_MyApp_CheckoutPolicy<TCommand> : global::TinyDispatcher.ICommandPipeline<TCommand, global::MyApp.AppContext>, global::TinyDispatcher.Pipeline.ICommandPipelineRuntime<TCommand, global::MyApp.AppContext>",
+                "where TCommand : global::TinyDispatcher.ICommand",
+                "public TinyDispatcherPolicyPipeline_MyApp_CheckoutPolicy(",
+                "case 0: return _globalLog.InvokeAsync(command, ctxValue, this, ct);",
+                "case 1: return _policyLog.InvokeAsync(command, ctxValue, this, ct);",
+                "default: return new ValueTask(_handler!.HandleAsync(command, ctxValue, ct));",
 
-            // Per-command
-            "internal sealed class TinyDispatcherPipeline_CmdA : global::TinyDispatcher.ICommandPipeline<global::MyApp.CmdA, global::MyApp.AppContext>, global::TinyDispatcher.Pipeline.ICommandPipelineRuntime<global::MyApp.CmdA, global::MyApp.AppContext>",
-            "public TinyDispatcherPipeline_CmdA(",
-            "case 0: return _globalLog.InvokeAsync(command, ctxValue, this, ct);",
-            "case 1: return _policyLog.InvokeAsync(command, ctxValue, this, ct);",
-            "case 2: return _perCommandLog.InvokeAsync(command, ctxValue, this, ct);",
-            "default: return new ValueTask(_handler!.HandleAsync(command, ctxValue, ct));",
+                // Per-command
+                "internal sealed class TinyDispatcherPipeline_CmdA : global::TinyDispatcher.ICommandPipeline<global::MyApp.CmdA, global::MyApp.AppContext>, global::TinyDispatcher.Pipeline.ICommandPipelineRuntime<global::MyApp.CmdA, global::MyApp.AppContext>",
+                "public TinyDispatcherPipeline_CmdA(",
+                "case 0: return _globalLog.InvokeAsync(command, ctxValue, this, ct);",
+                "case 1: return _policyLog.InvokeAsync(command, ctxValue, this, ct);",
+                "case 2: return _perCommandLog.InvokeAsync(command, ctxValue, this, ct);",
+                "default: return new ValueTask(_handler!.HandleAsync(command, ctxValue, ct));",
 
-            // Registrations unchanged
-            "services.TryAddTransient(typeof(global::MyApp.GlobalLogMiddleware<,>));",
-            "services.TryAddTransient(typeof(global::MyApp.PerCommandLogMiddleware<,>));",
-            "services.TryAddTransient(typeof(global::MyApp.PolicyLogMiddleware<,>));",
+                // Registrations unchanged
+                "services.TryAddTransient(typeof(global::MyApp.GlobalLogMiddleware<,>));",
+                "services.TryAddTransient(typeof(global::MyApp.PerCommandLogMiddleware<,>));",
+                "services.TryAddTransient(typeof(global::MyApp.PolicyLogMiddleware<,>));",
 
-            "services.AddScoped<global::TinyDispatcher.ICommandPipeline<global::MyApp.CmdA, global::MyApp.AppContext>, global::MyApp.Generated.TinyDispatcherPipeline_CmdA>();",
-            "services.AddScoped<global::TinyDispatcher.ICommandPipeline<global::MyApp.CmdB, global::MyApp.AppContext>, global::MyApp.Generated.TinyDispatcherPolicyPipeline_MyApp_CheckoutPolicy<global::MyApp.CmdB>>();",
-            "services.AddScoped<global::TinyDispatcher.ICommandPipeline<global::MyApp.CmdC, global::MyApp.AppContext>, global::MyApp.Generated.TinyDispatcherGlobalPipeline<global::MyApp.CmdC>>();",
-        });
+                "services.AddScoped<global::TinyDispatcher.ICommandPipeline<global::MyApp.CmdA, global::MyApp.AppContext>, global::MyApp.Generated.TinyDispatcherPipeline_CmdA>();",
+                "services.AddScoped<global::TinyDispatcher.ICommandPipeline<global::MyApp.CmdB, global::MyApp.AppContext>, global::MyApp.Generated.TinyDispatcherPolicyPipeline_MyApp_CheckoutPolicy<global::MyApp.CmdB>>();",
+                "services.AddScoped<global::TinyDispatcher.ICommandPipeline<global::MyApp.CmdC, global::MyApp.AppContext>, global::MyApp.Generated.TinyDispatcherGlobalPipeline<global::MyApp.CmdC>>();",
+            });
 
-
-            Assert.Equal(expected, snapshot);
-        }
+        Assert.Equal(expected, snapshot);
+    }
 
     private static PipelinePlan Create_plan()
     {
@@ -75,7 +78,7 @@ public sealed class PipelineSourceWriterGoldenSnapshotTests
             IsOpenGeneric: true,
             CommandType: "TCommand",
             Steps: ImmutableArray.Create(
-                new MiddlewareStep(new MiddlewareRef("global::MyApp.GlobalLogMiddleware", 2)))
+                new MiddlewareStep(Mw("global::MyApp.GlobalLogMiddleware", 2)))
         );
 
         // Policy: applies to CmdB (CmdA has per-command, so DI registration should prefer per-command)
@@ -84,8 +87,8 @@ public sealed class PipelineSourceWriterGoldenSnapshotTests
             IsOpenGeneric: true,
             CommandType: "TCommand",
             Steps: ImmutableArray.Create(
-                new MiddlewareStep(new MiddlewareRef("global::MyApp.GlobalLogMiddleware", 2)),
-                new MiddlewareStep(new MiddlewareRef("global::MyApp.PolicyLogMiddleware", 2)))
+                new MiddlewareStep(Mw("global::MyApp.GlobalLogMiddleware", 2)),
+                new MiddlewareStep(Mw("global::MyApp.PolicyLogMiddleware", 2)))
         );
 
         // Per-command: CmdA includes global + policy + per-command
@@ -94,9 +97,9 @@ public sealed class PipelineSourceWriterGoldenSnapshotTests
             IsOpenGeneric: false,
             CommandType: "global::MyApp.CmdA",
             Steps: ImmutableArray.Create(
-                new MiddlewareStep(new MiddlewareRef("global::MyApp.GlobalLogMiddleware", 2)),
-                new MiddlewareStep(new MiddlewareRef("global::MyApp.PolicyLogMiddleware", 2)),
-                new MiddlewareStep(new MiddlewareRef("global::MyApp.PerCommandLogMiddleware", 2)))
+                new MiddlewareStep(Mw("global::MyApp.GlobalLogMiddleware", 2)),
+                new MiddlewareStep(Mw("global::MyApp.PolicyLogMiddleware", 2)),
+                new MiddlewareStep(Mw("global::MyApp.PerCommandLogMiddleware", 2)))
         );
 
         var mwRegs = ImmutableArray.Create(
@@ -162,4 +165,3 @@ public sealed class PipelineSourceWriterGoldenSnapshotTests
         return string.Join("\n", keep);
     }
 }
-

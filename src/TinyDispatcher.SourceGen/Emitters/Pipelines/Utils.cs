@@ -1,7 +1,9 @@
-﻿using System;
+﻿#nullable enable
+
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Text;
+using System.Linq;
 using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen.Emitters.Pipelines;
@@ -10,18 +12,27 @@ internal static class MiddlewareSets
 {
     public static MiddlewareRef[] NormalizeDistinct(ImmutableArray<MiddlewareRef> items)
     {
-        if (items.IsDefaultOrEmpty) return Array.Empty<MiddlewareRef>();
+        if (items.IsDefaultOrEmpty)
+            return Array.Empty<MiddlewareRef>();
 
         var list = new List<MiddlewareRef>(items.Length);
+
         for (int i = 0; i < items.Length; i++)
         {
             var x = items[i];
-            if (x == null) continue;
 
+            // Struct: no null checks.
             var fqn = x.OpenTypeFqn;
-            if (string.IsNullOrWhiteSpace(fqn)) continue;
+            if (string.IsNullOrWhiteSpace(fqn))
+                continue;
 
-            list.Add(new MiddlewareRef(TypeNames.NormalizeFqn(fqn), x.Arity));
+            // Preserve the symbol; normalize only the FQN.
+            var normalizedFqn = TypeNames.NormalizeFqn(fqn);
+
+            list.Add(new MiddlewareRef(
+                OpenTypeSymbol: x.OpenTypeSymbol,
+                OpenTypeFqn: normalizedFqn,
+                Arity: x.Arity));
         }
 
         return DistinctByOpenTypeAndArity(list).ToArray();
@@ -29,8 +40,9 @@ internal static class MiddlewareSets
 
     public static IEnumerable<MiddlewareRef> DistinctByOpenTypeAndArity(IEnumerable<MiddlewareRef> items)
     {
+        // Struct: no null checks.
         return items
-            .Where(x => x != null && !string.IsNullOrWhiteSpace(x.OpenTypeFqn))
+            .Where(x => !string.IsNullOrWhiteSpace(x.OpenTypeFqn))
             .GroupBy(m => m.OpenTypeFqn + "|" + m.Arity.ToString(), StringComparer.Ordinal)
             .Select(g => g.First())
             .OrderBy(m => m.OpenTypeFqn, StringComparer.Ordinal);
@@ -41,7 +53,8 @@ internal static class TypeNames
 {
     public static string NormalizeFqn(string typeName)
     {
-        if (string.IsNullOrWhiteSpace(typeName)) return string.Empty;
+        if (string.IsNullOrWhiteSpace(typeName))
+            return string.Empty;
 
         var trimmed = typeName.Trim();
 

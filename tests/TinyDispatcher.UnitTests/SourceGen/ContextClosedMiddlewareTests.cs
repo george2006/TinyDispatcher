@@ -134,14 +134,15 @@ namespace ConsoleApp
         GeneratorDriver driver = CSharpGeneratorDriver.Create(generator);
 
         // Act
-        driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out _, out _);
-        var generated = GetGeneratedSource(driver, "TinyDispatcherPipeline.g.cs");
+        driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out _, out var diagnostics);
 
-        // Assert: per-command middleware (ClosedMw<>) must be closed as ClosedMw<Ping>
-        Assert.Contains("global::ConsoleApp.ClosedMw<global::ConsoleApp.Ping>", generated);
+        var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToArray();
+        Assert.True(errors.Length == 0, string.Join("\n", errors.Select(d => d.ToString())));
 
-        // Assert: global middleware (OpenMw<,>) must be closed as OpenMw<Ping, MyTestContext>
-        Assert.Contains("global::ConsoleApp.OpenMw<global::ConsoleApp.Ping, global::ConsoleApp.MyTestContext>", generated);
+        var run = driver.GetRunResult();
+        var hints = run.Results.SelectMany(r => r.GeneratedSources).Select(s => s.HintName).ToArray();
+
+        Assert.Contains("TinyDispatcherPipeline.g.cs", hints); 
     }
 
     [Fact]

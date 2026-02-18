@@ -1,9 +1,10 @@
-﻿using Microsoft.CodeAnalysis;
+﻿#nullable enable
+
+using Microsoft.CodeAnalysis;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Text;
-using TinyDispatcher.SourceGen.Emitters;
+using System.Linq;
 using TinyDispatcher.SourceGen.Generator;
 using TinyDispatcher.SourceGen.Generator.Models;
 
@@ -11,25 +12,20 @@ namespace TinyDispatcher.SourceGen.Discovery;
 
 internal sealed class PolicySpecBuilder
 {
-    private readonly MiddlewareRefFactory _mwFactory;
-
-    public PolicySpecBuilder(MiddlewareRefFactory mwFactory)
-        => _mwFactory = mwFactory ?? throw new ArgumentNullException(nameof(mwFactory));
-
     public ImmutableDictionary<string, PolicySpec> Build(
         Compilation compilation,
-        string expectedContextFqn,
-        List<INamedTypeSymbol> policies,
-        List<Diagnostic> diags)
+        List<INamedTypeSymbol> policies)
     {
         if (policies is null || policies.Count == 0)
             return ImmutableDictionary<string, PolicySpec>.Empty;
 
-        // Distinct policy symbols
         var distinct = new Dictionary<string, INamedTypeSymbol>(StringComparer.Ordinal);
+
         foreach (var p in policies)
         {
-            var key = Fqn.EnsureGlobal(p.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+            var key = Fqn.EnsureGlobal(
+                p.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+
             if (!distinct.ContainsKey(key))
                 distinct[key] = p;
         }
@@ -41,11 +37,9 @@ internal sealed class PolicySpecBuilder
             var policyTypeFqn = kv.Key;
             var policy = kv.Value;
 
-            // Must have [TinyPolicy]
             if (!HasAttribute(policy, "TinyDispatcher.TinyPolicyAttribute"))
                 continue;
 
-            // Extract [UseMiddleware(typeof(Mw<>/Mw<,>))] and [ForCommand(typeof(Cmd))]
             var mids = new List<MiddlewareRef>();
             var commands = new List<string>();
 
@@ -57,32 +51,24 @@ internal sealed class PolicySpecBuilder
                 {
                     if (TryGetTypeofArg(attr, out var mwType) && mwType is INamedTypeSymbol mwNamed)
                     {
-                        var open = mwNamed.OriginalDefinition;
-
-                        if (!_mwFactory.TryCreate(compilation, open, expectedContextFqn, out var mwRef, out var diag))
-                        {
-                            if (diag != null) diags.Add(diag);
-                            continue;
-                        }
-
-                        mids.Add(mwRef);
+                        mids.Add(CreateMiddlewareRef(mwNamed));
                     }
                 }
                 else if (attrName == "TinyDispatcher.ForCommandAttribute")
                 {
-                    if (TryGetTypeofArg(attr, out var cmdType) && cmdType != null)
+                    if (TryGetTypeofArg(attr, out var cmdType) && cmdType is not null)
                     {
-                        var cmdFqn = Fqn.EnsureGlobal(cmdType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+                        var cmdFqn = Fqn.EnsureGlobal(
+                            cmdType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+
                         commands.Add(cmdFqn);
                     }
                 }
             }
 
-            // Distinct middleware (keep declared order)
             var seenMw = new HashSet<MiddlewareRef>();
             var midsDistinct = mids.Where(x => seenMw.Add(x)).ToImmutableArray();
 
-            // Distinct commands (keep declared order)
             var seenCmd = new HashSet<string>(StringComparer.Ordinal);
             var cmdsDistinct = commands.Where(x => seenCmd.Add(x)).ToImmutableArray();
 
@@ -98,15 +84,31 @@ internal sealed class PolicySpecBuilder
         return builder.ToImmutable();
     }
 
+    private static MiddlewareRef CreateMiddlewareRef(INamedTypeSymbol middlewareType)
+    {
+        var open = middlewareType.OriginalDefinition;
+
+        var fqnWithArgs = Fqn.EnsureGlobal(
+            open.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+
+        var baseFqn = StripGenericSuffix(fqnWithArgs);
+
+        return new MiddlewareRef(open, baseFqn, open.Arity);
+    }
+
+    private static string StripGenericSuffix(string fqn)
+    {
+        var idx = fqn.IndexOf('<');
+        return idx < 0 ? fqn : fqn.Substring(0, idx);
+    }
+
     private static bool HasAttribute(INamedTypeSymbol symbol, string fullName)
     {
-        foreach (var a in symbol.GetAttributes())
-        {
-            var name = a.AttributeClass?.ToDisplayString() ?? string.Empty;
-            if (string.Equals(name, fullName, StringComparison.Ordinal))
-                return true;
-        }
-        return false;
+        return symbol.GetAttributes()
+            .Any(a => string.Equals(
+                a.AttributeClass?.ToDisplayString(),
+                fullName,
+                StringComparison.Ordinal));
     }
 
     private static bool TryGetTypeofArg(AttributeData attr, out ITypeSymbol? type)

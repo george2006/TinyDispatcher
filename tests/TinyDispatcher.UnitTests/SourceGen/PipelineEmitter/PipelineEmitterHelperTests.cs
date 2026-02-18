@@ -3,7 +3,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
-using TinyDispatcher.SourceGen.Abstractions;
+using Microsoft.CodeAnalysis;
 using TinyDispatcher.SourceGen.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 using Xunit;
@@ -12,6 +12,9 @@ namespace TinyDispatcher.UnitTests.SourceGen.PipelineEmitter;
 
 public sealed class PipelineEmitterHelpersTests
 {
+    private static MiddlewareRef Mw(string openTypeFqn, int arity)
+        => new MiddlewareRef(OpenTypeSymbol: default!, OpenTypeFqn: openTypeFqn, Arity: arity);
+
     [Fact]
     public void Normalize_fqn_adds_global_prefix_when_missing()
     {
@@ -31,7 +34,7 @@ public sealed class PipelineEmitterHelpersTests
     [Fact]
     public void Close_middleware_with_arity_2_closes_command_and_context()
     {
-        var mw = new MiddlewareRef("global::MyApp.Mw", 2);
+        var mw = Mw("global::MyApp.Mw", 2);
 
         var closed = TypeNames.CloseMiddleware(mw, "TCommand", "global::MyApp.Ctx");
 
@@ -41,7 +44,7 @@ public sealed class PipelineEmitterHelpersTests
     [Fact]
     public void Close_middleware_with_arity_1_closes_command_only()
     {
-        var mw = new MiddlewareRef("global::MyApp.Mw", 1);
+        var mw = Mw("global::MyApp.Mw", 1);
 
         var closed = TypeNames.CloseMiddleware(mw, "TCommand", "global::MyApp.Ctx");
 
@@ -51,7 +54,7 @@ public sealed class PipelineEmitterHelpersTests
     [Fact]
     public void Open_generic_typeof_with_arity_2_is_two_parameter_open_generic()
     {
-        var mw = new MiddlewareRef("global::MyApp.Mw", 2);
+        var mw = Mw("global::MyApp.Mw", 2);
 
         var open = TypeNames.OpenGenericTypeof(mw);
 
@@ -61,7 +64,7 @@ public sealed class PipelineEmitterHelpersTests
     [Fact]
     public void Open_generic_typeof_with_arity_1_is_one_parameter_open_generic()
     {
-        var mw = new MiddlewareRef("global::MyApp.Mw", 1);
+        var mw = Mw("global::MyApp.Mw", 1);
 
         var open = TypeNames.OpenGenericTypeof(mw);
 
@@ -72,10 +75,10 @@ public sealed class PipelineEmitterHelpersTests
     public void Normalize_distinct_removes_duplicates_by_open_type_and_arity_and_sorts()
     {
         var items = ImmutableArray.Create(
-            new MiddlewareRef("global::B.Mw", 2),
-            new MiddlewareRef("global::A.Mw", 2),
-            new MiddlewareRef("global::A.Mw", 2), // dup
-            new MiddlewareRef("global::A.Mw", 1)  // not dup (different arity)
+            Mw("global::B.Mw", 2),
+            Mw("global::A.Mw", 2),
+            Mw("global::A.Mw", 2), // dup
+            Mw("global::A.Mw", 1)  // not dup (different arity)
         );
 
         var distinct = MiddlewareSets.NormalizeDistinct(items);
@@ -96,7 +99,7 @@ public sealed class PipelineEmitterHelpersTests
     [Fact]
     public void Ctor_param_name_strips_namespace_ticks_and_middleware_suffix_and_lowercases_first_letter()
     {
-        var mw = new MiddlewareRef("global::MyApp.Logging.GlobalLogMiddleware`2", 2);
+        var mw = Mw("global::MyApp.Logging.GlobalLogMiddleware`2", 2);
 
         var name = NameFactory.CtorParamName(mw);
 
@@ -106,7 +109,7 @@ public sealed class PipelineEmitterHelpersTests
     [Fact]
     public void Ctor_param_name_when_type_name_is_single_letter_lowercases_only()
     {
-        var mw = new MiddlewareRef("global::MyApp.XMiddleware", 1);
+        var mw = Mw("global::MyApp.XMiddleware", 1);
 
         var name = NameFactory.CtorParamName(mw);
 
@@ -116,7 +119,7 @@ public sealed class PipelineEmitterHelpersTests
     [Fact]
     public void Field_name_is_ctor_param_name_prefixed_with_underscore()
     {
-        var mw = new MiddlewareRef("global::MyApp.GlobalLogMiddleware", 2);
+        var mw = Mw("global::MyApp.GlobalLogMiddleware", 2);
 
         var field = NameFactory.FieldName(mw);
 

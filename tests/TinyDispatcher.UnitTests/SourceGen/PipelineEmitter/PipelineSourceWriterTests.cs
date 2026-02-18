@@ -3,16 +3,18 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text.RegularExpressions;
+using Microsoft.CodeAnalysis;
 using TinyDispatcher.SourceGen.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 using Xunit;
-using static TinyDispatcher.SourceGen.Emitters.Pipelines.PipelineEmitter;
 
 namespace TinyDispatcher.UnitTests.SourceGen.PipelineEmitter;
 
 public sealed class PipelineSourceWriterTests
 {
+    private static MiddlewareRef Mw(string openTypeFqn, int arity)
+        => new MiddlewareRef(OpenTypeSymbol: default!, OpenTypeFqn: openTypeFqn, Arity: arity);
+
     [Fact]
     public void Open_generic_pipeline_has_where_clause_before_class_body()
     {
@@ -21,7 +23,7 @@ public sealed class PipelineSourceWriterTests
                 className: "TinyDispatcherGlobalPipeline",
                 isOpenGeneric: true,
                 commandType: "TCommand",
-                steps: new[] { new MiddlewareRef("global::MyApp.GlobalLogMiddleware", 2) }
+                steps: new[] { Mw("global::MyApp.GlobalLogMiddleware", 2) }
             ));
 
         var source = PipelineSourceWriter.Write(plan);
@@ -44,7 +46,7 @@ public sealed class PipelineSourceWriterTests
                 "TinyDispatcherGlobalPipeline",
                 true,
                 "TCommand",
-                new[] { new MiddlewareRef("global::MyApp.G1", 2) }));
+                new[] { Mw("global::MyApp.G1", 2) }));
 
         var source = PipelineSourceWriter.Write(plan);
 
@@ -61,9 +63,9 @@ public sealed class PipelineSourceWriterTests
             "global::MyApp.CommandA",
             new[]
             {
-                new MiddlewareRef("global::MyApp.G", 2),
-                new MiddlewareRef("global::MyApp.P", 2),
-                new MiddlewareRef("global::MyApp.C", 2)
+                Mw("global::MyApp.G", 2),
+                Mw("global::MyApp.P", 2),
+                Mw("global::MyApp.C", 2)
             });
 
         var plan = Create_plan(perCommandPipelines: new[] { pipeline });
@@ -87,14 +89,14 @@ public sealed class PipelineSourceWriterTests
                 "TinyDispatcherGlobalPipeline",
                 true,
                 "TCommand",
-                new[] { new MiddlewareRef("global::MyApp.G1", 2) }),
+                new[] { Mw("global::MyApp.G1", 2) }),
             policyPipelines: new[]
             {
                 Create_pipeline(
                     "TinyDispatcherPolicyPipeline_X",
                     true,
                     "TCommand",
-                    new[] { new MiddlewareRef("global::MyApp.P1", 2) })
+                    new[] { Mw("global::MyApp.P1", 2) })
             },
             perCommandPipelines: new[]
             {
@@ -102,7 +104,7 @@ public sealed class PipelineSourceWriterTests
                     "TinyDispatcherPipeline_CommandA",
                     false,
                     "global::MyApp.CommandA",
-                    new[] { new MiddlewareRef("global::MyApp.C1", 2) })
+                    new[] { Mw("global::MyApp.C1", 2) })
             });
 
         var source = PipelineSourceWriter.Write(plan);

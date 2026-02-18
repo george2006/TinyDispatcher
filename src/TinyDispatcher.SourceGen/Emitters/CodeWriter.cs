@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace TinyDispatcher.SourceGen.Emitters.Pipelines;
+namespace TinyDispatcher.SourceGen.Emitters;
 
 internal sealed class CodeWriter
 {
