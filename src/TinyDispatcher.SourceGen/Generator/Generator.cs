@@ -282,9 +282,9 @@ public sealed class Generator : IIncrementalGenerator
             PipelineMapFormat: o.PipelineMapFormat);
     }
     private static void Emit(
-    RoslynGeneratorContext roslyn,
-    GeneratorAnalysis analysis,
-    GeneratorOptions emitOptions)
+        RoslynGeneratorContext roslyn,
+        GeneratorAnalysis analysis,
+        GeneratorOptions emitOptions)
     {
         var vctx = analysis.ValidationContext;
 
