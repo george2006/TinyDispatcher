@@ -28,6 +28,7 @@ using System.Linq;
 using TinyDispatcher.SourceGen.Abstractions;
 using TinyDispatcher.SourceGen.Discovery;
 using TinyDispatcher.SourceGen.Emitters;
+using TinyDispatcher.SourceGen.Emitters.ModuleInitializer;
 using TinyDispatcher.SourceGen.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Internal;

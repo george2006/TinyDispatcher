@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using TinyDispatcher.SourceGen.Generator;
 using Xunit;
 
-namespace TinyDispatcher.UnitTests.SourceGen;
+namespace TinyDispatcher.UnitTest.SourceGen;
 
 public sealed class HostGateTests
 {
