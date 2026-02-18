@@ -42,19 +42,21 @@
   <PropertyGroup>
     <PackageReleaseNotes>
 
-      Removed CS1066 warning from generated pipeline code.
-      
-      Introduced unified validation layer for TinyDispatcher source generator.
+      Refactored source generator internals to a clear Analyze → Validate → Emit flow.
 
-      - Added IGeneratorValidator, GeneratorValidationContext, DiagnosticBag
-      - Added PipelineDiagnosticsValidator
-      - Enforced single UseTinyDispatcher&lt;TContext&gt; call per host project
-      - Added pipeline diagnostics:
-      * Middleware targeting unknown command (warning)
-      * Policy targeting unknown command (warning)
-      * Multiple policies targeting same command (warning)
-      - Migrated duplicate handler validation to unified validation system
-      - Internal generator cleanup and consistency improvements
+      Centralized diagnostics: discovery is now facts-only; all diagnostics are produced during validation.
+
+      Hardened middleware validation:
+
+      Middleware types must be open generic definitions.
+
+      Only arity 1 or 2 supported.
+
+      Context-closed middleware (arity 1) must match the expected context.
+
+      Improved reliability by removing fragile metadata-name middleware resolution.
+
+      Added/expanded unit tests covering new validation rules.
 
       No breaking API changes.
     </PackageReleaseNotes>
