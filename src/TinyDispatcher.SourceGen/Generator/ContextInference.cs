@@ -1,6 +1,14 @@
-﻿using System.Collections.Immutable;
+﻿// TinyDispatcher.SourceGen/Generator/ContextInference.cs
+// -----------------------------------------------------------------------------
+// Context inference helpers for UseTinyDispatcher<TContext>(...)
+// -----------------------------------------------------------------------------
+
+
+#nullable enable
+
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System.Collections.Immutable;
 using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen.Generator;
@@ -16,7 +24,7 @@ internal sealed class ContextInference
 
         var builder = ImmutableArray.CreateBuilder<UseTinyDispatcherCall>();
 
-        for (int i = 0; i < useTinyDispatcherInvocations.Length; i++)
+        for (var i = 0; i < useTinyDispatcherInvocations.Length; i++)
         {
             var inv = useTinyDispatcherInvocations[i];
 
@@ -27,28 +35,48 @@ internal sealed class ContextInference
             else
                 g = inv.Expression as GenericNameSyntax;
 
-            if (g is null || g.TypeArgumentList.Arguments.Count != 1)
+            if (g is null)
+                continue;
+
+            if (g.TypeArgumentList.Arguments.Count != 1)
                 continue;
 
             var ctxSyntax = g.TypeArgumentList.Arguments[0];
+
             var model = compilation.GetSemanticModel(inv.SyntaxTree);
             var ctxType = model.GetTypeInfo(ctxSyntax).Type;
+
             if (ctxType is null)
                 continue;
 
-            var fqn = Fqn.EnsureGlobal(ctxType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
-            builder.Add(new UseTinyDispatcherCall(fqn, inv.GetLocation()));
+            if (ctxType is ITypeParameterSymbol)
+                continue;
+
+            if (ctxType is IErrorTypeSymbol)
+                continue;
+
+            var ctxFqn = Fqn.EnsureGlobal(
+                ctxType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+
+            builder.Add(new UseTinyDispatcherCall(ctxFqn, inv.GetLocation()));
         }
 
         return builder.ToImmutable();
     }
 
+    /// <summary>
+    /// Best-effort inference of a concrete context from syntax-discovered UseTinyDispatcher calls.
+    /// Returns null if none can be inferred safely.
+    /// </summary>
     public string? TryInferContextTypeFromUseTinyCalls(
-        ImmutableArray<InvocationExpressionSyntax> useTinyDispatcherInvocations,
+        ImmutableArray<InvocationExpressionSyntax> useTinyCallsSyntax,
         Compilation compilation)
     {
-        var all = ResolveAllUseTinyDispatcherContexts(useTinyDispatcherInvocations, compilation);
-        if (all.IsDefaultOrEmpty) return null;
+        // We resolve using the same logic as the semantic resolver, but accept the syntax list.
+        var all = ResolveAllUseTinyDispatcherContexts(useTinyCallsSyntax, compilation);
+        if (all.IsDefaultOrEmpty)
+            return null;
+
         return all[0].ContextTypeFqn;
     }
 }

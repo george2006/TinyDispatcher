@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using Microsoft.CodeAnalysis;
 using TinyDispatcher.SourceGen;
 using TinyDispatcher.SourceGen.Abstractions;
 using TinyDispatcher.SourceGen.Emitters.Pipelines;
@@ -14,11 +15,14 @@ namespace TinyDispatcher.UnitTests.SourceGen.PipelineEmitter;
 
 public sealed class PipelinePlannerTests
 {
+    private static MiddlewareRef Mw(string openTypeFqn, int arity)
+        => new MiddlewareRef(OpenTypeSymbol: default!, OpenTypeFqn: openTypeFqn, Arity: arity);
+
     [Fact]
     public void Build_global_only_creates_global_pipeline_and_registers_global_for_all_commands()
     {
         var global = ImmutableArray.Create(
-            new MiddlewareRef("global::MyApp.GlobalLogMiddleware", 2));
+            Mw("global::MyApp.GlobalLogMiddleware", 2));
 
         var perCommand = ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty;
         var policies = ImmutableDictionary<string, PolicySpec>.Empty;
@@ -55,7 +59,7 @@ public sealed class PipelinePlannerTests
             "global::MyApp.CheckoutPolicy",
             new PolicySpec(
                 PolicyTypeFqn: "global::MyApp.CheckoutPolicy",
-                Middlewares: ImmutableArray.Create(new MiddlewareRef("global::MyApp.PolicyLogMiddleware", 2)),
+                Middlewares: ImmutableArray.Create(Mw("global::MyApp.PolicyLogMiddleware", 2)),
                 Commands: ImmutableArray.Create("global::MyApp.CmdA"))
         );
 
@@ -80,17 +84,17 @@ public sealed class PipelinePlannerTests
     [Fact]
     public void Build_global_policy_and_per_command_per_command_steps_are_global_then_policy_then_per_command()
     {
-        var global = ImmutableArray.Create(new MiddlewareRef("global::MyApp.GlobalLogMiddleware", 2));
+        var global = ImmutableArray.Create(Mw("global::MyApp.GlobalLogMiddleware", 2));
 
         var perCommand = ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty.Add(
             "global::MyApp.CmdA",
-            ImmutableArray.Create(new MiddlewareRef("global::MyApp.PerCommandLogMiddleware", 2)));
+            ImmutableArray.Create(Mw("global::MyApp.PerCommandLogMiddleware", 2)));
 
         var policies = ImmutableDictionary<string, PolicySpec>.Empty.Add(
             "global::MyApp.CheckoutPolicy",
             new PolicySpec(
                 PolicyTypeFqn: "global::MyApp.CheckoutPolicy",
-                Middlewares: ImmutableArray.Create(new MiddlewareRef("global::MyApp.PolicyLogMiddleware", 2)),
+                Middlewares: ImmutableArray.Create(Mw("global::MyApp.PolicyLogMiddleware", 2)),
                 Commands: ImmutableArray.Create("global::MyApp.CmdA"))
         );
 
@@ -117,17 +121,17 @@ public sealed class PipelinePlannerTests
     [Fact]
     public void Build_service_registrations_preference_is_per_command_over_policy_over_global()
     {
-        var global = ImmutableArray.Create(new MiddlewareRef("global::MyApp.GlobalLogMiddleware", 2));
+        var global = ImmutableArray.Create(Mw("global::MyApp.GlobalLogMiddleware", 2));
 
         var perCommand = ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty.Add(
             "global::MyApp.CmdA",
-            ImmutableArray.Create(new MiddlewareRef("global::MyApp.PerCommandLogMiddleware", 2)));
+            ImmutableArray.Create(Mw("global::MyApp.PerCommandLogMiddleware", 2)));
 
         var policies = ImmutableDictionary<string, PolicySpec>.Empty.Add(
             "global::MyApp.CheckoutPolicy",
             new PolicySpec(
                 PolicyTypeFqn: "global::MyApp.CheckoutPolicy",
-                Middlewares: ImmutableArray.Create(new MiddlewareRef("global::MyApp.PolicyLogMiddleware", 2)),
+                Middlewares: ImmutableArray.Create(Mw("global::MyApp.PolicyLogMiddleware", 2)),
                 Commands: ImmutableArray.Create("global::MyApp.CmdA"))
         );
 
