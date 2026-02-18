@@ -9,6 +9,16 @@ It provides a predictable, explicit, and performant command/query dispatch core 
 
 …while keeping runtime execution simple and scope-friendly.
 
+## What you get
+
+- **Compile-time handler discovery** (no runtime scanning/reflection)
+- **Generated pipelines** (global middleware → policy middleware → per-command middleware → handler)
+- **Deterministic ordering** and precedence rules (predictable output)
+- **Explicit context (`TContext`)** for command handlers
+- **Pluggable context factory** (pass a delegate or register `IContextFactory<TContext>`)
+- **Feature-friendly `AppContext`** (optional `IFeatureInitializer`-based composition)
+- **Source-generator diagnostics** for invalid shapes/config (fail fast, no guessing)
+
 ## Install
 
 ```bash
@@ -69,3 +79,7 @@ TinyDispatcher is a good fit when you want:
 - deterministic middleware precedence
 - compile-time discovery (no runtime scanning)
 - a small, focused dispatch core rather than a full framework
+
+## Samples
+
+The repository contains small runnable samples under `samples/` (ASP.NET, custom contexts, context factories, closed-context middleware, etc.).
