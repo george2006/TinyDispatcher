@@ -1,6 +1,4 @@
-﻿// TinyDispatcher.SourceGen/Emitters/ModuleInitializer/ModuleInitializerSourceWriter.cs
-
-#nullable enable
+﻿#nullable enable
 
 using System;
 using TinyDispatcher.SourceGen.Emitters.Pipelines;

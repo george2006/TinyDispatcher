@@ -1,6 +1,4 @@
-﻿// TinyDispatcher.SourceGen/Emitters/ModuleInitializer/ModuleInitializerPlanner.cs
-
-#nullable enable
+﻿#nullable enable
 
 using System;
 using TinyDispatcher.SourceGen.Abstractions;

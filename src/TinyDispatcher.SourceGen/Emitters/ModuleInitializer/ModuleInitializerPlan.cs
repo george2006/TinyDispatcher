@@ -1,6 +1,4 @@
-﻿// TinyDispatcher.SourceGen/Emitters/ModuleInitializer/ModuleInitializerPlan.cs
-
-#nullable enable
+﻿#nullable enable
 
 namespace TinyDispatcher.SourceGen.Emitters.ModuleInitializer;
 

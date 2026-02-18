@@ -1,6 +1,4 @@
-﻿// TinyDispatcher.SourceGen/Emitters/ModuleInitializerEmitter.cs
-
-#nullable enable
+﻿#nullable enable
 
 using System.Text;
 using Microsoft.CodeAnalysis.Text;
