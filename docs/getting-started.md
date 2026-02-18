@@ -57,7 +57,91 @@ services.UseTinyDispatcher<MyContext>(
 
 If no context factory is provided and none is registered, TinyDispatcher fails fast at startup.
 
-## 3) Dispatch
+### Option C: Register `IContextFactory<TContext>` in DI
+
+```csharp
+services.AddScoped<IContextFactory<MyContext>, MyContextFactory>();
+
+services.UseTinyDispatcher<MyContext>(tiny =>
+{
+    // optional: middleware, policies, features
+});
+```
+
+## 3) Add policies and middleware
+
+### Policy (group commands + attach middleware)
+
+Register a policy in the bootstrap:
+
+```csharp
+services.UseTinyDispatcher<AppContext>(tiny =>
+{
+    tiny.UsePolicy<CheckoutPolicy>();
+});
+```
+
+Define the policy in code using attributes:
+
+```csharp
+[TinyPolicy]
+[UseMiddleware(typeof(PolicyLoggingMiddleware<,>))]
+[UseMiddleware(typeof(PolicyValidationMiddleware<,>))]
+[ForCommand(typeof(CreateOrder))]
+[ForCommand(typeof(CancelOrder))]
+public sealed class CheckoutPolicy { }
+```
+
+### Global middleware (applies to ALL commands)
+
+```csharp
+services.AddTransient(typeof(GlobalLoggingMiddleware<,>));
+
+services.UseTinyDispatcher<AppContext>(tiny =>
+{
+    tiny.UseGlobalMiddleware(typeof(GlobalLoggingMiddleware<,>));
+});
+```
+
+### Per-command middleware (applies to ONE command)
+
+```csharp
+services.AddTransient(typeof(OnlyForPayMiddleware<,>));
+
+services.UseTinyDispatcher<AppContext>(tiny =>
+{
+    tiny.UseMiddlewareFor<Pay>(typeof(OnlyForPayMiddleware<,>));
+});
+```
+
+### “Open” vs “closed-context” middleware
+
+- **Open** (generic on `TCommand` + `TContext`): `MyMiddleware<TCommand, TContext>`
+- **Closed-context** (generic only on `TCommand`, context fixed): `MyMiddleware<TCommand> : ICommandMiddleware<TCommand, AppContext>`
+
+Example closed-context middleware:
+
+```csharp
+services.AddTransient(typeof(RequestIdMiddleware<>));
+
+services.UseTinyDispatcher<AppContext>(tiny =>
+{
+    tiny.UseGlobalMiddleware(typeof(RequestIdMiddleware<>));
+});
+
+public sealed class RequestIdMiddleware<TCommand> : ICommandMiddleware<TCommand, AppContext>
+    where TCommand : ICommand
+{
+    public Task InvokeAsync(
+        TCommand command,
+        AppContext ctx,
+        CommandDelegate<TCommand, AppContext> next,
+        CancellationToken ct)
+        => next(command, ctx, ct);
+}
+```
+
+## 4) Dispatch
 
 ```csharp
 await dispatcher.DispatchAsync(new CreateOrder("123"), ct);

@@ -1,5 +1,14 @@
 # Documentation
 
+If you only read one thing first, start with **Getting Started** and then skim **Architecture**.
+
+Key capabilities (high level):
+
+- compile-time discovery and validation (source generator)
+- generated, deterministic middleware pipelines
+- explicit `TContext` with **pluggable context factories**
+- optional feature composition via `AppContext` + `IFeatureInitializer`
+
 - [Getting Started](getting-started.md)
 - [Architecture](architecture.md)
 - [Source Generator](source-generator.md)
