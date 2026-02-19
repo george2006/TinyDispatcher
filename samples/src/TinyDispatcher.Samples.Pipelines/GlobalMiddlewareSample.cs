@@ -3,6 +3,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using TinyDispatcher.Dispatching;
+using TinyDispatcher.Pipeline;
 
 namespace TinyDispatcher.Samples.Pipelines;
 
@@ -12,17 +13,8 @@ public static class GlobalMiddlewareSample
     {
         var services = new ServiceCollection();
 
-        services.UseTinyDispatcher<AppContext>(tiny =>
-        {
-            // Applies to ALL commands
-            tiny.UseGlobalMiddleware(typeof(GlobalLoggingMiddleware<,>));
-        });
-
-
-        // 👉 ONLY middleware must be registered manually
-        services.AddTransient(typeof(GlobalLoggingMiddleware<,>));
-
-
+        services.AddTiny();
+       
         var sp = services.BuildServiceProvider();
         var dispatcher = sp.GetRequiredService<IDispatcher<AppContext>>();
 
@@ -72,15 +64,15 @@ public static class GlobalMiddlewareSample
         : ICommandMiddleware<TCommand, TContext>
         where TCommand : ICommand
     {
-        public async Task InvokeAsync(
+        public async ValueTask InvokeAsync(
             TCommand command,
             TContext ctx,
-            CommandDelegate<TCommand, TContext> next,
-            CancellationToken ct)
+            ICommandPipelineRuntime<TCommand, TContext> runtime,
+            CancellationToken ct = default)
         {
             Console.WriteLine($"[GlobalLogging] -> {typeof(TCommand).Name}");
 
-            await next(command, ctx, ct);
+            await runtime.NextAsync(command, ctx, ct).ConfigureAwait(false);
 
             Console.WriteLine($"[GlobalLogging] <- {typeof(TCommand).Name}");
         }

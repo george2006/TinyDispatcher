@@ -3,7 +3,9 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using TinyDispatcher.Dispatching;
+using TinyDispatcher.Pipeline;
 using static TinyDispatcher.Samples.Pipelines.GlobalMiddlewareSample;
+
 namespace TinyDispatcher.Samples.Pipelines;
 
 public static class PolicySample
@@ -12,18 +14,7 @@ public static class PolicySample
     {
         var services = new ServiceCollection();
 
-        services.UseTinyDispatcher<AppContext>(tiny =>
-        {
-            // Policy defines: which commands belong + which middlewares apply
-            tiny.UsePolicy<CheckoutPolicy>();
-        });
-
-        services.AddTransient(typeof(PolicyLoggingMiddleware<,>));
-        services.AddTransient(typeof(PolicyValidationMiddleware<,>));
-        services.AddTransient(typeof(GlobalLoggingMiddleware<,>));
-
-
-
+        services.AddTiny();
 
         var sp = services.BuildServiceProvider();
 
@@ -83,14 +74,14 @@ public static class PolicySample
     public sealed class PolicyLoggingMiddleware<TCommand, TContext> : ICommandMiddleware<TCommand, TContext>
         where TCommand : ICommand
     {
-        public async Task InvokeAsync(
+        public async ValueTask InvokeAsync(
             TCommand command,
             TContext ctx,
-            CommandDelegate<TCommand, TContext> next,
-            CancellationToken ct)
+            ICommandPipelineRuntime<TCommand, TContext> runtime,
+            CancellationToken ct = default)
         {
             Console.WriteLine($"[PolicyLogging] -> {typeof(TCommand).Name}");
-            await next(command, ctx, ct);
+            await runtime.NextAsync(command, ctx, ct).ConfigureAwait(false);
             Console.WriteLine($"[PolicyLogging] <- {typeof(TCommand).Name}");
         }
     }
@@ -98,14 +89,14 @@ public static class PolicySample
     public sealed class PolicyValidationMiddleware<TCommand, TContext> : ICommandMiddleware<TCommand, TContext>
         where TCommand : ICommand
     {
-        public async Task InvokeAsync(
+        public async ValueTask InvokeAsync(
             TCommand command,
             TContext ctx,
-            CommandDelegate<TCommand, TContext> next,
-            CancellationToken ct)
+            ICommandPipelineRuntime<TCommand, TContext> runtime,
+            CancellationToken ct = default)
         {
             Console.WriteLine($"[PolicyValidation] OK for {typeof(TCommand).Name}");
-            await next(command, ctx, ct);
+            await runtime.NextAsync(command, ctx, ct).ConfigureAwait(false);
         }
     }
 }
