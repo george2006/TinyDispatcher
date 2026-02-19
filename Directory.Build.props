@@ -1,6 +1,9 @@
 <Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
   <ItemGroup>
-    <PackageReference Include="Nerdbank.GitVersioning"
-                      PrivateAssets="All" />
+    <PackageVersion Include="Nerdbank.GitVersioning" Version="3.6.139" />
   </ItemGroup>
 </Project>
