@@ -6,8 +6,10 @@ using System.Threading.Tasks;
 using TinyDispatcher;
 using TinyDispatcher.Context;
 using TinyDispatcher.Dispatching;
+using TinyDispatcher.Pipeline;
 
 namespace TinyDispatcher.Samples.CustomContextFactory;
+
 public sealed class CustomContextFactoryFeature
 {
     public static async Task RunAsync(CancellationToken ct = default)
@@ -89,14 +91,14 @@ public sealed class CustomContextFactoryFeature
         : ICommandMiddleware<TCommand, TContext>
         where TCommand : ICommand
     {
-        public async Task InvokeAsync(
+        public async ValueTask InvokeAsync(
             TCommand command,
             TContext ctx,
-            CommandDelegate<TCommand, TContext> next,
-            CancellationToken ct)
+            ICommandPipelineRuntime<TCommand, TContext> runtime,
+            CancellationToken ct = default)
         {
             Console.WriteLine($"[MW] -> {typeof(TCommand).Name}");
-            await next(command, ctx, ct);
+            await runtime.NextAsync(command, ctx, ct).ConfigureAwait(false);
             Console.WriteLine($"[MW] <- {typeof(TCommand).Name}");
         }
     }

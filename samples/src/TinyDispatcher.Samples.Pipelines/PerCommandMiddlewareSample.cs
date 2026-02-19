@@ -3,6 +3,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using TinyDispatcher.Dispatching;
+using TinyDispatcher.Pipeline;
 using static TinyDispatcher.Samples.Pipelines.GlobalMiddlewareSample;
 
 namespace TinyDispatcher.Samples.Pipelines;
@@ -13,17 +14,7 @@ public static class PerCommandMiddlewareSample
     {
         var services = new ServiceCollection();
 
-        // Only middleware must be registered manually
-        services.AddTransient(typeof(OnlyForPayMiddleware<,>));
-
-        services.UseTinyDispatcher<AppContext>(tiny =>
-        {
-            // Applies ONLY to Pay
-            tiny.UseMiddlewareFor<Pay>(typeof(OnlyForPayMiddleware<,>));
-        });
-
-        // 👉 ONLY middleware must be registered manually
-        services.AddTransient(typeof(GlobalLoggingMiddleware<,>));
+        services.AddTiny();
 
         var sp = services.BuildServiceProvider();
         var dispatcher = sp.GetRequiredService<IDispatcher<AppContext>>();
@@ -78,15 +69,15 @@ public static class PerCommandMiddlewareSample
     public sealed class OnlyForPayMiddleware<TCommand, TContext> : ICommandMiddleware<TCommand, TContext>
         where TCommand : ICommand
     {
-        public async Task InvokeAsync(
+        public async ValueTask InvokeAsync(
             TCommand command,
             TContext ctx,
-            CommandDelegate<TCommand, TContext> next,
-            CancellationToken ct)
+            ICommandPipelineRuntime<TCommand, TContext> runtime,
+            CancellationToken ct = default)
         {
             Console.WriteLine($"[OnlyForPayMiddleware] -> {typeof(TCommand).Name}");
 
-            await next(command, ctx, ct);
+            await runtime.NextAsync(command, ctx, ct).ConfigureAwait(false);
 
             Console.WriteLine($"[OnlyForPayMiddleware] <- {typeof(TCommand).Name}");
         }

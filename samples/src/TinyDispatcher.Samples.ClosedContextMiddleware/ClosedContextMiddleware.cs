@@ -6,9 +6,11 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using TinyDispatcher;
 using TinyDispatcher.Context;
 using TinyDispatcher.Dispatching;
+using TinyDispatcher.Pipeline;
 
 namespace TinyDispatcher.Samples.ClosedContextMiddleware;
 
@@ -60,23 +62,22 @@ public sealed class RequestIdFeatureInitializer : IFeatureInitializer
 }
 
 // ============================================================
-// 2) Closed-context middlewares (generic ONLY on TCommand)
-//    - Context is fixed to AppContext
+// 2) Closed-context middlewares (runtime-based signature)
 // ============================================================
 
 public sealed class RequestIdMiddleware<TCommand> : ICommandMiddleware<TCommand, AppContext>
     where TCommand : ICommand
 {
-    public async Task InvokeAsync(
+    public async ValueTask InvokeAsync(
         TCommand command,
         AppContext ctx,
-        CommandDelegate<TCommand, AppContext> next,
-        CancellationToken ct)
+        ICommandPipelineRuntime<TCommand, AppContext> runtime,
+        CancellationToken ct = default)
     {
         var rid = ctx.GetFeature<RequestIdFeature>().Value;
 
         Console.WriteLine($"[RequestId MW] -> {typeof(TCommand).Name} (rid={rid})");
-        await next(command, ctx, ct).ConfigureAwait(false);
+        await runtime.NextAsync(command, ctx, ct).ConfigureAwait(false);
         Console.WriteLine($"[RequestId MW] <- {typeof(TCommand).Name} (rid={rid})");
     }
 }
@@ -84,18 +85,18 @@ public sealed class RequestIdMiddleware<TCommand> : ICommandMiddleware<TCommand,
 public sealed class TimingMiddleware<TCommand> : ICommandMiddleware<TCommand, AppContext>
     where TCommand : ICommand
 {
-    public async Task InvokeAsync(
+    public async ValueTask InvokeAsync(
         TCommand command,
         AppContext ctx,
-        CommandDelegate<TCommand, AppContext> next,
-        CancellationToken ct)
+        ICommandPipelineRuntime<TCommand, AppContext> runtime,
+        CancellationToken ct = default)
     {
         var rid = ctx.GetFeature<RequestIdFeature>().Value;
 
         var sw = Stopwatch.StartNew();
         try
         {
-            await next(command, ctx, ct).ConfigureAwait(false);
+            await runtime.NextAsync(command, ctx, ct).ConfigureAwait(false);
         }
         finally
         {

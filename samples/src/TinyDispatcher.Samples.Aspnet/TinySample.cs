@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using TinyDispatcher;
 using TinyDispatcher.Context;
+using TinyDispatcher.Pipeline;
 
 namespace TinyDispatcher.Samples.Aspnet;
 
@@ -23,7 +24,7 @@ public static class TinySample
         // Needed by the feature initializer (reads current request headers)
         services.AddHttpContextAccessor();
 
-        // Middlewares (open generic arity-1; context closed to AppContext)
+        // Middlewares (open generic; context is AppContext via ICommandMiddleware<TCommand, AppContext>)
         services.AddTransient(typeof(RequestIdMiddleware<>));
         services.AddTransient(typeof(TimingMiddleware<>));
 
@@ -33,7 +34,7 @@ public static class TinySample
             // Plug request feature into AppContext
             tiny.AddFeatureInitializer<RequestIdFromHttpFeatureInitializer>();
 
-            // Closed-context middleware registrations
+            // Global middleware registrations
             tiny.UseGlobalMiddleware(typeof(RequestIdMiddleware<>));
             tiny.UseGlobalMiddleware(typeof(TimingMiddleware<>));
         });
@@ -85,22 +86,22 @@ public sealed class RequestIdFromHttpFeatureInitializer : IFeatureInitializer
 }
 
 // ============================================================
-// Closed-context middlewares (generic ONLY on TCommand)
+// Middlewares (runtime-based signature)
 // ============================================================
 
 public sealed class RequestIdMiddleware<TCommand> : ICommandMiddleware<TCommand, AppContext>
     where TCommand : ICommand
 {
-    public async Task InvokeAsync(
+    public async ValueTask InvokeAsync(
         TCommand command,
         AppContext ctx,
-        CommandDelegate<TCommand, AppContext> next,
-        CancellationToken ct)
+        ICommandPipelineRuntime<TCommand, AppContext> runtime,
+        CancellationToken ct = default)
     {
         var rid = ctx.GetFeature<RequestIdFeature>().Value;
 
         Console.WriteLine($"[RequestId MW] -> {typeof(TCommand).Name} (rid={rid})");
-        await next(command, ctx, ct).ConfigureAwait(false);
+        await runtime.NextAsync(command, ctx, ct).ConfigureAwait(false);
         Console.WriteLine($"[RequestId MW] <- {typeof(TCommand).Name} (rid={rid})");
     }
 }
@@ -108,18 +109,18 @@ public sealed class RequestIdMiddleware<TCommand> : ICommandMiddleware<TCommand,
 public sealed class TimingMiddleware<TCommand> : ICommandMiddleware<TCommand, AppContext>
     where TCommand : ICommand
 {
-    public async Task InvokeAsync(
+    public async ValueTask InvokeAsync(
         TCommand command,
         AppContext ctx,
-        CommandDelegate<TCommand, AppContext> next,
-        CancellationToken ct)
+        ICommandPipelineRuntime<TCommand, AppContext> runtime,
+        CancellationToken ct = default)
     {
         var rid = ctx.GetFeature<RequestIdFeature>().Value;
 
         var sw = Stopwatch.StartNew();
         try
         {
-            await next(command, ctx, ct).ConfigureAwait(false);
+            await runtime.NextAsync(command, ctx, ct).ConfigureAwait(false);
         }
         finally
         {
