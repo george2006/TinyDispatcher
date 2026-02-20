@@ -16,8 +16,8 @@
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="8.0.1" />
 
     <!-- Dependency Injection (aligned) -->
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
 
     <!-- Roslyn (MUST match SourceGen) -->
     <PackageVersion Include="Microsoft.CodeAnalysis.Common" Version="4.14.0" />
