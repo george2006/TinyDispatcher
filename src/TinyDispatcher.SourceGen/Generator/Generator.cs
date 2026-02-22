@@ -333,21 +333,19 @@ public sealed class Generator : IIncrementalGenerator
     // =====================================================================
     // VALIDATE
     // =====================================================================
+    private static readonly ContextConsistencyValidator _contextConsistency = new();
+    private static readonly DuplicateHandlerValidator _duplicateHandler = new();
+    private static readonly MiddlewareRefShapeValidator _middlewareRefShape = new();
+    private static readonly PipelineDiagnosticsValidator _pipelineDiagnostics = new();
+
     private static DiagnosticBag Validate(GeneratorValidationContext vctx)
     {
         var bag = new DiagnosticBag();
 
-        // 1) Global invariants
-        new ContextConsistencyValidator().Validate(vctx, bag);
-
-        // 2) Handler wiring
-        new DuplicateHandlerValidator().Validate(vctx, bag);
-
-        // 3) Middleware/pipeline structural validity
-        new MiddlewareRefShapeValidator().Validate(vctx, bag);
-
-        // 4) Higher-level pipeline diagnostics
-        new PipelineDiagnosticsValidator().Validate(vctx, bag);
+        _contextConsistency.Validate(vctx, bag);
+        _duplicateHandler.Validate(vctx, bag);
+        _middlewareRefShape.Validate(vctx, bag);
+        _pipelineDiagnostics.Validate(vctx, bag);
 
         return bag;
     }
