@@ -35,6 +35,10 @@
 
    </PropertyGroup>
 
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+
   <ItemGroup>
     <!-- Make sure the README is included in the .nupkg root -->
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
