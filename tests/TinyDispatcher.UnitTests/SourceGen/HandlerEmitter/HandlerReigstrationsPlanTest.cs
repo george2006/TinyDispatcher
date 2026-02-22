@@ -1,5 +1,4 @@
-﻿// File: tests/TinyDispatcher.UnitTests/SourceGen/Emitters/Handlers/HandlerRegistrationsPlanTests.cs
-#nullable enable
+﻿#nullable enable
 
 using TinyDispatcher.SourceGen.Emitters.Handlers;
 using TinyDispatcher.SourceGen.Generator.Models;
