@@ -1,5 +1,4 @@
-﻿// File: tests/TinyDispatcher.UnitTests/SourceGen/Emitters/Handlers/HandlerRegistrationsPlannerTests.cs
-#nullable enable
+﻿#nullable enable
 
 using System.Collections.Immutable;
 using TinyDispatcher.SourceGen;
