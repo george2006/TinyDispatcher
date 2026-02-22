@@ -41,24 +41,33 @@
   </ItemGroup>
   <PropertyGroup>
     <PackageReleaseNotes>
+      Generator Refactor Validation Hardening
 
-      Refactored source generator internals to a clear Analyze → Validate → Emit flow.
+      This release focuses on structural clarity, validation robustness, and long-term maintainability.
 
-      Centralized diagnostics: discovery is now facts-only; all diagnostics are produced during validation.
+      Refactored Analyze pipeline:
+      - Clear phase-based orchestration:
+      * Option resolution
+      * Handler discovery
+      * Pipeline extraction
+      * Validation context construction
+      - Introduced PipelineFacts aggregation model
+      - Reordered Generator methods for top-to-bottom readability:
+      Initialize -> Execute -> Analyze -> Validate -> Emit
+      - No behavioral changes
+      - All tests remain green
 
-      Hardened middleware validation:
+      New validation: Missing Handler Detection
+      - DISP410: Middleware configured for a command without a handler
+      - DISP411: Policy targets a command without a handler
 
-      Middleware types must be open generic definitions.
+      Internal improvements:
+      - Clearer validation layering
+      - Cleaner responsibility boundaries
+      - Minor allocation reductions
+      - Improved determinism and readability
 
-      Only arity 1 or 2 supported.
-
-      Context-closed middleware (arity 1) must match the expected context.
-
-      Improved reliability by removing fragile metadata-name middleware resolution.
-
-      Added/expanded unit tests covering new validation rules.
-
-      No breaking API changes.
+      This release continues the stabilization path toward v1.0.
     </PackageReleaseNotes>
 
 
