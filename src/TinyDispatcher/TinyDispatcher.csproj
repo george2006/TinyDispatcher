@@ -67,7 +67,17 @@
       - Minor allocation reductions
       - Improved determinism and readability
 
-      This release continues the stabilization path toward v1.0.
+      Next steps toward v1.0:
+
+      We are entering a focused file-by-file polishing phase.
+      The goal is to review every component for clarity, consistency,
+      diagnostic quality, and long-term maintainability.
+
+      No major features are planned before v1.0.
+      The focus is stability, readability, and API confidence.
+
+      v1.0 will be released once the generator reaches
+      a level of simplicity and determinism we are fully satisfied with.
     </PackageReleaseNotes>
 
 
