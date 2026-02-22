@@ -337,9 +337,16 @@ public sealed class Generator : IIncrementalGenerator
     {
         var bag = new DiagnosticBag();
 
+        // 1) Global invariants
         new ContextConsistencyValidator().Validate(vctx, bag);
+
+        // 2) Handler wiring
         new DuplicateHandlerValidator().Validate(vctx, bag);
+
+        // 3) Middleware/pipeline structural validity
         new MiddlewareRefShapeValidator().Validate(vctx, bag);
+
+        // 4) Higher-level pipeline diagnostics
         new PipelineDiagnosticsValidator().Validate(vctx, bag);
 
         return bag;
