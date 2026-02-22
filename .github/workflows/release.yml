@@ -1,7 +1,12 @@
-name: Release (manual publish)
+name: Release
 
 on:
-  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
 
 jobs:
   publish:
@@ -33,3 +38,8 @@ jobs:
 
       - name: Publish to NuGet
         run: dotnet nuget push "./artifacts/*.nupkg" --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+
+      - name: Upload nupkg to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./artifacts/*.nupkg
