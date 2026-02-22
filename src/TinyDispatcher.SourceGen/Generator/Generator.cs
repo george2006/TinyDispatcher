@@ -44,6 +44,9 @@ namespace TinyDispatcher.SourceGen.Generator;
 [Generator]
 public sealed class Generator : IIncrementalGenerator
 {
+    // =====================================================================
+    // Entry point
+    // =====================================================================
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var syntax = new UseTinyDispatcherSyntax();
@@ -91,33 +94,20 @@ public sealed class Generator : IIncrementalGenerator
     // EXECUTE
     // =====================================================================
     private static void Execute(
-       SourceProductionContext spc,
-       (((Compilation Compilation,
-       ImmutableArray<INamedTypeSymbol?> Handlers) Left,
-       ImmutableArray<InvocationExpressionSyntax?> UseTinyCalls) Left,
-       AnalyzerConfigOptionsProvider Options) data)
+        SourceProductionContext spc,
+        (((Compilation Compilation,
+           ImmutableArray<INamedTypeSymbol?> Handlers) Left,
+           ImmutableArray<InvocationExpressionSyntax?> UseTinyCalls) Left,
+           AnalyzerConfigOptionsProvider Options) data)
     {
         var compilation = data.Left.Left.Compilation;
 
-        // ---------------------------------------------------------------------
-        // Normalize inputs
-        // ---------------------------------------------------------------------
-        var handlerSymbols = data.Left.Left.Handlers
-            .Where(static s => s is not null)
-            .Select(static s => s!)
-            .ToImmutableArray();
-
-        var useTinyCallsSyntax = data.Left.UseTinyCalls
-            .Where(static x => x is not null)
-            .Select(static x => x!)
-            .ToImmutableArray();
+        var handlerSymbols = NormalizeHandlerSymbols(data.Left.Left.Handlers);
+        var useTinyCallsSyntax = NormalizeUseTinyCalls(data.Left.UseTinyCalls);
 
         var roslyn = new RoslynGeneratorContext(spc);
         var diagnosticsCatalog = new DiagnosticsCatalog();
 
-        // =====================================================================
-        // ANALYZE (facts-only)
-        // =====================================================================
         var analysis = Analyze(
             compilation,
             handlerSymbols,
@@ -125,25 +115,37 @@ public sealed class Generator : IIncrementalGenerator
             data.Options,
             diagnosticsCatalog);
 
-        // =====================================================================
-        // VALIDATE (all diagnostics)
-        // =====================================================================
         var bag = Validate(analysis.ValidationContext);
 
         if (ReportAndHasErrors(roslyn, bag))
             return;
 
-        // =====================================================================
-        // EMIT (only after validation passes)
-        // =====================================================================
         var emitOptions = BuildEmitOptions(analysis);
 
         Emit(roslyn, analysis, emitOptions);
     }
 
-    static bool ReportAndHasErrors(RoslynGeneratorContext ctx, DiagnosticBag bag)
+    private static ImmutableArray<INamedTypeSymbol> NormalizeHandlerSymbols(
+        ImmutableArray<INamedTypeSymbol?> handlers)
     {
-        if (bag.Count == 0) 
+        return handlers
+            .Where(static s => s is not null)
+            .Select(static s => s!)
+            .ToImmutableArray();
+    }
+
+    private static ImmutableArray<InvocationExpressionSyntax> NormalizeUseTinyCalls(
+        ImmutableArray<InvocationExpressionSyntax?> useTinyCalls)
+    {
+        return useTinyCalls
+            .Where(static x => x is not null)
+            .Select(static x => x!)
+            .ToImmutableArray();
+    }
+
+    private static bool ReportAndHasErrors(RoslynGeneratorContext ctx, DiagnosticBag bag)
+    {
+        if (bag.Count == 0)
             return false;
 
         var arr = bag.ToImmutable();
@@ -153,6 +155,9 @@ public sealed class Generator : IIncrementalGenerator
         return bag.HasErrors;
     }
 
+    // =====================================================================
+    // ANALYZE (facts-only)
+    // =====================================================================
     private static GeneratorAnalysis Analyze(
         Compilation compilation,
         ImmutableArray<INamedTypeSymbol> handlerSymbols,
@@ -160,55 +165,118 @@ public sealed class Generator : IIncrementalGenerator
         AnalyzerConfigOptionsProvider optionsProvider,
         DiagnosticsCatalog diagnosticsCatalog)
     {
-        if (compilation is null) throw new ArgumentNullException(nameof(compilation));
-        if (diagnosticsCatalog is null) throw new ArgumentNullException(nameof(diagnosticsCatalog));
+        GuardInputs(compilation, diagnosticsCatalog);
 
         // Components (facts-only)
-        var invocationExtractor = new TinyBootstrapInvocationExtractor(); // facts-only
-        var policyBuilder = new PolicySpecBuilder();                     // facts-only
+        var invocationExtractor = new TinyBootstrapInvocationExtractor();
+        var policyBuilder = new PolicySpecBuilder();
         var ordering = new MiddlewareOrdering();
         var ctxInference = new ContextInference();
         var optionsFactory = new GeneratorOptionsFactory(new OptionsProvider());
 
-        // ---------------------------------------------------------------------
-        // 1) Read base options
-        // ---------------------------------------------------------------------
+        var effectiveOptions = ResolveEffectiveOptions(
+            compilation,
+            optionsProvider,
+            useTinyCallsSyntax,
+            ctxInference,
+            optionsFactory);
+
+        var expectedContextFqn = GetExpectedContextFqn(effectiveOptions);
+
+        var discoveryResult = DiscoverHandlers(
+            compilation,
+            handlerSymbols,
+            effectiveOptions);
+
+        var pipelineFacts = ExtractPipelineFacts(
+            compilation,
+            useTinyCallsSyntax,
+            invocationExtractor,
+            ctxInference,
+            policyBuilder,
+            ordering);
+
+        var validationContext = BuildValidationContext(
+            compilation,
+            discoveryResult,
+            diagnosticsCatalog,
+            useTinyCallsSyntax,
+            expectedContextFqn,
+            pipelineFacts);
+
+        return new GeneratorAnalysis(
+            Compilation: compilation,
+            UseTinyCallsSyntax: useTinyCallsSyntax,
+            Discovery: discoveryResult,
+            EffectiveOptions: effectiveOptions,
+            ValidationContext: validationContext,
+            Globals: pipelineFacts.Globals,
+            PerCommand: pipelineFacts.PerCommand,
+            Policies: pipelineFacts.Policies);
+    }
+
+    private static void GuardInputs(
+        Compilation compilation,
+        DiagnosticsCatalog diagnosticsCatalog)
+    {
+        if (compilation is null)
+            throw new ArgumentNullException(nameof(compilation));
+
+        if (diagnosticsCatalog is null)
+            throw new ArgumentNullException(nameof(diagnosticsCatalog));
+    }
+
+    private static GeneratorOptions ResolveEffectiveOptions(
+        Compilation compilation,
+        AnalyzerConfigOptionsProvider optionsProvider,
+        ImmutableArray<InvocationExpressionSyntax> useTinyCallsSyntax,
+        ContextInference ctxInference,
+        GeneratorOptionsFactory optionsFactory)
+    {
         var baseOptions = optionsFactory.Create(compilation, optionsProvider);
 
-        // ---------------------------------------------------------------------
-        // 2) Infer context from SYNTAX-based UseTinyDispatcher calls
-        //    (ContextInference must never infer "TContext" – it must ignore type params)
-        // ---------------------------------------------------------------------
-        var inferredCtxFqn = ctxInference.TryInferContextTypeFromUseTinyCalls(useTinyCallsSyntax, compilation);
-        var effectiveOptions = optionsFactory.ApplyInferredContextIfMissing(baseOptions, inferredCtxFqn);
+        var inferredCtxFqn =
+            ctxInference.TryInferContextTypeFromUseTinyCalls(useTinyCallsSyntax, compilation);
 
-        var expectedContextFqn =
-            string.IsNullOrWhiteSpace(effectiveOptions.CommandContextType)
-                ? string.Empty
-                : Fqn.EnsureGlobal(effectiveOptions.CommandContextType!);
+        return optionsFactory.ApplyInferredContextIfMissing(baseOptions, inferredCtxFqn);
+    }
 
-        // ---------------------------------------------------------------------
-        // 3) Discover handlers using the effective options (context-aware)
-        // ---------------------------------------------------------------------
+    private static string GetExpectedContextFqn(GeneratorOptions options)
+    {
+        if (string.IsNullOrWhiteSpace(options.CommandContextType))
+            return string.Empty;
+
+        return Fqn.EnsureGlobal(options.CommandContextType!);
+    }
+
+    private static DiscoveryResult DiscoverHandlers(
+        Compilation compilation,
+        ImmutableArray<INamedTypeSymbol> handlerSymbols,
+        GeneratorOptions effectiveOptions)
+    {
         var handlerDiscovery = new RoslynHandlerDiscovery(
             Known.CoreNamespace,
             includeNamespacePrefix: effectiveOptions.IncludeNamespacePrefix,
             commandContextTypeFqn: effectiveOptions.CommandContextType);
 
-        var discoveryResult = handlerDiscovery.Discover(compilation, handlerSymbols);
+        return handlerDiscovery.Discover(compilation, handlerSymbols);
+    }
 
-        // ---------------------------------------------------------------------
-        // 4) Discover semantic UseTinyDispatcher<TContext> calls (facts-only)
-        // ---------------------------------------------------------------------
+    private static PipelineFacts ExtractPipelineFacts(
+        Compilation compilation,
+        ImmutableArray<InvocationExpressionSyntax> useTinyCallsSyntax,
+        TinyBootstrapInvocationExtractor invocationExtractor,
+        ContextInference ctxInference,
+        PolicySpecBuilder policyBuilder,
+        MiddlewareOrdering ordering)
+    {
         var useTinyDispatcherInvocations =
             UseTinyDispatcherInvocationExtractor.FindAllUseTinyDispatcherCalls(compilation);
 
         var allUseTinyDispatcherCalls =
             ctxInference.ResolveAllUseTinyDispatcherContexts(useTinyDispatcherInvocations, compilation);
 
-        // ---------------------------------------------------------------------
-        // 5) Extract middleware registrations + referenced policies from bootstrap lambdas (facts-only)
-        // ---------------------------------------------------------------------
+        // Temp collections for extractor
         var globalEntries = new List<OrderedEntry>();
         var perCmdEntries = new List<OrderedPerCommandEntry>();
         var policyTypeSymbols = new List<INamedTypeSymbol>();
@@ -223,37 +291,48 @@ public sealed class Generator : IIncrementalGenerator
                 policyTypeSymbols);
         }
 
-        // ---------------------------------------------------------------------
-        // 6) Build policy specs (facts-only)
-        // ---------------------------------------------------------------------
-        var policies = policyBuilder.Build(compilation, policyTypeSymbols);
-
-        // ---------------------------------------------------------------------
-        // 7) Normalize ordering / distinct (normalization only)
-        // ---------------------------------------------------------------------
         var globals = ordering.OrderAndDistinctGlobals(globalEntries);
         var perCommand = ordering.BuildPerCommandMap(perCmdEntries);
+        var policies = policyBuilder.Build(compilation, policyTypeSymbols);
 
-        // ---------------------------------------------------------------------
-        // 8) Build validation context (still facts-only)
-        // ---------------------------------------------------------------------
-        var vctx = new GeneratorValidationContext.Builder(compilation, discoveryResult, diagnosticsCatalog)
-            .WithHostGate(useTinyCallsSyntax, isHost: useTinyCallsSyntax.Length > 0)
-            .WithUseTinyDispatcherCalls(allUseTinyDispatcherCalls)
-            .WithExpectedContext(expectedContextFqn)
-            .WithPipelineConfig(globals, perCommand, policies)
-            .Build();
-
-        return new GeneratorAnalysis(
-            Compilation: compilation,
-            UseTinyCallsSyntax: useTinyCallsSyntax,
-            Discovery: discoveryResult,
-            EffectiveOptions: effectiveOptions,
-            ValidationContext: vctx,
-            Globals: globals,
-            PerCommand: perCommand,
-            Policies: policies);
+        return new PipelineFacts(
+            globals,
+            perCommand,
+            policies,
+            allUseTinyDispatcherCalls);
     }
+
+    private static GeneratorValidationContext BuildValidationContext(
+        Compilation compilation,
+        DiscoveryResult discoveryResult,
+        DiagnosticsCatalog diagnosticsCatalog,
+        ImmutableArray<InvocationExpressionSyntax> useTinyCallsSyntax,
+        string expectedContextFqn,
+        PipelineFacts pipelineFacts)
+    {
+        return new GeneratorValidationContext.Builder(
+                compilation,
+                discoveryResult,
+                diagnosticsCatalog)
+            .WithHostGate(useTinyCallsSyntax, isHost: useTinyCallsSyntax.Length > 0)
+            .WithUseTinyDispatcherCalls(pipelineFacts.AllUseTinyCalls)
+            .WithExpectedContext(expectedContextFqn)
+            .WithPipelineConfig(
+                pipelineFacts.Globals,
+                pipelineFacts.PerCommand,
+                pipelineFacts.Policies)
+            .Build();
+    }
+
+    private sealed record PipelineFacts(
+        ImmutableArray<MiddlewareRef> Globals,
+        ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> PerCommand,
+        ImmutableDictionary<string, PolicySpec> Policies,
+        ImmutableArray<UseTinyDispatcherCall> AllUseTinyCalls);
+
+    // =====================================================================
+    // VALIDATE
+    // =====================================================================
     private static DiagnosticBag Validate(GeneratorValidationContext vctx)
     {
         var bag = new DiagnosticBag();
@@ -265,6 +344,10 @@ public sealed class Generator : IIncrementalGenerator
 
         return bag;
     }
+
+    // =====================================================================
+    // EMIT
+    // =====================================================================
     private static GeneratorOptions BuildEmitOptions(GeneratorAnalysis analysis)
     {
         var vctx = analysis.ValidationContext;
@@ -283,6 +366,7 @@ public sealed class Generator : IIncrementalGenerator
             EmitPipelineMap: o.EmitPipelineMap,
             PipelineMapFormat: o.PipelineMapFormat);
     }
+
     private static void Emit(
         RoslynGeneratorContext roslyn,
         GeneratorAnalysis analysis,
@@ -311,8 +395,4 @@ public sealed class Generator : IIncrementalGenerator
         new PipelineEmitter(vctx.Globals, vctx.PerCommand, vctx.Policies)
             .Emit(roslyn, analysis.Discovery, emitOptions);
     }
-
-
-
-
 }
