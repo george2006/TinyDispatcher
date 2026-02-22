@@ -19,8 +19,8 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
 
-    <PackageReference Include="Microsoft.NET.Test.Sdk"/>
-    <PackageReference Include="xunit"/>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -30,8 +30,8 @@
   <!-- Roslyn (MUST match SourceGen versions) -->
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.Common" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp"  PrivateAssets="all" />
-    <PackageReference Include="System.Collections.Immutable"  PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+    <PackageReference Include="System.Collections.Immutable" PrivateAssets="all" />
   </ItemGroup>
 
   <!-- Compiler-visible properties for source generator -->
