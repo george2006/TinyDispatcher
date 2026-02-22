@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using Microsoft.CodeAnalysis;
+using System.Collections.Immutable;
 
 namespace TinyDispatcher.SourceGen.Generator.Models;
 
@@ -14,4 +15,10 @@ namespace TinyDispatcher.SourceGen.Generator.Models;
 public readonly record struct MiddlewareRef(
     INamedTypeSymbol OpenTypeSymbol,
     string OpenTypeFqn,
-    int Arity);
+    int Arity)
+{
+    internal static ImmutableArray<MiddlewareRef> FromOrderedEntries(ImmutableArray<OrderedEntry> globals)
+    {
+        throw new NotImplementedException();
+    }
+}
