@@ -9,9 +9,6 @@
     <!-- TinyDispatcher -->
     <PackageVersion Include="TinyDispatcher" Version="0.1.103-alpha-g6d84474285" />
 
-    <!-- Versioning -->
-    <PackageVersion Include="Nerdbank.GitVersioning" Version="3.6.139" />
-
     <!-- ASP.NET -->
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="8.0.1" />
 
