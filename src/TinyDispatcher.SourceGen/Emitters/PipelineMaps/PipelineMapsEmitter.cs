@@ -100,7 +100,7 @@ internal sealed class PipelineMapsEmitter : ICodeEmitter
             if (string.IsNullOrWhiteSpace(raw))
                 return DefaultJson();
 
-            var parts = raw.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+            var parts = raw!.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
 
             var json = false;
             var mermaid = false;
