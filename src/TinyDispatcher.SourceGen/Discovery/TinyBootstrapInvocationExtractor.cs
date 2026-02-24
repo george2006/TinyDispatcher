@@ -160,8 +160,8 @@ internal sealed class TinyBootstrapInvocationExtractor
         if (inv.ArgumentList?.Arguments.Count < 2)
             return false;
 
-        var a0 = inv.ArgumentList.Arguments[0].Expression as TypeOfExpressionSyntax;
-        var a1 = inv.ArgumentList.Arguments[1].Expression as TypeOfExpressionSyntax;
+        var a0 = inv.ArgumentList!.Arguments[0].Expression as TypeOfExpressionSyntax;
+        var a1 = inv.ArgumentList!.Arguments[1].Expression as TypeOfExpressionSyntax;
 
         if (a0 is null || a1 is null)
             return false;
