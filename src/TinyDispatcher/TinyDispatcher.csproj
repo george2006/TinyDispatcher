@@ -36,7 +36,7 @@
    </PropertyGroup>
 
   <PropertyGroup>
-    <Version>1.0.0</Version>
+    <Version>1.0.2</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -45,10 +45,9 @@
   </ItemGroup>
   <PropertyGroup>
     <PackageReleaseNotes>
-      1.0.1
-      - Fixed pipeline map emission regression (generator emits maps when enabled).
-      - Added regression tests for pipeline map emission.
-      - Fixed nullable warning in PipelineMapFormats.Parse.
+      1.0.2
+      - Fix: package version now matches release tag (previous v1.0.1 produced 1.0.0 package).
+      - Fix: pipeline map emission regression.
     </PackageReleaseNotes>
 
 
