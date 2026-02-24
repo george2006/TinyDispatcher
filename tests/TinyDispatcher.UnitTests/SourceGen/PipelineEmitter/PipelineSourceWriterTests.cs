@@ -8,7 +8,7 @@ using TinyDispatcher.SourceGen.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 using Xunit;
 
-namespace TinyDispatcher.UnitTests.SourceGen.PipelineEmitter;
+namespace TinyDispatcher.UnitTest.SourceGen.PipelineEmitter;
 
 public sealed class PipelineSourceWriterTests
 {

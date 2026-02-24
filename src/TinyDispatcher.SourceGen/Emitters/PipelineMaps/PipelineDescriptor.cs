@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace TinyDispatcher.SourceGen.PipelineMaps;
+namespace TinyDispatcher.SourceGen.Emitters.PipelineMaps;
 
 internal sealed record PipelineDescriptor(
     string CommandFullName,

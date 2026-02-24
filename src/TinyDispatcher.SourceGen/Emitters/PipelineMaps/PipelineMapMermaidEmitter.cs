@@ -4,9 +4,8 @@ using Microsoft.CodeAnalysis.Text;
 using System;
 using System.Text;
 using TinyDispatcher.SourceGen.Abstractions;
-using TinyDispatcher.SourceGen.PipelineMaps;
 
-namespace TinyDispatcher.SourceGen.PipelineMap;
+namespace TinyDispatcher.SourceGen.Emitters.PipelineMaps;
 
 internal static class PipelineMapMermaidEmitter
 {
