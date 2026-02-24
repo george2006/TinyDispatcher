@@ -36,6 +36,21 @@ jobs:
       - name: Pack (Release)
         run: dotnet pack src/TinyDispatcher/TinyDispatcher.csproj -c Release --no-build -o ./artifacts
 
+      - name: Verify package version matches tag
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          echo "Git tag version: $TAG"
+          echo "Artifacts:"
+          ls -la ./artifacts
+
+          # Expect at least one package whose filename contains the tag version, e.g. TinyDispatcher.1.0.2.nupkg
+          if ! ls ./artifacts/*."$TAG".nupkg 1> /dev/null 2>&1; then
+            echo "ERROR: Expected a .nupkg with version $TAG but none found."
+            echo "Make sure <Version>$TAG</Version> (or equivalent) is set before tagging."
+            exit 1
+          fi
+
       - name: Publish to NuGet
         run: dotnet nuget push "./artifacts/*.nupkg" --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
 
