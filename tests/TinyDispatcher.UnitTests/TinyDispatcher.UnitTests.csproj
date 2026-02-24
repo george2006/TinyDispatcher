@@ -48,5 +48,8 @@
     <!-- Source generator: referenced as analyzer ONLY -->
     <ProjectReference Include="..\..\src\TinyDispatcher.SourceGen\TinyDispatcher.SourceGen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="SourceGen\PipelineMaps\" />
+  </ItemGroup>
 
 </Project>

@@ -5,7 +5,7 @@ using System.Text;
 using Microsoft.CodeAnalysis.Text;
 using TinyDispatcher.SourceGen.Abstractions;
 
-namespace TinyDispatcher.SourceGen.PipelineMaps;
+namespace TinyDispatcher.SourceGen.Emitters.PipelineMaps;
 
 internal static class PipelineMapJsonEmitter
 {

@@ -8,6 +8,7 @@ using System.Linq;
 using TinyDispatcher.SourceGen.Abstractions;
 using TinyDispatcher.SourceGen.Emitters.Handlers;
 using TinyDispatcher.SourceGen.Emitters.ModuleInitializer;
+using TinyDispatcher.SourceGen.Emitters.PipelineMaps;
 using TinyDispatcher.SourceGen.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Internal;
@@ -146,20 +147,31 @@ public sealed class Generator : IIncrementalGenerator
         new EmptyPipelineContributionEmitter().Emit(roslyn, analysis.Discovery, emitOptions);
         new HandlerRegistrationsEmitter().Emit(roslyn, analysis.Discovery, emitOptions);
 
-        if (!vctx.IsHostProject)
-            return;
+        if (emitOptions.EmitPipelineMap) 
+        {
+            new PipelineMapsEmitter(vctx.Globals, vctx.PerCommand, vctx.Policies).Emit(roslyn, analysis.Discovery, emitOptions);
+        }
 
-        if (string.IsNullOrWhiteSpace(vctx.ExpectedContextFqn))
+        if (!vctx.IsHostProject) 
+        {
             return;
+        }
 
+        if (string.IsNullOrWhiteSpace(vctx.ExpectedContextFqn)) 
+        {
+            return;
+        }
+           
         var hasAnyPipelineContributions =
             vctx.Globals.Length > 0 ||
             vctx.PerCommand.Count > 0 ||
             vctx.Policies.Count > 0;
 
-        if (!hasAnyPipelineContributions)
+        if (!hasAnyPipelineContributions) 
+        {
             return;
-
+        }
+        
         new PipelineEmitter(vctx.Globals, vctx.PerCommand, vctx.Policies)
             .Emit(roslyn, analysis.Discovery, emitOptions);
     }
