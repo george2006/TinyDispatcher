@@ -22,7 +22,7 @@ It provides a predictable, explicit, and performant command/query dispatch core 
 ## Install
 
 ```bash
-dotnet add package TinyDispatcher --prerelease
+dotnet add package TinyDispatcher
 ```
 
 ## Quick start
