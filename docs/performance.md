@@ -14,3 +14,13 @@ Key ideas:
 - Benchmark in Release mode.
 - Treat middleware as normal DI services; keep global middleware minimal and cheap.
 - Prefer deterministic layering over “smart” dynamic composition.
+
+## No-op context (maximum throughput)
+
+If you do not need a runtime context object, prefer:
+
+```csharp
+services.UseTinyNoOpContext(tiny => { });
+```
+
+This uses `NoOpContext` and allows the generator/runtime to avoid context-related overhead.

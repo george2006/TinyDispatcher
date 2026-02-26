@@ -7,6 +7,7 @@ Key capabilities (high level):
 - compile-time discovery and validation (source generator)
 - generated, deterministic middleware pipelines
 - explicit `TContext` with **pluggable context factories**
+- optional **no-op context** mode (`UseTinyNoOpContext`) when you don't need context
 - optional feature composition via `AppContext` + `IFeatureInitializer`
 
 - [Getting Started](getting-started.md)
