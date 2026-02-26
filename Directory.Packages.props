@@ -5,7 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- TinyDispatcher -->
-    <PackageVersion Include="TinyDispatcher" Version="1.0.2" />
+    <PackageVersion Include="TinyDispatcher" Version="1.0.3" />
     <!-- ASP.NET -->
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="8.0.1" />
     <!-- Dependency Injection (aligned) -->
