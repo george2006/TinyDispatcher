@@ -3,31 +3,25 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
-
   <ItemGroup>
-
     <!-- TinyDispatcher -->
     <PackageVersion Include="TinyDispatcher" Version="1.0.2" />
-
     <!-- ASP.NET -->
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="8.0.1" />
-
     <!-- Dependency Injection (aligned) -->
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.10" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
-
     <!-- Roslyn (MUST match SourceGen) -->
     <PackageVersion Include="Microsoft.CodeAnalysis.Common" Version="4.14.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" />
-
     <!-- Immutable collections -->
     <PackageVersion Include="System.Collections.Immutable" Version="9.0.0" />
-
     <!-- Test infrastructure -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageVersion Include="xunit" Version="2.9.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
-
+    <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
+    <PackageVersion Include="MediatR" Version="13.0.0" />
   </ItemGroup>
 </Project>
