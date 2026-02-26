@@ -1,11 +1,10 @@
 ﻿#nullable enable
 
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TinyDispatcher.SourceGen.Generator;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen.Discovery;
@@ -22,15 +21,11 @@ internal sealed class TinyBootstrapInvocationExtractor
         if (useTinyCall.ArgumentList is null)
             return;
 
-        var lambda = useTinyCall.ArgumentList.Arguments
-            .Select(a => a.Expression)
-            .OfType<LambdaExpressionSyntax>()
-            .FirstOrDefault();
+        var model = compilation.GetSemanticModel(useTinyCall.SyntaxTree);
 
+        var lambda = SelectBootstrapLambda(useTinyCall, model);
         if (lambda is null)
             return;
-
-        var model = compilation.GetSemanticModel(useTinyCall.SyntaxTree);
 
         IEnumerable<InvocationExpressionSyntax> invocations =
             lambda.Body switch
@@ -116,6 +111,47 @@ internal sealed class TinyBootstrapInvocationExtractor
         }
     }
 
+    private static LambdaExpressionSyntax? SelectBootstrapLambda(
+        InvocationExpressionSyntax useTinyCall,
+        SemanticModel model)
+    {
+        foreach (var arg in useTinyCall.ArgumentList!.Arguments)
+        {
+            if (arg.Expression is not LambdaExpressionSyntax lambda)
+                continue;
+
+            if (IsTinyBootstrapDelegate(lambda, model))
+                return lambda;
+        }
+
+        // Fallback: old behavior (first lambda)
+        return useTinyCall.ArgumentList.Arguments
+            .Select(a => a.Expression)
+            .OfType<LambdaExpressionSyntax>()
+            .FirstOrDefault();
+    }
+
+    private static bool IsTinyBootstrapDelegate(LambdaExpressionSyntax lambda, SemanticModel model)
+    {
+        var converted = model.GetTypeInfo(lambda).ConvertedType as INamedTypeSymbol;
+        var invoke = converted?.DelegateInvokeMethod;
+        if (invoke is null)
+            return false;
+
+        if (invoke.Parameters.Length != 1)
+            return false;
+
+        var p0 = invoke.Parameters[0].Type;
+
+        // Fast path:
+        if (p0.Name == "TinyBootstrap")
+            return true;
+
+        // Safer path (avoids false positives if multiple TinyBootstrap types exist):
+        var fqn = p0.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        return string.Equals(fqn, "global::TinyDispatcher.TinyBootstrap", StringComparison.Ordinal);
+    }
+
     private static MiddlewareRef CreateMiddlewareRef(INamedTypeSymbol middlewareOpenType)
     {
         var open = middlewareOpenType.OriginalDefinition;
@@ -161,7 +197,7 @@ internal sealed class TinyBootstrapInvocationExtractor
             return false;
 
         var a0 = inv.ArgumentList!.Arguments[0].Expression as TypeOfExpressionSyntax;
-        var a1 = inv.ArgumentList!.Arguments[1].Expression as TypeOfExpressionSyntax;
+        var a1 = inv.ArgumentList.Arguments[1].Expression as TypeOfExpressionSyntax;
 
         if (a0 is null || a1 is null)
             return false;

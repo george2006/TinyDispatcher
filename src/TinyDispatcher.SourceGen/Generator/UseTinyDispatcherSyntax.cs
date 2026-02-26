@@ -18,6 +18,10 @@ internal sealed class UseTinyDispatcherSyntax
                 g.TypeArgumentList.Arguments.Count == 1)
                 return true;
 
+            if (ma.Name is IdentifierNameSyntax id &&
+                string.Equals(id.Identifier.ValueText, "UseTinyNoOpContext", StringComparison.Ordinal))
+                return true;
+
             return false;
         }
 
@@ -26,6 +30,10 @@ internal sealed class UseTinyDispatcherSyntax
             string.Equals(gg.Identifier.ValueText, "UseTinyDispatcher", StringComparison.Ordinal) &&
             gg.TypeArgumentList != null &&
             gg.TypeArgumentList.Arguments.Count == 1)
+            return true;
+
+        if (inv.Expression is IdentifierNameSyntax id2 &&
+            string.Equals(id2.Identifier.ValueText, "UseTinyNoOpContext", StringComparison.Ordinal))
             return true;
 
         return false;

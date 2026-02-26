@@ -2,12 +2,12 @@
 using TinyDispatcher.SourceGen;
 using TinyDispatcher.SourceGen.Abstractions;
 
-namespace TinyDispatcher.SourceGen
+namespace TinyDispatcher.SourceGen.Diagnostics
 {
     /// <summary>
     /// Central catalog of diagnostics emitted by the TinyDispatcher source generator.
     /// </summary>
-    public sealed class DiagnosticsCatalog 
+    public sealed class DiagnosticsCatalog
     {
         private const string Category = "Dispatcher";
 
@@ -113,14 +113,14 @@ namespace TinyDispatcher.SourceGen
             BuildDescriptor(
                 id: "DISP110",
                 title: "Multiple TinyDispatcher contexts detected",
-                message: "Only one UseTinyDispatcher<TContext> call is allowed per project. Found {0}.",
+                message: "Only one TinyDispatcher bootstrap call is allowed per project (UseTinyDispatcher<TContext> or UseTinyNoOpContext). Found {0}.",
                 severity: DiagnosticSeverity.Error);
 
         public DiagnosticDescriptor ContextTypeNotFound { get; } =
             BuildDescriptor(
                 id: "DISP111",
                 title: "TinyDispatcher context type not found",
-                message: "No UseTinyDispatcher<TContext> call was found, but code generation requires a context type.",
+                message: "No TinyDispatcher bootstrap call was found (UseTinyDispatcher<TContext> or UseTinyNoOpContext), but code generation requires a context type.",
                 severity: DiagnosticSeverity.Error);
 
         #endregion

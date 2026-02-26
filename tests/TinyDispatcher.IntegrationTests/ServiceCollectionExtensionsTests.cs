@@ -45,7 +45,7 @@ public sealed class ServiceCollectionExtensionsTests
         var services = new ServiceCollection();
 
         services.AddScoped<IContextFactory<TestContext>, ContextFactory>();
-        services.AddTransient<ICommandHandler<CreateThing, TestContext>, Handler>();
+        services.AddTransient<ICommandHandler<CreateThing, TestContext>, HandlerWithContext>();
         var called = 0;
 
         services.AddDispatcher<TestContext>((sp, ct) =>

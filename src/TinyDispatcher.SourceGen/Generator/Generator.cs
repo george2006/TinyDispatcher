@@ -5,13 +5,12 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using System.Collections.Immutable;
 using System.Linq;
-using TinyDispatcher.SourceGen.Abstractions;
+using TinyDispatcher.SourceGen.Diagnostics;
 using TinyDispatcher.SourceGen.Emitters.Handlers;
 using TinyDispatcher.SourceGen.Emitters.ModuleInitializer;
 using TinyDispatcher.SourceGen.Emitters.PipelineMaps;
 using TinyDispatcher.SourceGen.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
-using TinyDispatcher.SourceGen.Internal;
 using TinyDispatcher.SourceGen.Validation;
 
 namespace TinyDispatcher.SourceGen.Generator;
