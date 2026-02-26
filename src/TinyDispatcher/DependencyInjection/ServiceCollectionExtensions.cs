@@ -68,11 +68,19 @@ public static class ServiceCollectionExtensions
     /// Internally reuses the standard bootstrap path with a static no-op context factory.
     /// </summary>
     public static IServiceCollection UseTinyNoOpContext(
-        this IServiceCollection services,
-        Action<TinyBootstrap> configure)
-        => services.UseTinyDispatcher<NoOpContext>(
-            configure,
-            static (_, __) => new ValueTask<NoOpContext>(default(NoOpContext)));
+     this IServiceCollection services,
+     Action<TinyBootstrap> configure)
+    {
+        configure?.Invoke(new TinyBootstrap(services));
+
+        services.TryAddSingleton<IContextFactory<NoOpContext>>(NoOpContextFactory.Instance);
+
+        services.AddDispatcher<NoOpContext>(contextFactory: null);
+
+        DispatcherPipelineBootstrap.Apply(services);
+
+        return services;
+    }
 
     private static void EnsureContextFactoryRegistered<TContext>(IServiceCollection services)
     {
