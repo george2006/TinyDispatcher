@@ -28,3 +28,12 @@ using TinyDispatcher;
 
 - Prefer assembly-level config over MSBuild properties when possible.
 - Keep `GeneratedNamespace` stable to avoid churn in generated type names across projects.
+
+### Bootstrap detection (UseTinyDispatcher vs UseTinyNoOpContext)
+
+The generator discovers your bootstrap call from your composition root. Exactly one bootstrap call is expected:
+
+- `UseTinyDispatcher<TContext>(...)`
+- `UseTinyNoOpContext(...)` (uses `NoOpContext`)
+
+If `UseTinyNoOpContext` is used, the generator can emit a pipeline that avoids context-related work.

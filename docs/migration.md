@@ -13,3 +13,13 @@ Pipeline.ICommandPipelineRuntime<TCommand, TContext>
 ```
 
 …no changes are required. The runtime contract remains stable.
+
+## UseTinyNoOpContext bootstrap
+
+If your application does not require a runtime context object, you can switch to:
+
+```csharp
+services.UseTinyNoOpContext(tiny => { });
+```
+
+Your command handlers should use `NoOpContext` as the context type.

@@ -68,6 +68,27 @@ services.UseTinyDispatcher<MyContext>(tiny =>
 });
 ```
 
+### Option D: No-op context (when you don't need one)
+
+If your commands do not need a runtime context object, bootstrap with a no-op context:
+
+```csharp
+services.UseTinyNoOpContext(tiny =>
+{
+    // optional: middleware, policies
+});
+```
+
+In this mode, command handlers use `NoOpContext`:
+
+```csharp
+public sealed class CreateOrderHandler : ICommandHandler<CreateOrder, NoOpContext>
+{
+    public Task HandleAsync(CreateOrder command, NoOpContext ctx, CancellationToken ct = default)
+        => Task.CompletedTask;
+}
+```
+
 ## 3) Add policies and middleware
 
 ### Policy (group commands + attach middleware)

@@ -38,3 +38,16 @@ services.UseTinyDispatcher<MyContext>(tiny =>
 ```
 
 If no factory exists, TinyDispatcher fails fast at startup.
+
+## No-op context
+
+If you do not need any context at runtime, you can bootstrap with a no-op context:
+
+```csharp
+services.UseTinyNoOpContext(tiny =>
+{
+    // optional: middleware, policies
+});
+```
+
+This uses `NoOpContext` (a zero-payload struct). It is intended for maximum throughput.
