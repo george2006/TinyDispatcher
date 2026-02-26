@@ -34,7 +34,11 @@ jobs:
         run: dotnet test -c Release --no-build
 
       - name: Pack (Release)
-        run: dotnet pack src/TinyDispatcher/TinyDispatcher.csproj -c Release --no-build -o ./artifacts
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          echo "Packing TinyDispatcher version: $TAG"
+          dotnet pack src/TinyDispatcher/TinyDispatcher.csproj -c Release --no-build -o ./artifacts /p:PackageVersion="$TAG" /p:Version="$TAG"
 
       - name: Verify package version matches tag
         shell: bash
@@ -44,10 +48,9 @@ jobs:
           echo "Artifacts:"
           ls -la ./artifacts
 
-          # Expect at least one package whose filename contains the tag version, e.g. TinyDispatcher.1.0.2.nupkg
+          # Expect at least one package whose filename contains the tag version, e.g. TinyDispatcher.1.0.3.nupkg
           if ! ls ./artifacts/*."$TAG".nupkg 1> /dev/null 2>&1; then
             echo "ERROR: Expected a .nupkg with version $TAG but none found."
-            echo "Make sure <Version>$TAG</Version> (or equivalent) is set before tagging."
             exit 1
           fi
 
