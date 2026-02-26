@@ -37,7 +37,7 @@
     <DefineConstants>$(DefineConstants);MW10</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <DefineConstants>$(DefineConstants);MW0</DefineConstants>
+    <DefineConstants>$(DefineConstants);MW10</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'" />
 
