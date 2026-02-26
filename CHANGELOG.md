@@ -1,3 +1,9 @@
+## 1.0.1
+
+- Fixed pipeline map emission regression (generator now emits maps when enabled).
+- Added regression tests for pipeline map emission.
+- Fixed nullable warning in `PipelineMapFormats.Parse`.
+
 ### Added
 - **Pipeline Maps**: explicit, inspectable execution paths for commands.
   - The full middleware + handler execution chain is now deterministic and materialized.

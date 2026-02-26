@@ -63,6 +63,17 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Bootstraps TinyDispatcher using <see cref="NoOpContext"/> (fastest mode).
+    /// Internally reuses the standard bootstrap path with a static no-op context factory.
+    /// </summary>
+    public static IServiceCollection UseTinyNoOpContext(
+        this IServiceCollection services,
+        Action<TinyBootstrap> configure)
+        => services.UseTinyDispatcher<NoOpContext>(
+            configure,
+            static (_, __) => new ValueTask<NoOpContext>(default(NoOpContext)));
+
     private static void EnsureContextFactoryRegistered<TContext>(IServiceCollection services)
     {
         var serviceType = typeof(IContextFactory<TContext>);

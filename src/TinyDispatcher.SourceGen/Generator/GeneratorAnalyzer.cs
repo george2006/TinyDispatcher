@@ -10,6 +10,7 @@ using TinyDispatcher.SourceGen.Discovery;
 using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Internal;
 using TinyDispatcher.SourceGen.Validation;
+using TinyDispatcher.SourceGen.Diagnostics;
 
 namespace TinyDispatcher.SourceGen.Generator;
 

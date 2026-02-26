@@ -40,6 +40,10 @@ internal static class UseTinyDispatcherInvocationExtractor
                 g.Identifier.ValueText == "UseTinyDispatcher" &&
                 g.TypeArgumentList.Arguments.Count == 1)
                 return true;
+
+            if (ma.Name is IdentifierNameSyntax id &&
+                id.Identifier.ValueText == "UseTinyNoOpContext")
+                return true;
         }
 
         // UseTinyDispatcher<TContext>(...)  (static import / extension form)
@@ -50,7 +54,12 @@ internal static class UseTinyDispatcherInvocationExtractor
                 return true;
         }
 
+        if (inv.Expression is IdentifierNameSyntax id2)
+        {
+            if (id2.Identifier.ValueText == "UseTinyNoOpContext")
+                return true;
+        }
+
         return false;
     }
 }
-

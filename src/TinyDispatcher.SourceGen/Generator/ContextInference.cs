@@ -1,10 +1,4 @@
-﻿// TinyDispatcher.SourceGen/Generator/ContextInference.cs
-// -----------------------------------------------------------------------------
-// Context inference helpers for UseTinyDispatcher<TContext>(...)
-// -----------------------------------------------------------------------------
-
-
-#nullable enable
+﻿#nullable enable
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -27,6 +21,12 @@ internal sealed class ContextInference
         for (var i = 0; i < useTinyDispatcherInvocations.Length; i++)
         {
             var inv = useTinyDispatcherInvocations[i];
+
+            if (IsUseTinyNoOpContextCall(inv))
+            {
+                builder.Add(new UseTinyDispatcherCall("global::TinyDispatcher.Context.NoOpContext", inv.GetLocation()));
+                continue;
+            }
 
             GenericNameSyntax? g = null;
 
@@ -78,5 +78,19 @@ internal sealed class ContextInference
             return null;
 
         return all[0].ContextTypeFqn;
+    }
+
+    private static bool IsUseTinyNoOpContextCall(InvocationExpressionSyntax inv)
+    {
+        if (inv.Expression is MemberAccessExpressionSyntax ma &&
+            ma.Name is IdentifierNameSyntax id &&
+            id.Identifier.ValueText == "UseTinyNoOpContext")
+            return true;
+
+        if (inv.Expression is IdentifierNameSyntax id2 &&
+            id2.Identifier.ValueText == "UseTinyNoOpContext")
+            return true;
+
+        return false;
     }
 }

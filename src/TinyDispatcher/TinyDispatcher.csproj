@@ -36,7 +36,7 @@
    </PropertyGroup>
 
   <PropertyGroup>
-    <Version>1.0.0</Version>
+    <Version>1.0.2</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -45,43 +45,9 @@
   </ItemGroup>
   <PropertyGroup>
     <PackageReleaseNotes>
-      Generator Refactor Validation Hardening
-
-      This release focuses on structural clarity, validation robustness, and long-term maintainability.
-
-      Refactored Analyze pipeline:
-      - Clear phase-based orchestration:
-      * Option resolution
-      * Handler discovery
-      * Pipeline extraction
-      * Validation context construction
-      - Introduced PipelineFacts aggregation model
-      - Reordered Generator methods for top-to-bottom readability:
-      Initialize -> Execute -> Analyze -> Validate -> Emit
-      - No behavioral changes
-      - All tests remain green
-
-      New validation: Missing Handler Detection
-      - DISP410: Middleware configured for a command without a handler
-      - DISP411: Policy targets a command without a handler
-
-      Internal improvements:
-      - Clearer validation layering
-      - Cleaner responsibility boundaries
-      - Minor allocation reductions
-      - Improved determinism and readability
-
-      Next steps toward v1.0:
-
-      We are entering a focused file-by-file polishing phase.
-      The goal is to review every component for clarity, consistency,
-      diagnostic quality, and long-term maintainability.
-
-      No major features are planned before v1.0.
-      The focus is stability, readability, and API confidence.
-
-      v1.0 will be released once the generator reaches
-      a level of simplicity and determinism we are fully satisfied with.
+      1.0.2
+      - Fix: package version now matches release tag (previous v1.0.1 produced 1.0.0 package).
+      - Fix: pipeline map emission regression.
     </PackageReleaseNotes>
 
 
