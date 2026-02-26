@@ -3,6 +3,7 @@ using Performance.Shared;
 using System;
 using System.Runtime.CompilerServices;
 using TinyDispatcher;
+using TinyDispatcher.Context;
 using TinyDispatcher.Dispatching;
 using TinyDispatcher.Pipeline;
 
@@ -48,7 +49,7 @@ public sealed class TinyDispatcherFixture
 //#endif
 //        });
 
-        services.UseTinyDispatcher<NoOpContext>(cfg =>
+        services.UseTinyNoOpContext(cfg =>
         {
 #if MW0
             // no middleware
@@ -77,7 +78,7 @@ public sealed class TinyDispatcherFixture
 #else
 #error Define one of: MW0, MW1, MW2, MW5, MW10
 #endif
-        }, (sp, context) => { return ValueTask.FromResult(NoOpContext.Instance); });
+        });
 
         _sp = services.BuildServiceProvider(validateScopes: false);
         _dispatcher = _sp.GetRequiredService<IDispatcher<NoOpContext>>();
@@ -164,8 +165,4 @@ public sealed class Middleware8<TCommand, TContext> : Base<TCommand, TContext>
 public sealed class Middleware9<TCommand, TContext> : Base<TCommand, TContext>
        where TCommand : ICommand;
 
-public sealed class NoOpContext
-{
-    public static readonly NoOpContext Instance = new();
-    private NoOpContext() { }
-}
+
