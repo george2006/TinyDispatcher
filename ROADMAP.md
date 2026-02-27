@@ -26,7 +26,7 @@ No new features planned in this phase.
 
 - Improve generator diagnostics (clear compile-time errors)
 - Improve middleware shape validation
-- Expand integration samples (azure functions, Worker Service)
+- Expand integration samples (Azure functions, Worker Service)
 - Benchmark suite documentation refresh
 
 ---
