@@ -20,5 +20,5 @@ Key capabilities (high level):
 - [Performance Notes](performance.md)
 - [Migration Guide](migration.md)
 - [Design Decisions](design-decisions.md)
-- [Benchmarks](docs/benchmarks.md)
+- [Benchmarks](benchmarks.md)
 
