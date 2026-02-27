@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static TinyDispatcher.UnitTests.ConcurrentDispatchSameCommandTypeTests;
 
 namespace TinyDispatcher.UnitTests
 {
@@ -20,7 +21,11 @@ namespace TinyDispatcher.UnitTests
             services.UseTinyDispatcher<TestContext>(tiny =>
             {
                 tiny.UseGlobalMiddleware(typeof(GlobalLogMiddleware<,>));
+                tiny.UseGlobalMiddleware(typeof(ProbeMiddleware0<,>));
+                tiny.UseGlobalMiddleware(typeof(ProbeMiddleware1<,>));
+                
                 tiny.UseMiddlewareFor<TestCommand>(typeof(PerCommandLogMiddleware<,>));
+                
                 tiny.UsePolicy<CheckoutPolicy>();
                 tiny.UsePolicy<PolicyOnlyPolicy>();
             });
