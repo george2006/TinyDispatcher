@@ -1,3 +1,14 @@
+## 1.0.4 - 2026-02-27
+
+### Fixed
+- Generated pipelines are now fully re-entrant and safe for concurrent dispatch within the same DI scope.
+  Mutable execution state (`_index`, handler reference) has been moved from the scoped pipeline instance
+  to a per-dispatch runtime object, eliminating potential race conditions when dispatching the same
+  command type concurrently.
+
+### Internal
+- Refactored generated pipeline structure to isolate execution state per invocation.
+- Added concurrency test coverage to validate thread-safety guarantees.
 ## 1.0.1
 
 - Fixed pipeline map emission regression (generator now emits maps when enabled).
