@@ -13,19 +13,13 @@ public record PingCommand() : ICommand;
 public sealed class TinyDispatcherFixture
 {
     private ServiceProvider _sp = default!;
-    private IDispatcher<NoOpContext> _dispatcher = default!;
+    private IDispatcher<TinyDispatcher.AppContext> _dispatcher = default!;
 
     public void Build()
     {
         RuntimeHelpers.RunModuleConstructor(typeof(PingHandlerNoOpContext).Module.ModuleHandle);
 
         var services = new ServiceCollection();
-
-        services.AddScoped(typeof(Middleware0<,>));
-        services.AddScoped(typeof(Middleware1<,>));
-        services.AddScoped(typeof(Middleware2<,>));
-        services.AddScoped(typeof(Middleware3<,>));
-        services.AddScoped(typeof(Middleware4<,>));
 
         TinyBenchmarkRegistration.AddGenerated(services);
 
@@ -49,7 +43,7 @@ public sealed class TinyDispatcherFixture
 //#endif
 //        });
 
-        services.UseTinyNoOpContext(cfg =>
+        services.UseTinyDispatcher<TinyDispatcher.AppContext>(cfg =>
         {
 #if MW0
             // no middleware
@@ -81,31 +75,31 @@ public sealed class TinyDispatcherFixture
         });
 
         _sp = services.BuildServiceProvider(validateScopes: false);
-        _dispatcher = _sp.GetRequiredService<IDispatcher<NoOpContext>>();
+        _dispatcher = _sp.GetRequiredService<IDispatcher<TinyDispatcher.AppContext>>();
     }
 
     public Task Dispatch(PingCommand command, CancellationToken ct = default)
         => _dispatcher.DispatchAsync(command, ct);
 
     // --- Handler
-    //public sealed class PingHandler : ICommandHandler<PingCommand, TinyDispatcher.AppContext>
-    //{
-    //    public Task HandleAsync(
-    //        PingCommand command,
-    //        TinyDispatcher.AppContext context,
-    //        CancellationToken cancellationToken = default)
-    //    {
-    //        // Anti-JIT guard: same as MediatR
-    //        BlackHole.Consume(1);
-    //        return Task.CompletedTask;
-    //    }
-    //}
-
+   
     public sealed class PingHandlerNoOpContext : ICommandHandler<PingCommand, NoOpContext>
     {
         public Task HandleAsync(
             PingCommand command,
             NoOpContext context,
+            CancellationToken cancellationToken = default)
+        {
+            // Anti-JIT guard: same as MediatR
+            BlackHole.Consume(1);
+            return Task.CompletedTask;
+        }
+    }
+    public sealed class PingHandlerAppContext : ICommandHandler<PingCommand, TinyDispatcher.AppContext>
+    {
+        public Task HandleAsync(
+            PingCommand command,
+            TinyDispatcher.AppContext context,
             CancellationToken cancellationToken = default)
         {
             // Anti-JIT guard: same as MediatR

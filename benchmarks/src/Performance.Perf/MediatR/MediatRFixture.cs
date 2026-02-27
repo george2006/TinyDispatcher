@@ -3,6 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging; // optional, but AddLogging needs package anyway
 using Performance.Shared;
 using System;
+using System.Runtime.CompilerServices;
+using static Performance.Tiny.TinyDispatcherFixture;
 
 namespace Performance.Mediatr;
 
@@ -13,6 +15,8 @@ public sealed class MediatRFixture
 
     public void Build()
     {
+
+        RuntimeHelpers.RunModuleConstructor(typeof(PingHandler).Module.ModuleHandle);
         var services = new ServiceCollection();
 
         // Fixes: ILoggerFactory required by MediatR licensing accessor
@@ -23,25 +27,25 @@ public sealed class MediatRFixture
 
         // Register behaviors declaratively (NO loops, NO runtime logic)
 #if MW1 || MW2 || MW5 ||MW10
-        services.AddScoped<IPipelineBehavior<PingRequest, Unit>, Behavior0>();
+        services.AddTransient<IPipelineBehavior<PingRequest, Unit>, Behavior0>();
 #endif
 
 #if MW2 || MW5 || MW10
-        services.AddScoped<IPipelineBehavior<PingRequest, Unit>, Behavior1>();
+        services.AddTransient<IPipelineBehavior<PingRequest, Unit>, Behavior1>();
 #endif
 
 #if MW5 || MW10
-        services.AddScoped<IPipelineBehavior<PingRequest, Unit>, Behavior2>();
-        services.AddScoped<IPipelineBehavior<PingRequest, Unit>, Behavior3>();
-        services.AddScoped<IPipelineBehavior<PingRequest, Unit>, Behavior4>();
+        services.AddTransient<IPipelineBehavior<PingRequest, Unit>, Behavior2>();
+        services.AddTransient<IPipelineBehavior<PingRequest, Unit>, Behavior3>();
+        services.AddTransient<IPipelineBehavior<PingRequest, Unit>, Behavior4>();
 #endif
 
 #if MW10
-        services.AddScoped<IPipelineBehavior<PingRequest, Unit>, Behavior5>();
-        services.AddScoped<IPipelineBehavior<PingRequest, Unit>, Behavior6>();
-        services.AddScoped<IPipelineBehavior<PingRequest, Unit>, Behavior7>();
-        services.AddScoped<IPipelineBehavior<PingRequest, Unit>, Behavior8>();
-        services.AddScoped<IPipelineBehavior<PingRequest, Unit>, Behavior9>();
+        services.AddTransient<IPipelineBehavior<PingRequest, Unit>, Behavior5>();
+        services.AddTransient<IPipelineBehavior<PingRequest, Unit>, Behavior6>();
+        services.AddTransient<IPipelineBehavior<PingRequest, Unit>, Behavior7>();
+        services.AddTransient<IPipelineBehavior<PingRequest, Unit>, Behavior8>();
+        services.AddTransient<IPipelineBehavior<PingRequest, Unit>, Behavior9>();
 #endif
 
 
@@ -67,7 +71,7 @@ public sealed class MediatRFixture
         public Task<Unit> Handle(PingRequest request, CancellationToken cancellationToken)
         {
             BlackHole.Consume(1);
-            return Task.FromResult(Unit.Value);
+            return Unit.Task; ;
         }
     }
 
