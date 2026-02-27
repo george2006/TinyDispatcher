@@ -70,6 +70,7 @@ await dispatcher.DispatchAsync(new CreateOrder("123"), ct);
 - [Performance Notes](docs/performance.md)
 - [Migration Guide](docs/migration.md)
 - [Design Decisions](docs/design-decisions.md)
+- [Benchmarks](docs/benchmarks.md)
 
 ## When to use
 
