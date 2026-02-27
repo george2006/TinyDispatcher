@@ -2,6 +2,13 @@
 
 This document presents benchmark results comparing **TinyDispatcher** and **MediatR**.
 
+> ⚠️ Benchmark Update in Progress  
+> The benchmark suite is currently being updated to reflect corrected DI lifetime semantics and pipeline concurrency behavior.  
+>  
+> Previous results were measured using a root service provider, which did not accurately represent scoped lifetimes in real-world ASP.NET or Worker scenarios.  
+>  
+> Updated measurements will be published shortly.
+
 The focus is strictly on the **dispatch hot path**:
 
 - Send / Dispatch call
@@ -9,7 +16,6 @@ The focus is strictly on the **dispatch hot path**:
 - Handler execution
 
 No startup, DI build time, logging output, or I/O is measured.
-
 ---
 
 # Environment
