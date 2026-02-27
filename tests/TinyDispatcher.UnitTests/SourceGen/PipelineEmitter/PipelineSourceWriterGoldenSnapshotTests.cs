@@ -27,41 +27,38 @@ public sealed class PipelineSourceWriterGoldenSnapshotTests
         var snapshot = Create_snapshot(source);
 
         var expected = string.Join(
-            "\n",
-            new[]
-            {
-                // Global
-                "internal sealed class TinyDispatcherGlobalPipeline<TCommand> : global::TinyDispatcher.ICommandPipeline<TCommand, global::MyApp.AppContext>, global::TinyDispatcher.Pipeline.ICommandPipelineRuntime<TCommand, global::MyApp.AppContext>",
-                "where TCommand : global::TinyDispatcher.ICommand",
-                "public TinyDispatcherGlobalPipeline(",
-                "case 0: return _globalLog.InvokeAsync(command, ctxValue, this, ct);",
-                "default: return new ValueTask(_handler!.HandleAsync(command, ctxValue, ct));",
+     "\n",
+     new[]
+     {
+        // Global
+        "internal sealed class TinyDispatcherGlobalPipeline<TCommand> : global::TinyDispatcher.ICommandPipeline<TCommand, global::MyApp.AppContext>",
+        "where TCommand : global::TinyDispatcher.ICommand",
+        "case 0: return _pipeline._globalLog.InvokeAsync(command, ctxValue, this, ct);",
+        "default: return new ValueTask(_handler.HandleAsync(command, ctxValue, ct));",
 
-                // Policy
-                "internal sealed class TinyDispatcherPolicyPipeline_MyApp_CheckoutPolicy<TCommand> : global::TinyDispatcher.ICommandPipeline<TCommand, global::MyApp.AppContext>, global::TinyDispatcher.Pipeline.ICommandPipelineRuntime<TCommand, global::MyApp.AppContext>",
-                "where TCommand : global::TinyDispatcher.ICommand",
-                "public TinyDispatcherPolicyPipeline_MyApp_CheckoutPolicy(",
-                "case 0: return _globalLog.InvokeAsync(command, ctxValue, this, ct);",
-                "case 1: return _policyLog.InvokeAsync(command, ctxValue, this, ct);",
-                "default: return new ValueTask(_handler!.HandleAsync(command, ctxValue, ct));",
+        // Policy
+        "internal sealed class TinyDispatcherPolicyPipeline_MyApp_CheckoutPolicy<TCommand> : global::TinyDispatcher.ICommandPipeline<TCommand, global::MyApp.AppContext>",
+        "where TCommand : global::TinyDispatcher.ICommand",
+        "case 0: return _pipeline._globalLog.InvokeAsync(command, ctxValue, this, ct);",
+        "case 1: return _pipeline._policyLog.InvokeAsync(command, ctxValue, this, ct);",
+        "default: return new ValueTask(_handler.HandleAsync(command, ctxValue, ct));",
 
-                // Per-command
-                "internal sealed class TinyDispatcherPipeline_CmdA : global::TinyDispatcher.ICommandPipeline<global::MyApp.CmdA, global::MyApp.AppContext>, global::TinyDispatcher.Pipeline.ICommandPipelineRuntime<global::MyApp.CmdA, global::MyApp.AppContext>",
-                "public TinyDispatcherPipeline_CmdA(",
-                "case 0: return _globalLog.InvokeAsync(command, ctxValue, this, ct);",
-                "case 1: return _policyLog.InvokeAsync(command, ctxValue, this, ct);",
-                "case 2: return _perCommandLog.InvokeAsync(command, ctxValue, this, ct);",
-                "default: return new ValueTask(_handler!.HandleAsync(command, ctxValue, ct));",
+        // Per-command
+        "internal sealed class TinyDispatcherPipeline_CmdA : global::TinyDispatcher.ICommandPipeline<global::MyApp.CmdA, global::MyApp.AppContext>",
+        "case 0: return _pipeline._globalLog.InvokeAsync(command, ctxValue, this, ct);",
+        "case 1: return _pipeline._policyLog.InvokeAsync(command, ctxValue, this, ct);",
+        "case 2: return _pipeline._perCommandLog.InvokeAsync(command, ctxValue, this, ct);",
+        "default: return new ValueTask(_handler.HandleAsync(command, ctxValue, ct));",
 
-                // Registrations unchanged
-                "services.TryAddTransient(typeof(global::MyApp.GlobalLogMiddleware<,>));",
-                "services.TryAddTransient(typeof(global::MyApp.PerCommandLogMiddleware<,>));",
-                "services.TryAddTransient(typeof(global::MyApp.PolicyLogMiddleware<,>));",
+        // Registrations unchanged
+        "services.TryAddTransient(typeof(global::MyApp.GlobalLogMiddleware<,>));",
+        "services.TryAddTransient(typeof(global::MyApp.PerCommandLogMiddleware<,>));",
+        "services.TryAddTransient(typeof(global::MyApp.PolicyLogMiddleware<,>));",
 
-                "services.AddScoped<global::TinyDispatcher.ICommandPipeline<global::MyApp.CmdA, global::MyApp.AppContext>, global::MyApp.Generated.TinyDispatcherPipeline_CmdA>();",
-                "services.AddScoped<global::TinyDispatcher.ICommandPipeline<global::MyApp.CmdB, global::MyApp.AppContext>, global::MyApp.Generated.TinyDispatcherPolicyPipeline_MyApp_CheckoutPolicy<global::MyApp.CmdB>>();",
-                "services.AddScoped<global::TinyDispatcher.ICommandPipeline<global::MyApp.CmdC, global::MyApp.AppContext>, global::MyApp.Generated.TinyDispatcherGlobalPipeline<global::MyApp.CmdC>>();",
-            });
+        "services.AddScoped<global::TinyDispatcher.ICommandPipeline<global::MyApp.CmdA, global::MyApp.AppContext>, global::MyApp.Generated.TinyDispatcherPipeline_CmdA>();",
+        "services.AddScoped<global::TinyDispatcher.ICommandPipeline<global::MyApp.CmdB, global::MyApp.AppContext>, global::MyApp.Generated.TinyDispatcherPolicyPipeline_MyApp_CheckoutPolicy<global::MyApp.CmdB>>();",
+        "services.AddScoped<global::TinyDispatcher.ICommandPipeline<global::MyApp.CmdC, global::MyApp.AppContext>, global::MyApp.Generated.TinyDispatcherGlobalPipeline<global::MyApp.CmdC>>();",
+     });
 
         Assert.Equal(expected, snapshot);
     }
@@ -138,10 +135,7 @@ public sealed class PipelineSourceWriterGoldenSnapshotTests
 
     private static string Create_snapshot(string source)
     {
-        // Normalize CRLF and take only "structural" lines.
-        // This gives us a stable "golden" without being sensitive to whitespace/indent tweaks.
         var normalized = source.Replace("\r\n", "\n", StringComparison.Ordinal);
-
         var lines = normalized.Split('\n');
 
         var keep = new List<string>(256);
@@ -153,7 +147,6 @@ public sealed class PipelineSourceWriterGoldenSnapshotTests
 
             if (t.StartsWith("internal sealed class ", StringComparison.Ordinal) ||
                 t.StartsWith("where TCommand : ", StringComparison.Ordinal) ||
-                t.StartsWith("public TinyDispatcher", StringComparison.Ordinal) ||
                 t.StartsWith("case ", StringComparison.Ordinal) ||
                 t.StartsWith("default: ", StringComparison.Ordinal) ||
                 t.StartsWith("services.", StringComparison.Ordinal))

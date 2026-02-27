@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
 using TinyDispatcher.SourceGen.Generator.Models;
 using static TinyDispatcher.SourceGen.Emitters.Pipelines.PipelineEmitter;
 
@@ -48,24 +48,25 @@ internal static class PipelineSourceWriter
     {
         var core = plan.CoreFqn;
         var ctx = plan.ContextFqn;
+
         var cmdType = def.IsOpenGeneric ? "TCommand" : def.CommandType;
 
         if (def.IsOpenGeneric)
         {
-            // IMPORTANT: do NOT use BeginBlock for "where". Emit where line, then open the class body as an anonymous block.
+            // Emit class header + where clause, then open the body WITHOUT re-emitting "class ..."
             w.Line(
                 $"internal sealed class {def.ClassName}<TCommand> : " +
-                $"{core}.ICommandPipeline<TCommand, {ctx}>, " +
-                $"{core}.Pipeline.ICommandPipelineRuntime<TCommand, {ctx}>");
+                $"{core}.ICommandPipeline<TCommand, {ctx}>");
             w.Line($"  where TCommand : {core}.ICommand");
-            w.BeginAnonymousBlock($"class {def.ClassName}<TCommand>");
+
+            // Open anonymous block with no header => just "{"
+            w.BeginAnonymousBlock(string.Empty);
         }
         else
         {
             w.BeginBlock(
                 $"internal sealed class {def.ClassName} : " +
-                $"{core}.ICommandPipeline<{def.CommandType}, {ctx}>, " +
-                $"{core}.Pipeline.ICommandPipelineRuntime<{def.CommandType}, {ctx}>");
+                $"{core}.ICommandPipeline<{def.CommandType}, {ctx}>");
         }
 
         // Fields (distinct by open type + arity)
@@ -79,29 +80,81 @@ internal static class PipelineSourceWriter
             w.Line($"private readonly {TypeNames.CloseMiddleware(mw, cmdType, ctx)} {NameFactory.FieldName(mw)};");
         }
 
-        w.Line("private int _index;");
+        w.Line();
 
-        if (def.IsOpenGeneric)
-            w.Line($"private {core}.ICommandHandler<TCommand, {ctx}>? _handler;");
-        else
-            w.Line($"private {core}.ICommandHandler<{def.CommandType}, {ctx}>? _handler;");
-
+        // Runtime state is per ExecuteAsync invocation (thread-safe / re-entrant)
+        WriteRuntimeClass(w, plan, def, cmdType);
         w.Line();
 
         WriteCtor(w, plan, def, cmdType, mwDistinct);
         WriteExecute(w, plan, def, cmdType);
-        WriteNext(w, plan, def, cmdType);
-        WriteRuntimeInterface(w, plan, def, cmdType);
 
         w.EndBlock(); // class body
         w.Line();
+    }
+
+    private static void WriteRuntimeClass(CodeWriter w, PipelinePlan plan, PipelineDefinition def, string cmdType)
+    {
+        var core = plan.CoreFqn;
+        var ctx = plan.ContextFqn;
+
+        // The concrete pipeline type used inside the nested Runtime class
+        var pipelineType = def.IsOpenGeneric
+            ? $"{def.ClassName}<TCommand>"
+            : def.ClassName;
+
+        // The handler type depends on open/closed pipeline
+        var handlerType = def.IsOpenGeneric
+            ? $"{core}.ICommandHandler<TCommand, {ctx}>"
+            : $"{core}.ICommandHandler<{def.CommandType}, {ctx}>";
+
+        w.BeginBlock($"private sealed class Runtime : {core}.Pipeline.ICommandPipelineRuntime<{cmdType}, {ctx}>");
+        w.Line($"private readonly {pipelineType} _pipeline;");
+        w.Line($"private readonly {handlerType} _handler;");
+        w.Line("private int _index;");
+        w.Line();
+
+        w.BeginBlock($"public Runtime({pipelineType} pipeline, {handlerType} handler)");
+        w.Line("_pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));");
+        w.Line("_handler = handler ?? throw new ArgumentNullException(nameof(handler));");
+        w.Line("_index = 0;");
+        w.EndBlock();
+        w.Line();
+
+        // Entry point used by ExecuteAsync
+        w.BeginBlock($"public ValueTask StartAsync({cmdType} command, {ctx} ctxValue, CancellationToken ct)");
+        w.Line("return NextAsyncInternal(command, ctxValue, ct);");
+        w.EndBlock();
+        w.Line();
+
+        w.BeginBlock($"private ValueTask NextAsyncInternal({cmdType} command, {ctx} ctxValue, CancellationToken ct)");
+        w.BeginBlock("switch (_index++)");
+
+        for (int i = 0; i < def.Steps.Length; i++)
+        {
+            var mw = def.Steps[i].Middleware;
+            w.Line($"case {i}: return _pipeline.{NameFactory.FieldName(mw)}.InvokeAsync(command, ctxValue, this, ct);");
+        }
+
+        w.Line("default: return new ValueTask(_handler.HandleAsync(command, ctxValue, ct));");
+        w.EndBlock(); // switch
+        w.EndBlock(); // method
+        w.Line();
+
+        // Explicit interface implementation
+        w.BeginBlock(
+            $"ValueTask {core}.Pipeline.ICommandPipelineRuntime<{cmdType}, {ctx}>.NextAsync({cmdType} command, {ctx} ctxValue, CancellationToken ct)");
+        w.Line("return NextAsyncInternal(command, ctxValue, ct);");
+        w.EndBlock();
+
+        w.EndBlock(); // class Runtime
     }
 
     private static void WriteCtor(CodeWriter w, PipelinePlan plan, PipelineDefinition def, string cmdType, MiddlewareRef[] mwDistinct)
     {
         var ctx = plan.ContextFqn;
 
-        // ctor signature (NON-generic name!)
+        // Constructor name does NOT include generic args in C#
         w.Line($"public {def.ClassName}(");
         for (int i = 0; i < mwDistinct.Length; i++)
         {
@@ -110,7 +163,7 @@ internal static class PipelineSourceWriter
             w.Line($"  {TypeNames.CloseMiddleware(mw, cmdType, ctx)} {NameFactory.CtorParamName(mw)}{comma}");
         }
         w.Line(")");
-        w.BeginAnonymousBlock($"ctor {def.ClassName}");
+        w.BeginAnonymousBlock(string.Empty);
 
         for (int i = 0; i < mwDistinct.Length; i++)
         {
@@ -138,46 +191,11 @@ internal static class PipelineSourceWriter
         w.EndBlock();
         w.Line();
 
-        // Main method: keep ct parameter (optional default here is fine, but not required anymore)
         w.BeginBlock($"public ValueTask ExecuteAsync({cmdSig} command, {ctx} ctxValue, {handlerType} handler, CancellationToken ct)");
         w.Line("if (command is null) throw new ArgumentNullException(nameof(command));");
         w.Line("if (handler is null) throw new ArgumentNullException(nameof(handler));");
-        w.Line("_handler = handler;");
-        w.Line("_index = 0;");
-        w.Line("return NextAsyncInternal(command, ctxValue, ct);");
-        w.EndBlock();
-        w.Line();
-    }
-
-    private static void WriteNext(CodeWriter w, PipelinePlan plan, PipelineDefinition def, string cmdType)
-    {
-        var ctx = plan.ContextFqn;
-
-        w.BeginBlock($"private ValueTask NextAsyncInternal({cmdType} command, {ctx} ctxValue, CancellationToken ct)");
-        w.BeginBlock("switch (_index++)");
-
-        for (int i = 0; i < def.Steps.Length; i++)
-        {
-            var mw = def.Steps[i].Middleware;
-
-            w.Line($"case {i}: return {NameFactory.FieldName(mw)}.InvokeAsync(command, ctxValue, this, ct);");
-        }
-
-        w.Line("default: return new ValueTask(_handler!.HandleAsync(command, ctxValue, ct));");
-        w.EndBlock(); // switch
-        w.EndBlock(); // method
-        w.Line();
-    }
-
-    private static void WriteRuntimeInterface(CodeWriter w, PipelinePlan plan, PipelineDefinition def, string cmdType)
-    {
-        var core = plan.CoreFqn;
-        var ctx = plan.ContextFqn;
-
-        // IMPORTANT: explicit interface implementation must not use optional arguments (avoids CS1066)
-        w.BeginBlock(
-            $"ValueTask {core}.Pipeline.ICommandPipelineRuntime<{cmdType}, {ctx}>.NextAsync({cmdType} command, {ctx} ctxValue, CancellationToken ct)");
-        w.Line("return NextAsyncInternal(command, ctxValue, ct);");
+        w.Line("var runtime = new Runtime(this, handler);");
+        w.Line("return runtime.StartAsync(command, ctxValue, ct);");
         w.EndBlock();
         w.Line();
     }

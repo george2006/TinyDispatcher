@@ -8,6 +8,7 @@ using TinyDispatcher.Dispatching;
 using TinyDispatcher.Pipeline;
 using TinyDispatcher.UnitTests;
 using Xunit;
+using static TinyDispatcher.UnitTests.ConcurrentDispatchSameCommandTypeTests;
 using static TinyDispatcher.UnitTets.PipelineSelectionTests;
 
 namespace TinyDispatcher.UnitTets;
@@ -28,6 +29,7 @@ public sealed class PipelineResolutionTest
         var services = new ServiceCollection();
 
         // Middleware implementations used by the generated pipelines
+        services.AddSingleton<ProbeState>();
         services.AddScoped(typeof(GlobalLogMiddleware<,>));
         services.AddScoped(typeof(PerCommandLogMiddleware<,>));
         services.AddScoped(typeof(PolicyLogMiddleware<,>));
