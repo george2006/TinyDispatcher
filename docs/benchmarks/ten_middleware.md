@@ -1,4 +1,5 @@
-# TinyDispatcher vs MediatR --- 10 Middleware Benchmark (MW10)
+# TinyDispatcher vs MediatR
+## 10 Middleware Benchmark (MW10)
 
 ## Overview
 
@@ -35,14 +36,17 @@ Each iteration includes:
 
 ## Aggregated Results (Average of Provided Runs)
 
-**Runs included:** 9\
-(If you run an additional sample later, we can append it and recompute
-the averages.)
+**Runs included:** 9  
+(If you run an additional sample later, we can append it and recompute the averages.)
 
-  Method           Average Mean   Allocated
-  ---------------- -------------- -----------
-  MediatR          7.751 μs       1384 B
-  TinyDispatcher   6.490 μs       192 B
+| Method          | Average Mean | Allocated |
+|-----------------|-------------|-----------|
+| MediatR         | 7.751 μs    | 1384 B    |
+| TinyDispatcher  | 6.490 μs    | 192 B     |
+
+### Performance Difference (Average)
+
+TinyDispatcher is approximately **16.27% faster** on average across the provided runs.
 
 ### Performance Difference (Average)
 
@@ -87,32 +91,26 @@ MW10 scenario.
 
 Full unfiltered run data for transparency:
 
-  ---------------------------------------------------------------------------
-  Run   MediatR Mean   MediatR     MediatR     Tiny Mean   Tiny     Tiny
-        (μs)           Error       StdDev      (μs)        Error    StdDev
-  ----- -------------- ----------- ----------- ----------- -------- ---------
-  1     9.135          2.0715      2.3855      6.318       0.2844   0.2921
+## Raw Benchmark Data (All Runs)
 
-  2     7.839          0.4326      0.4629      6.031       0.1273   0.1250
+Full unfiltered run data for transparency:
 
-  3     7.500          1.1818      1.3136      6.206       0.3213   0.3438
-
-  4     7.212          0.2794      0.2870      6.076       0.1705   0.1751
-
-  5     6.969          0.1377      0.1352      7.088       0.5770   0.5925
-
-  6     6.994          0.6278      0.6447      6.538       0.2752   0.2826
-
-  7     9.150          1.2670      1.3550      7.842       1.3510   1.5020
-
-  8     6.795          1.1951      1.3763      5.712       0.3998   0.4106
-
-  9     8.165          0.2035      0.2090      6.595       0.8974   0.9975
-  ---------------------------------------------------------------------------
-
+| Run | MediatR Mean (μs) | MediatR Error | MediatR StdDev | Tiny Mean (μs) | Tiny Error | Tiny StdDev |
+|-----|-------------------|---------------|----------------|----------------|------------|-------------|
+| 1   | 9.135 | 2.0715 | 2.3855 | 6.318 | 0.2844 | 0.2921 |
+| 2   | 7.839 | 0.4326 | 0.4629 | 6.031 | 0.1273 | 0.1250 |
+| 3   | 7.500 | 1.1818 | 1.3136 | 6.206 | 0.3213 | 0.3438 |
+| 4   | 7.212 | 0.2794 | 0.2870 | 6.076 | 0.1705 | 0.1751 |
+| 5   | 6.969 | 0.1377 | 0.1352 | 7.088 | 0.5770 | 0.5925 |
+| 6   | 6.994 | 0.6278 | 0.6447 | 6.538 | 0.2752 | 0.2826 |
+| 7   | 9.150 | 1.2670 | 1.3550 | 7.842 | 1.3510 | 1.5020 |
+| 8   | 6.795 | 1.1951 | 1.3763 | 5.712 | 0.3998 | 0.4106 |
+| 9   | 8.165 | 0.2035 | 0.2090 | 6.595 | 0.8974 | 0.9975 |
 ------------------------------------------------------------------------
 
+
 ## Conclusion
+
 
 With **10 middleware layers**, TinyDispatcher shows:
 
