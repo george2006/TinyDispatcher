@@ -1,4 +1,4 @@
-# TinyDispatcher vs MediatR 
+# TinyDispatcher(Shipped context) vs MediatR 
 ## Zero Middleware Benchmark (10 Runs, Full Transparency)
 
 ## Aggregated Results
