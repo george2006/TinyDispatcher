@@ -9,6 +9,7 @@
 ### Internal
 - Refactored generated pipeline structure to isolate execution state per invocation.
 - Added concurrency test coverage to validate thread-safety guarantees.
+>>>>>>> fd80e007fe537793ad25329802f7b0cc7dc55f96
 ## 1.0.1
 
 - Fixed pipeline map emission regression (generator now emits maps when enabled).

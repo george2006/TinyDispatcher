@@ -36,7 +36,7 @@
    </PropertyGroup>
 
   <PropertyGroup>
-    <Version>1.0.3</Version>
+    <Version>1.0.4</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -45,10 +45,9 @@
   </ItemGroup>
   <PropertyGroup>
     <PackageReleaseNotes>
-      - Added UseTinyNoOpContext() for zero-context dispatch.
-      - Generator now infers NoOpContext correctly.
-      - No breaking changes.
-      - Documentation updated.
+      Fixed
+      - Generated pipelines are now re-entrant and safe for concurrent dispatch within the same DI scope
+        by moving mutable execution state to a per-dispatch runtime instance.
     </PackageReleaseNotes>
 
 
