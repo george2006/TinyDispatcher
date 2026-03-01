@@ -1,3 +1,18 @@
+## [1.0.4] - 2026-02-26
+
+### Added
+- UseTinyNoOpContext() for zero-context dispatch.
+
+### Generator
+- Context inference updated to support NoOpContext.
+
+### Internal
+- Documentation updates.
+- Minor validation polish.
+
+### Breaking Changes
+- None
+
 ## 1.0.1
 
 - Fixed pipeline map emission regression (generator now emits maps when enabled).

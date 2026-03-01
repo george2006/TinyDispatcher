@@ -14,12 +14,11 @@ public record PingCommand() : ICommand;
 
 public sealed class TinyDispatcherFixture
 {
-    private ServiceProvider _sp = default!;
-    private IServiceScope _scope = default!;
-    private IDispatcher<TinyDispatcher.AppContext> _dispatcher = default!;
+    public ServiceProvider ServiceProvider { get; private set; } = default!;
 
     public void Build()
     {
+        // Ensures source-gen module initializers / static init is done upfront
         RuntimeHelpers.RunModuleConstructor(typeof(PingHandlerNoOpContext).Module.ModuleHandle);
 
         var services = new ServiceCollection();
@@ -57,21 +56,26 @@ public sealed class TinyDispatcherFixture
 #endif
         });
 
-        _sp = services.BuildServiceProvider(validateScopes: true);
-
-        // Create ONE scope for the benchmark instance
-        _scope = _sp.CreateScope();
-        _dispatcher = _scope.ServiceProvider.GetRequiredService<IDispatcher<TinyDispatcher.AppContext>>();
+        ServiceProvider = services.BuildServiceProvider(validateScopes: true);
     }
 
     public void Cleanup()
     {
-        _scope.Dispose();
-        _sp.Dispose();
+        ServiceProvider.Dispose();
     }
 
-    public Task Dispatch(PingCommand command, CancellationToken ct = default)
-        => _dispatcher.DispatchAsync(command, ct);
+    public ScopeRunner CreateRunner(IServiceProvider scopedProvider) => new(scopedProvider);
+
+    public readonly struct ScopeRunner
+    {
+        private readonly IDispatcher<TinyDispatcher.AppContext> _dispatcher;
+
+        public ScopeRunner(IServiceProvider sp)
+            => _dispatcher = sp.GetRequiredService<IDispatcher<TinyDispatcher.AppContext>>();
+
+        public Task Dispatch(PingCommand command, CancellationToken ct = default)
+            => _dispatcher.DispatchAsync(command, ct);
+    }
 
     // --- Handler
 

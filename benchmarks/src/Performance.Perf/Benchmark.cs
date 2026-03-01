@@ -1,10 +1,9 @@
 ﻿using BenchmarkDotNet.Attributes;
-using Performance.Mediatr;
-using Performance.Shared;
-using Performance.Tiny;
 using BenchmarkDotNet.Engines;
-using static Performance.Mediatr.MediatRFixture;
-
+using Microsoft.Extensions.DependencyInjection;
+using Performance.Mediatr;
+using Performance.Tiny;
+using System.Threading.Tasks;
 
 namespace Performance.Perf;
 
@@ -14,25 +13,56 @@ namespace Performance.Perf;
 public class DispatcherBenchmarks
 {
     private PingCommand _cmd = default!;
-    private PingRequest _request = default!;
-    private MediatRFixture _mediatr = default!;
-    private TinyDispatcherFixture _tiny = default!;
- 
+    private MediatRFixture.PingRequest _request = default!;
+
+    private MediatRFixture _mediatrFixture = default!;
+    private TinyDispatcherFixture _tinyFixture = default!;
+
+    // per-iteration scope + runners (correct scoped behavior, low overhead)
+    private IServiceScope _mediatrScope = default!;
+    private IServiceScope _tinyScope = default!;
+    private MediatRFixture.ScopeRunner _mediatr = default!;
+    private TinyDispatcherFixture.ScopeRunner _tiny = default!;
+
     [GlobalSetup]
-    public void Setup()
+    public void GlobalSetup()
     {
         _cmd = new PingCommand();
-        _request = new PingRequest();
-      
-        _mediatr = new MediatRFixture();
-        _mediatr.Build();
+        _request = new MediatRFixture.PingRequest();
 
-        _tiny = new TinyDispatcherFixture();
-        _tiny.Build();
+        _mediatrFixture = new MediatRFixture();
+        _mediatrFixture.Build();
 
-        // Warm-up to remove "first run" noise (JIT / DI caches)
+        _tinyFixture = new TinyDispatcherFixture();
+        _tinyFixture.Build();
+    }
+
+    [GlobalCleanup]
+    public void GlobalCleanup()
+    {
+        _mediatrFixture.Cleanup();
+        _tinyFixture.Cleanup();
+    }
+
+    [IterationSetup]
+    public void IterationSetup()
+    {
+        _mediatrScope = _mediatrFixture.ServiceProvider.CreateScope();
+        _tinyScope = _tinyFixture.ServiceProvider.CreateScope();
+
+        _mediatr = _mediatrFixture.CreateRunner(_mediatrScope.ServiceProvider);
+        _tiny = _tinyFixture.CreateRunner(_tinyScope.ServiceProvider);
+
+        // warm-up inside same scope to avoid first-call artifacts
         _mediatr.Send(_request).GetAwaiter().GetResult();
         _tiny.Dispatch(_cmd).GetAwaiter().GetResult();
+    }
+
+    [IterationCleanup]
+    public void IterationCleanup()
+    {
+        _mediatrScope.Dispose();
+        _tinyScope.Dispose();
     }
 
     [Benchmark(Baseline = true)]
