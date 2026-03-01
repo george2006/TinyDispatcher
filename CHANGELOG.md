@@ -1,18 +1,15 @@
-## [1.0.4] - 2026-02-26
+## 1.0.4 - 2026-02-27
 
-### Added
-- UseTinyNoOpContext() for zero-context dispatch.
-
-### Generator
-- Context inference updated to support NoOpContext.
+### Fixed
+- Generated pipelines are now fully re-entrant and safe for concurrent dispatch within the same DI scope.
+  Mutable execution state (`_index`, handler reference) has been moved from the scoped pipeline instance
+  to a per-dispatch runtime object, eliminating potential race conditions when dispatching the same
+  command type concurrently.
 
 ### Internal
-- Documentation updates.
-- Minor validation polish.
-
-### Breaking Changes
-- None
-
+- Refactored generated pipeline structure to isolate execution state per invocation.
+- Added concurrency test coverage to validate thread-safety guarantees.
+>>>>>>> fd80e007fe537793ad25329802f7b0cc7dc55f96
 ## 1.0.1
 
 - Fixed pipeline map emission regression (generator now emits maps when enabled).
