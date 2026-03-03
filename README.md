@@ -80,6 +80,8 @@ TinyDispatcher is a good fit when you want:
 - deterministic middleware precedence
 - compile-time discovery (no runtime scanning)
 - a small, focused dispatch core rather than a full framework
+- aot friendly.
+- microservices, minimal Api and Azure functions.
 
 ## Samples
 
