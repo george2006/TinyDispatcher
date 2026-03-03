@@ -21,3 +21,15 @@ All benchmarks:
 | [Zero Middleware (10 runs)](benchmarks/zero_middleware.md) | Baseline dispatch cost | ~9.5% faster, -40B alloc |
 | [Middleware x10 (9 runs)](benchmarks/ten_middleware.md) | Heavy pipeline (10 middleware layers) | ~12–15% faster avg, -1192B alloc |
 | [Middleware x10 + NoOpContext (10 runs)](benchmarks/ten_middleware_noopcontext.md) | Heavy pipeline (10 middleware layers) without handler context | ~19% faster avg, -1320B alloc (~95% less) |
+
+---
+
+## Visual Summary
+
+### Average Latency Comparison
+
+![Latency Comparison](benchmarks/assets/benchmark_latency_comparison.png)
+
+### Allocation Comparison
+
+![Allocation Comparison](benchmarks/assets/benchmark_allocation_comparison.png)
