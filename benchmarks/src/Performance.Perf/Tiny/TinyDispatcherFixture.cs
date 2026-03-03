@@ -25,7 +25,7 @@ public sealed class TinyDispatcherFixture
 
         TinyBenchmarkRegistration.AddGenerated(services);
 
-        services.UseTinyDispatcher<TinyDispatcher.AppContext>(cfg =>
+        services.UseTinyNoOpContext(cfg =>
         {
 #if MW0
             // no middleware
@@ -68,10 +68,10 @@ public sealed class TinyDispatcherFixture
 
     public readonly struct ScopeRunner
     {
-        private readonly IDispatcher<TinyDispatcher.AppContext> _dispatcher;
+        private readonly IDispatcher<NoOpContext> _dispatcher;
 
         public ScopeRunner(IServiceProvider sp)
-            => _dispatcher = sp.GetRequiredService<IDispatcher<TinyDispatcher.AppContext>>();
+            => _dispatcher = sp.GetRequiredService<IDispatcher<NoOpContext>>();
 
         public Task Dispatch(PingCommand command, CancellationToken ct = default)
             => _dispatcher.DispatchAsync(command, ct);
