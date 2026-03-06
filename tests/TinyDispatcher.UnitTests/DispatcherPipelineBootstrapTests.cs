@@ -3,6 +3,7 @@
 using System;
 using Microsoft.Extensions.DependencyInjection;
 using TinyDispatcher;
+using TinyDispatcher.Bootstrap;
 using Xunit;
 
 namespace TinyDispatcher.UnitTets;
