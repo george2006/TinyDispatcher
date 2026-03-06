@@ -14,6 +14,11 @@
     <!-- Pack generator output into the NuGet under analyzers/ -->
     <None Include="..\TinyDispatcher.SourceGen\bin\$(Configuration)\netstandard2.0\TinyDispatcher.SourceGen.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="TinyDispatcher.UnitTests" />
+    <InternalsVisibleTo Include="TinyDispatcher.IntegrationTests" />
+  </ItemGroup>
   <PropertyGroup>
     <!-- NuGet metadata -->
     <PackageId>TinyDispatcher</PackageId>
@@ -52,5 +57,7 @@
 
 
   </PropertyGroup>
+  
+  
 
 </Project>

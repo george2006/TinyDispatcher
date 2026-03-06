@@ -4,32 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
+using TinyDispatcher.Bootstrap;
 
-namespace TinyDispatcher;
-
-internal static class PipelineContributionStore
-{
-    private static readonly object _gate = new();
-    private static readonly List<Action<IServiceCollection>> _items = new();
-
-    public static void Add(Action<IServiceCollection> contribution)
-    {
-        if (contribution is null) return;
-        lock (_gate)
-        {
-            _items.Add(contribution);
-        }
-    }
-
-    public static Action<IServiceCollection>[] Drain()
-    {
-        lock (_gate)
-        {
-            // Snapshot: do NOT clear. Allows multiple ServiceProviders in the same process.
-            return _items.ToArray();
-        }
-    }
-}
+namespace TinyDispatcher.Bootstrap;
 
 /// <summary>
 /// Stores DI registrations for generated command pipelines contributed by consumer assemblies.
@@ -55,4 +32,5 @@ public static class DispatcherPipelineBootstrap
     }
 
     private sealed class DispatcherPipelineBootstrapAppliedMarker { }
+
 }

@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using TinyDispatcher.Bootstrap;
 using TinyDispatcher.Context;
 using TinyDispatcher.Dispatching;
 

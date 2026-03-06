@@ -2,7 +2,7 @@ using System;
 using Microsoft.Extensions.DependencyInjection;
 using TinyDispatcher.Context;
 
-namespace TinyDispatcher;
+namespace TinyDispatcher.Bootstrap;
 
 public sealed class TinyBootstrap
 {
