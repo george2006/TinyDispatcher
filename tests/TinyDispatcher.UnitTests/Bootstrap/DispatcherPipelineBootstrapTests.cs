@@ -7,6 +7,7 @@ using Xunit;
 
 namespace TinyDispatcher.UnitTests.Bootstrap;
 
+[Collection("Pipeline contribution store")]
 public sealed class DispatcherPipelineBootstrapTests
 {
     [Fact]
