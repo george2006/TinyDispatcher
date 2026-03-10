@@ -108,7 +108,7 @@ These components form the core execution and configuration model of TinyDispatch
 
 ### Hardening Sessions
 
-Leading up to the first stable release, the project is undergoing a short series of **hardening sessions** focused on strengthening runtime guarantees and improving branch coverage.
+Leading up after the first stable release, the project is undergoing a short series of **hardening sessions** focused on strengthening runtime guarantees and improving branch coverage.
 
 These sessions concentrate on:
 
