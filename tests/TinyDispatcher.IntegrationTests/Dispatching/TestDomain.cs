@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using TinyDispatcher.Context;
 using TinyDispatcher.Pipeline;
 
-namespace TinyDispatcher.UnitTests;
+namespace TinyDispatcher.IntegrationTests.Dispatching;
 
 public sealed class CallTracker
 {
@@ -46,6 +46,13 @@ public sealed class TestContext
 // -------------------------------------------------------------------------
 public sealed class TestContextFactory : IContextFactory<TestContext>
 {
+    private readonly TestContext _probe;
+
+    public TestContextFactory(TestContext probe)
+    {
+        _probe = probe;
+    }
+
     public ValueTask<TestContext> CreateAsync(CancellationToken ct = default)
     {
         var context = new TestContext
@@ -53,6 +60,7 @@ public sealed class TestContextFactory : IContextFactory<TestContext>
             SeenByFactory = ct
         };
 
+        _probe.LastCreatedContext = context;
         return new ValueTask<TestContext>(context);
     }
 }

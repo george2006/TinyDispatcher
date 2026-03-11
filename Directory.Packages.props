@@ -5,6 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- TinyDispatcher -->
+    <PackageVersion Include="Moq" Version="4.20.72" />
     <PackageVersion Include="TinyDispatcher" Version="1.0.4" />
     <!-- ASP.NET -->
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="8.0.1" />
