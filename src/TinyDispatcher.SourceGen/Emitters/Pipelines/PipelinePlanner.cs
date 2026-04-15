@@ -42,7 +42,7 @@ internal static class PipelinePlanner
                 ClassName: "TinyDispatcherGlobalPipeline",
                 IsOpenGeneric: true,
                 CommandType: "TCommand",
-                Steps: global.Select(m => new MiddlewareStep(m)).ToImmutableArray());
+                Steps: BuildSteps(global));
         }
 
         var policyPipelines = BuildPolicyPipelines(global, policies);
@@ -82,16 +82,11 @@ internal static class PipelinePlanner
             var policyMids = PipelineMiddlewareSets.NormalizeDistinct(p.Middlewares);
             if (policyMids.Length == 0) continue;
 
-            // ORDER: Global -> Policy -> Handler
-            var steps = new List<MiddlewareStep>(global.Length + policyMids.Length);
-            for (int i = 0; i < global.Length; i++) steps.Add(new MiddlewareStep(global[i]));
-            for (int i = 0; i < policyMids.Length; i++) steps.Add(new MiddlewareStep(policyMids[i]));
-
             list.Add(new PipelineDefinition(
                 ClassName: "TinyDispatcherPolicyPipeline_" + PipelineNameFactory.SanitizePolicyName(p.PolicyTypeFqn),
                 IsOpenGeneric: true,
                 CommandType: "TCommand",
-                Steps: steps.ToImmutableArray()));
+                Steps: BuildSteps(global, policyMids)));
         }
 
         return list.ToImmutableArray();
@@ -114,20 +109,52 @@ internal static class PipelinePlanner
             if (!cmdToPolicyMids.TryGetValue(cmdFqn, out var policyMids))
                 policyMids = Array.Empty<MiddlewareRef>();
 
-            // ORDER: Global -> Policy -> PerCommand -> Handler
-            var steps = new List<MiddlewareStep>(global.Length + policyMids.Length + perCmdMids.Length);
-            for (int i = 0; i < global.Length; i++) steps.Add(new MiddlewareStep(global[i]));
-            for (int i = 0; i < policyMids.Length; i++) steps.Add(new MiddlewareStep(policyMids[i]));
-            for (int i = 0; i < perCmdMids.Length; i++) steps.Add(new MiddlewareStep(perCmdMids[i]));
-
             list.Add(new PipelineDefinition(
                 ClassName: "TinyDispatcherPipeline_" + PipelineNameFactory.SanitizeCommandName(cmdFqn),
                 IsOpenGeneric: false,
                 CommandType: cmdFqn,
-                Steps: steps.ToImmutableArray()));
+                Steps: BuildSteps(global, policyMids, perCmdMids)));
         }
 
         return list.ToImmutableArray();
+    }
+
+    private static ImmutableArray<MiddlewareStep> BuildSteps(MiddlewareRef[] first)
+    {
+        var steps = new List<MiddlewareStep>(first.Length);
+
+        AddSteps(steps, first);
+
+        return steps.ToImmutableArray();
+    }
+
+    private static ImmutableArray<MiddlewareStep> BuildSteps(MiddlewareRef[] first, MiddlewareRef[] second)
+    {
+        var steps = new List<MiddlewareStep>(first.Length + second.Length);
+
+        AddSteps(steps, first);
+        AddSteps(steps, second);
+
+        return steps.ToImmutableArray();
+    }
+
+    private static ImmutableArray<MiddlewareStep> BuildSteps(MiddlewareRef[] first, MiddlewareRef[] second, MiddlewareRef[] third)
+    {
+        var steps = new List<MiddlewareStep>(first.Length + second.Length + third.Length);
+
+        AddSteps(steps, first);
+        AddSteps(steps, second);
+        AddSteps(steps, third);
+
+        return steps.ToImmutableArray();
+    }
+
+    private static void AddSteps(List<MiddlewareStep> steps, MiddlewareRef[] middlewares)
+    {
+        for (int i = 0; i < middlewares.Length; i++)
+        {
+            steps.Add(new MiddlewareStep(middlewares[i]));
+        }
     }
 
     private static Dictionary<string, MiddlewareRef[]> BuildCommandToPolicyMiddlewares(
