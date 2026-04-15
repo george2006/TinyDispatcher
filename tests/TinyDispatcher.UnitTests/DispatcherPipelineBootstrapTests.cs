@@ -6,7 +6,7 @@ using TinyDispatcher;
 using TinyDispatcher.Bootstrap;
 using Xunit;
 
-namespace TinyDispatcher.UnitTets;
+namespace TinyDispatcher.UnitTests;
 
 public sealed class DispatcherPipelineBootstrapTests
 {

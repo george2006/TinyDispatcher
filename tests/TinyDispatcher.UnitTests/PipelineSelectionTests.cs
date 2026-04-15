@@ -8,7 +8,7 @@ using TinyDispatcher.Dispatching;
 using TinyDispatcher.UnitTests;
 using Xunit;
 
-namespace TinyDispatcher.UnitTets
+namespace TinyDispatcher.UnitTests
 {
     public sealed class PipelineSelectionTests
     {

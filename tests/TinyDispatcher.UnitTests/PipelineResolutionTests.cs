@@ -9,9 +9,9 @@ using TinyDispatcher.Pipeline;
 using TinyDispatcher.UnitTests;
 using Xunit;
 using static TinyDispatcher.UnitTests.ConcurrentDispatchSameCommandTypeTests;
-using static TinyDispatcher.UnitTets.PipelineSelectionTests;
+using static TinyDispatcher.UnitTests.PipelineSelectionTests;
 
-namespace TinyDispatcher.UnitTets;
+namespace TinyDispatcher.UnitTests;
 
 public sealed class PipelineResolutionTest
 {
@@ -151,5 +151,4 @@ public sealed class PipelineResolutionTest
 
 
 }
-
 

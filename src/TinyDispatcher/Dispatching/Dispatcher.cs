@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,7 +22,7 @@ public sealed class Dispatcher<TContext> : IDispatcher<TContext>
     public Dispatcher(IServiceProvider services, IContextFactory<TContext> contextFactory)
     {
         _services = services ?? throw new ArgumentNullException(nameof(services));
-        _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(_contextFactory));
+        _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
     }
 
     public async Task DispatchAsync<TCommand>(TCommand command, CancellationToken ct = default)
@@ -53,11 +52,6 @@ public sealed class Dispatcher<TContext> : IDispatcher<TContext>
         if (query is null) throw new ArgumentNullException(nameof(query));
 
         var handler = _services.GetRequiredService<IQueryHandler<TQuery, TResult>>();
-        if (handler == null)
-        {
-            throw new InvalidOperationException(
-                $"No handler registered for query '{typeof(TQuery).FullName}'.");
-        }
         return handler.HandleAsync(query, ct);
     }
 }

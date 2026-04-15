@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using TinyDispatcher.SourceGen.Generator;
 using Xunit;
 
-namespace TinyDispatcher.UnitTest.SourceGen;
+namespace TinyDispatcher.UnitTests.SourceGen;
 
 public sealed class ContextConsistencyValidatorTests
 {
