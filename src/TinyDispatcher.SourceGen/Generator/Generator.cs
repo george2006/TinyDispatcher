@@ -4,7 +4,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using System.Collections.Immutable;
-using System.Linq;
 using TinyDispatcher.SourceGen.Diagnostics;
 using TinyDispatcher.SourceGen.Emitters.Handlers;
 using TinyDispatcher.SourceGen.Emitters.ModuleInitializer;
@@ -89,19 +88,37 @@ public sealed class Generator : IIncrementalGenerator
     private static ImmutableArray<INamedTypeSymbol> NormalizeHandlerSymbols(
         ImmutableArray<INamedTypeSymbol?> handlers)
     {
-        return handlers
-            .Where(static s => s is not null)
-            .Select(static s => s!)
-            .ToImmutableArray();
+        if (handlers.IsDefaultOrEmpty)
+            return ImmutableArray<INamedTypeSymbol>.Empty;
+
+        var builder = ImmutableArray.CreateBuilder<INamedTypeSymbol>(handlers.Length);
+
+        for (var i = 0; i < handlers.Length; i++)
+        {
+            var handler = handlers[i];
+            if (handler is not null)
+                builder.Add(handler);
+        }
+
+        return builder.ToImmutable();
     }
 
     private static ImmutableArray<InvocationExpressionSyntax> NormalizeUseTinyCalls(
         ImmutableArray<InvocationExpressionSyntax?> useTinyCalls)
     {
-        return useTinyCalls
-            .Where(static x => x is not null)
-            .Select(static x => x!)
-            .ToImmutableArray();
+        if (useTinyCalls.IsDefaultOrEmpty)
+            return ImmutableArray<InvocationExpressionSyntax>.Empty;
+
+        var builder = ImmutableArray.CreateBuilder<InvocationExpressionSyntax>(useTinyCalls.Length);
+
+        for (var i = 0; i < useTinyCalls.Length; i++)
+        {
+            var useTinyCall = useTinyCalls[i];
+            if (useTinyCall is not null)
+                builder.Add(useTinyCall);
+        }
+
+        return builder.ToImmutable();
     }
 
     private static bool ReportAndHasErrors(RoslynGeneratorContext ctx, DiagnosticBag bag)
