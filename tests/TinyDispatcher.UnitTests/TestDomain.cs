@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using TinyDispatcher.Context;
@@ -125,9 +126,11 @@ internal sealed class GlobalLogMiddleware<TCommand, TContext> : ICommandMiddlewa
         ICommandPipelineRuntime<TCommand, TContext> runtime,
         CancellationToken ct)
     {
-        ((TestContext)(object)ctx).Log.Add("mw:global:before");
+        var testContext = TestContextAccessor.Get(ctx);
+
+        testContext.Log.Add("mw:global:before");
         await runtime.NextAsync(command, ctx, ct);
-        ((TestContext)(object)ctx).Log.Add("mw:global:after");
+        testContext.Log.Add("mw:global:after");
     }
 }
 
@@ -140,9 +143,11 @@ internal sealed class PolicyLogMiddleware<TCommand, TContext> : ICommandMiddlewa
         ICommandPipelineRuntime<TCommand, TContext> runtime,
         CancellationToken ct)
     {
-        ((TestContext)(object)ctx).Log.Add("mw:policy:before");
+        var testContext = TestContextAccessor.Get(ctx);
+
+        testContext.Log.Add("mw:policy:before");
         await runtime.NextAsync(command, ctx, ct);
-        ((TestContext)(object)ctx).Log.Add("mw:policy:after");
+        testContext.Log.Add("mw:policy:after");
     }
 }
 
@@ -155,8 +160,23 @@ internal sealed class PerCommandLogMiddleware<TCommand, TContext> : ICommandMidd
         ICommandPipelineRuntime<TCommand, TContext> runtime,
         CancellationToken ct)
     {
-        ((TestContext)(object)ctx).Log.Add("mw:percmd:before");
+        var testContext = TestContextAccessor.Get(ctx);
+
+        testContext.Log.Add("mw:percmd:before");
         await runtime.NextAsync(command, ctx, ct);
-        ((TestContext)(object)ctx).Log.Add("mw:percmd:after");
+        testContext.Log.Add("mw:percmd:after");
+    }
+}
+
+internal static class TestContextAccessor
+{
+    public static TestContext Get<TContext>(TContext ctx)
+    {
+        if (ctx is TestContext testContext)
+        {
+            return testContext;
+        }
+
+        throw new InvalidOperationException("Expected a TestContext instance.");
     }
 }
