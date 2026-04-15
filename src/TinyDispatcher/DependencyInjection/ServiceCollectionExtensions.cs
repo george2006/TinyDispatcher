@@ -48,18 +48,8 @@ public static class ServiceCollectionExtensions
         // User config (middleware, policies, etc.)
         configure?.Invoke(new TinyBootstrap(services));
 
-        if (contextFactory is null && typeof(TContext) == typeof(AppContext))
-        {
-            services.TryAddScoped<IContextFactory<TContext>>(sp =>
-                (IContextFactory<TContext>)(object)
-                new DefaultAppContextFactory(sp.GetServices<IFeatureInitializer>()));
-        }
-
-        // Core registration
-        services.AddDispatcher<TContext>(contextFactory);
-
-        // Apply generated pipeline registrations contributed by module initializers
-        DispatcherPipelineBootstrap.Apply(services);
+        RegisterDefaultAppContextFactoryWhenNeeded(services, contextFactory);
+        RegisterDispatcherAndApplyPipelineBootstrap(services, contextFactory);
 
         return services;
     }
@@ -69,18 +59,40 @@ public static class ServiceCollectionExtensions
     /// Internally reuses the standard bootstrap path with a static no-op context factory.
     /// </summary>
     public static IServiceCollection UseTinyNoOpContext(
-     this IServiceCollection services,
-     Action<TinyBootstrap> configure)
+        this IServiceCollection services,
+        Action<TinyBootstrap> configure)
     {
         configure?.Invoke(new TinyBootstrap(services));
-
-        services.TryAddSingleton<IContextFactory<NoOpContext>>(NoOpContextFactory.Instance);
-
-        services.AddDispatcher<NoOpContext>(contextFactory: null);
-
-        DispatcherPipelineBootstrap.Apply(services);
+        RegisterNoOpContextFactory(services);
+        RegisterDispatcherAndApplyPipelineBootstrap<NoOpContext>(services);
 
         return services;
+    }
+
+    private static void RegisterDefaultAppContextFactoryWhenNeeded<TContext>(
+        IServiceCollection services,
+        Func<IServiceProvider, CancellationToken, ValueTask<TContext>>? contextFactory)
+    {
+        if (contextFactory is not null || typeof(TContext) != typeof(AppContext))
+            return;
+
+        services.TryAddScoped<IContextFactory<TContext>>(sp =>
+            (IContextFactory<TContext>)(object)
+            new DefaultAppContextFactory(sp.GetServices<IFeatureInitializer>()));
+    }
+
+    private static void RegisterNoOpContextFactory(IServiceCollection services)
+        => services.TryAddSingleton<IContextFactory<NoOpContext>>(NoOpContextFactory.Instance);
+
+    private static void RegisterDispatcherAndApplyPipelineBootstrap<TContext>(
+        IServiceCollection services,
+        Func<IServiceProvider, CancellationToken, ValueTask<TContext>>? contextFactory = null)
+    {
+        // Core registration
+        services.AddDispatcher(contextFactory);
+
+        // Apply generated pipeline registrations contributed by module initializers
+        DispatcherPipelineBootstrap.Apply(services);
     }
 
     private static void EnsureContextFactoryRegistered<TContext>(IServiceCollection services)
