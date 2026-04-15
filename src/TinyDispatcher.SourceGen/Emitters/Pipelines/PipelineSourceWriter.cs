@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using TinyDispatcher.SourceGen.Generator.Models;
 using static TinyDispatcher.SourceGen.Emitters.Pipelines.PipelineEmitter;
 
@@ -70,14 +69,12 @@ internal static class PipelineSourceWriter
         }
 
         // Fields (distinct by open type + arity)
-        var mwDistinct = MiddlewareSets
-            .DistinctByOpenTypeAndArity(def.Steps.Select(s => s.Middleware))
-            .ToArray();
+        var mwDistinct = GetDistinctMiddlewares(def);
 
         for (int i = 0; i < mwDistinct.Length; i++)
         {
             var mw = mwDistinct[i];
-            w.Line($"private readonly {TypeNames.CloseMiddleware(mw, cmdType, ctx)} {NameFactory.FieldName(mw)};");
+            w.Line($"private readonly {PipelineTypeNames.CloseMiddleware(mw, cmdType, ctx)} {PipelineNameFactory.FieldName(mw)};");
         }
 
         w.Line();
@@ -91,6 +88,16 @@ internal static class PipelineSourceWriter
 
         w.EndBlock(); // class body
         w.Line();
+    }
+
+    private static MiddlewareRef[] GetDistinctMiddlewares(PipelineDefinition def)
+    {
+        var middlewares = new List<MiddlewareRef>(def.Steps.Length);
+
+        for (int i = 0; i < def.Steps.Length; i++)
+            middlewares.Add(def.Steps[i].Middleware);
+
+        return PipelineMiddlewareSets.DistinctByOpenTypeAndArity(middlewares);
     }
 
     private static void WriteRuntimeClass(CodeWriter w, PipelinePlan plan, PipelineDefinition def, string cmdType)
@@ -133,7 +140,7 @@ internal static class PipelineSourceWriter
         for (int i = 0; i < def.Steps.Length; i++)
         {
             var mw = def.Steps[i].Middleware;
-            w.Line($"case {i}: return _pipeline.{NameFactory.FieldName(mw)}.InvokeAsync(command, ctxValue, this, ct);");
+            w.Line($"case {i}: return _pipeline.{PipelineNameFactory.FieldName(mw)}.InvokeAsync(command, ctxValue, this, ct);");
         }
 
         w.Line("default: return new ValueTask(_handler.HandleAsync(command, ctxValue, ct));");
@@ -160,7 +167,7 @@ internal static class PipelineSourceWriter
         {
             var mw = mwDistinct[i];
             var comma = (i == mwDistinct.Length - 1) ? "" : ",";
-            w.Line($"  {TypeNames.CloseMiddleware(mw, cmdType, ctx)} {NameFactory.CtorParamName(mw)}{comma}");
+            w.Line($"  {PipelineTypeNames.CloseMiddleware(mw, cmdType, ctx)} {PipelineNameFactory.CtorParamName(mw)}{comma}");
         }
         w.Line(")");
         w.BeginAnonymousBlock(string.Empty);
@@ -168,7 +175,7 @@ internal static class PipelineSourceWriter
         for (int i = 0; i < mwDistinct.Length; i++)
         {
             var mw = mwDistinct[i];
-            w.Line($"{NameFactory.FieldName(mw)} = {NameFactory.CtorParamName(mw)};");
+            w.Line($"{PipelineNameFactory.FieldName(mw)} = {PipelineNameFactory.CtorParamName(mw)};");
         }
 
         w.EndBlock();

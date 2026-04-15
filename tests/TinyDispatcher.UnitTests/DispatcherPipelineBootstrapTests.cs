@@ -8,11 +8,14 @@ using Xunit;
 
 namespace TinyDispatcher.UnitTests;
 
+[Collection("Pipeline contribution store")]
 public sealed class DispatcherPipelineBootstrapTests
 {
     [Fact]
     public void Apply_is_idempotent_per_IServiceCollection()
     {
+        PipelineContributionStore.ResetForTests();
+
         var calls = 0;
 
         DispatcherPipelineBootstrap.AddContribution(_ => calls++);

@@ -10,7 +10,7 @@ using Xunit;
 
 namespace TinyDispatcher.UnitTests.SourceGen.PipelineEmitter;
 
-public sealed class PipelineEmitterHelpersTests
+public sealed class PipelineNamingTests
 {
     private static MiddlewareRef Mw(string openTypeFqn, int arity)
         => new MiddlewareRef(OpenTypeSymbol: default!, OpenTypeFqn: openTypeFqn, Arity: arity);
@@ -18,7 +18,7 @@ public sealed class PipelineEmitterHelpersTests
     [Fact]
     public void Normalize_fqn_adds_global_prefix_when_missing()
     {
-        var result = TypeNames.NormalizeFqn("MyApp.Foo");
+        var result = PipelineTypeNames.NormalizeFqn("MyApp.Foo");
 
         Assert.Equal("global::MyApp.Foo", result);
     }
@@ -26,7 +26,7 @@ public sealed class PipelineEmitterHelpersTests
     [Fact]
     public void Normalize_fqn_deduplicates_double_global_prefix()
     {
-        var result = TypeNames.NormalizeFqn("global::global::MyApp.Foo");
+        var result = PipelineTypeNames.NormalizeFqn("global::global::MyApp.Foo");
 
         Assert.Equal("global::MyApp.Foo", result);
     }
@@ -36,7 +36,7 @@ public sealed class PipelineEmitterHelpersTests
     {
         var mw = Mw("global::MyApp.Mw", 2);
 
-        var closed = TypeNames.CloseMiddleware(mw, "TCommand", "global::MyApp.Ctx");
+        var closed = PipelineTypeNames.CloseMiddleware(mw, "TCommand", "global::MyApp.Ctx");
 
         Assert.Equal("global::MyApp.Mw<TCommand, global::MyApp.Ctx>", closed);
     }
@@ -46,7 +46,7 @@ public sealed class PipelineEmitterHelpersTests
     {
         var mw = Mw("global::MyApp.Mw", 1);
 
-        var closed = TypeNames.CloseMiddleware(mw, "TCommand", "global::MyApp.Ctx");
+        var closed = PipelineTypeNames.CloseMiddleware(mw, "TCommand", "global::MyApp.Ctx");
 
         Assert.Equal("global::MyApp.Mw<TCommand>", closed);
     }
@@ -56,7 +56,7 @@ public sealed class PipelineEmitterHelpersTests
     {
         var mw = Mw("global::MyApp.Mw", 2);
 
-        var open = TypeNames.OpenGenericTypeof(mw);
+        var open = PipelineTypeNames.OpenGenericTypeof(mw);
 
         Assert.Equal("global::MyApp.Mw<,>", open);
     }
@@ -66,7 +66,7 @@ public sealed class PipelineEmitterHelpersTests
     {
         var mw = Mw("global::MyApp.Mw", 1);
 
-        var open = TypeNames.OpenGenericTypeof(mw);
+        var open = PipelineTypeNames.OpenGenericTypeof(mw);
 
         Assert.Equal("global::MyApp.Mw<>", open);
     }
@@ -81,7 +81,7 @@ public sealed class PipelineEmitterHelpersTests
             Mw("global::A.Mw", 1)  // not dup (different arity)
         );
 
-        var distinct = MiddlewareSets.NormalizeDistinct(items);
+        var distinct = PipelineMiddlewareSets.NormalizeDistinct(items);
 
         Assert.Equal(3, distinct.Length);
 
@@ -101,7 +101,7 @@ public sealed class PipelineEmitterHelpersTests
     {
         var mw = Mw("global::MyApp.Logging.GlobalLogMiddleware`2", 2);
 
-        var name = NameFactory.CtorParamName(mw);
+        var name = PipelineNameFactory.CtorParamName(mw);
 
         Assert.Equal("globalLog", name);
     }
@@ -111,7 +111,7 @@ public sealed class PipelineEmitterHelpersTests
     {
         var mw = Mw("global::MyApp.XMiddleware", 1);
 
-        var name = NameFactory.CtorParamName(mw);
+        var name = PipelineNameFactory.CtorParamName(mw);
 
         Assert.Equal("x", name);
     }
@@ -121,7 +121,7 @@ public sealed class PipelineEmitterHelpersTests
     {
         var mw = Mw("global::MyApp.GlobalLogMiddleware", 2);
 
-        var field = NameFactory.FieldName(mw);
+        var field = PipelineNameFactory.FieldName(mw);
 
         Assert.Equal("_globalLog", field);
     }
@@ -131,7 +131,7 @@ public sealed class PipelineEmitterHelpersTests
     {
         var cmd = "global::MyApp.Commands.Do-Thing+Inner";
 
-        var name = NameFactory.SanitizeCommandName(cmd);
+        var name = PipelineNameFactory.SanitizeCommandName(cmd);
 
         Assert.Equal("Do_Thing_Inner", name);
     }
@@ -141,7 +141,7 @@ public sealed class PipelineEmitterHelpersTests
     {
         var policy = "global::MyApp.Policies.CheckoutPolicy+Nested";
 
-        var name = NameFactory.SanitizePolicyName(policy);
+        var name = PipelineNameFactory.SanitizePolicyName(policy);
 
         Assert.Equal("MyApp_Policies_CheckoutPolicy_Nested", name);
     }

@@ -1,7 +1,7 @@
 ﻿#nullable enable
 
 using System.Collections.Immutable;
-using TinyDispatcher.SourceGen.Emitters.Pipelines; // TypeNames + MiddlewareSets
+using TinyDispatcher.SourceGen.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen.Emitters.PipelineMaps;
@@ -19,10 +19,10 @@ internal sealed class PipelineMapInspector
         ImmutableDictionary<string, PolicySpec> policies,
         GeneratorOptions options)
     {
-        _globals = MiddlewareSets.NormalizeDistinct(globals);
+        _globals = PipelineMiddlewareSets.NormalizeDistinct(globals);
         _perCommand = NormalizePerCommand(perCommand);
         _policyByCommand = BuildPolicyIndex(policies);
-        _contextFqn = TypeNames.NormalizeFqn(options.CommandContextType!);
+        _contextFqn = PipelineTypeNames.NormalizeFqn(options.CommandContextType!);
     }
 
     public PipelineDescriptor InspectCommand(HandlerContract handler)
@@ -33,8 +33,8 @@ internal sealed class PipelineMapInspector
 
     private PipelineDescriptor BuildCommand(HandlerContract handler)
     {
-        var command = TypeNames.NormalizeFqn(handler.MessageTypeFqn);
-        var handlerFqn = TypeNames.NormalizeFqn(handler.HandlerTypeFqn);
+        var command = PipelineTypeNames.NormalizeFqn(handler.MessageTypeFqn);
+        var handlerFqn = PipelineTypeNames.NormalizeFqn(handler.HandlerTypeFqn);
 
         var policy = FindPolicy(command);
         var middlewares = Compose(command, policy);
@@ -49,8 +49,8 @@ internal sealed class PipelineMapInspector
 
     private PipelineDescriptor BuildQuery(QueryHandlerContract handler)
     {
-        var query = TypeNames.NormalizeFqn(handler.QueryTypeFqn);
-        var handlerFqn = TypeNames.NormalizeFqn(handler.HandlerTypeFqn);
+        var query = PipelineTypeNames.NormalizeFqn(handler.QueryTypeFqn);
+        var handlerFqn = PipelineTypeNames.NormalizeFqn(handler.HandlerTypeFqn);
 
         // Queries: global + per-command only (no policies today)
         var middlewares = Compose(query, policy: null);
@@ -110,11 +110,11 @@ internal sealed class PipelineMapInspector
 
         foreach (var kv in perCommand)
         {
-            var cmd = TypeNames.NormalizeFqn(kv.Key);
+            var cmd = PipelineTypeNames.NormalizeFqn(kv.Key);
             if (string.IsNullOrWhiteSpace(cmd))
                 continue;
 
-            var mids = MiddlewareSets.NormalizeDistinct(kv.Value);
+            var mids = PipelineMiddlewareSets.NormalizeDistinct(kv.Value);
             if (mids.Length == 0)
                 continue;
 
@@ -132,19 +132,19 @@ internal sealed class PipelineMapInspector
     {
         var map = new Dictionary<string, PolicyContribution>(StringComparer.Ordinal);
 
-        foreach (var p in policies.Values.OrderBy(x => TypeNames.NormalizeFqn(x.PolicyTypeFqn), StringComparer.Ordinal))
+        foreach (var p in policies.Values.OrderBy(x => PipelineTypeNames.NormalizeFqn(x.PolicyTypeFqn), StringComparer.Ordinal))
         {
-            var policyType = TypeNames.NormalizeFqn(p.PolicyTypeFqn);
+            var policyType = PipelineTypeNames.NormalizeFqn(p.PolicyTypeFqn);
             if (string.IsNullOrWhiteSpace(policyType))
                 continue;
 
-            var mids = MiddlewareSets.NormalizeDistinct(p.Middlewares);
+            var mids = PipelineMiddlewareSets.NormalizeDistinct(p.Middlewares);
             if (mids.Length == 0)
                 continue;
 
             for (var i = 0; i < p.Commands.Length; i++)
             {
-                var cmd = TypeNames.NormalizeFqn(p.Commands[i]);
+                var cmd = PipelineTypeNames.NormalizeFqn(p.Commands[i]);
                 if (string.IsNullOrWhiteSpace(cmd))
                     continue;
 

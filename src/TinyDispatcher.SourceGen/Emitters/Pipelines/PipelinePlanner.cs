@@ -19,16 +19,16 @@ internal static class PipelinePlanner
     {
         var core = "global::TinyDispatcher";
         var genNs = options.GeneratedNamespace;
-        var ctx = TypeNames.NormalizeFqn(options.CommandContextType!);
+        var ctx = PipelineTypeNames.NormalizeFqn(options.CommandContextType!);
 
-        var global = MiddlewareSets.NormalizeDistinct(globalMiddlewares);
+        var global = PipelineMiddlewareSets.NormalizeDistinct(globalMiddlewares);
         var hasGlobal = global.Length > 0;
 
         var perCmd = new Dictionary<string, MiddlewareRef[]>(StringComparer.Ordinal);
         foreach (var kv in perCommand)
         {
-            var cmd = TypeNames.NormalizeFqn(kv.Key);
-            var mids = MiddlewareSets.NormalizeDistinct(kv.Value);
+            var cmd = PipelineTypeNames.NormalizeFqn(kv.Key);
+            var mids = PipelineMiddlewareSets.NormalizeDistinct(kv.Value);
             if (string.IsNullOrWhiteSpace(cmd) || mids.Length == 0) continue;
             perCmd[cmd] = mids;
         }
@@ -77,9 +77,9 @@ internal static class PipelinePlanner
 
         var list = new List<PipelineDefinition>(policies.Count);
 
-        foreach (var p in policies.Values.OrderBy(x => TypeNames.NormalizeFqn(x.PolicyTypeFqn), StringComparer.Ordinal))
+        foreach (var p in policies.Values.OrderBy(x => PipelineTypeNames.NormalizeFqn(x.PolicyTypeFqn), StringComparer.Ordinal))
         {
-            var policyMids = MiddlewareSets.NormalizeDistinct(p.Middlewares);
+            var policyMids = PipelineMiddlewareSets.NormalizeDistinct(p.Middlewares);
             if (policyMids.Length == 0) continue;
 
             // ORDER: Global -> Policy -> Handler
@@ -88,7 +88,7 @@ internal static class PipelinePlanner
             for (int i = 0; i < policyMids.Length; i++) steps.Add(new MiddlewareStep(policyMids[i]));
 
             list.Add(new PipelineDefinition(
-                ClassName: "TinyDispatcherPolicyPipeline_" + NameFactory.SanitizePolicyName(p.PolicyTypeFqn),
+                ClassName: "TinyDispatcherPolicyPipeline_" + PipelineNameFactory.SanitizePolicyName(p.PolicyTypeFqn),
                 IsOpenGeneric: true,
                 CommandType: "TCommand",
                 Steps: steps.ToImmutableArray()));
@@ -121,7 +121,7 @@ internal static class PipelinePlanner
             for (int i = 0; i < perCmdMids.Length; i++) steps.Add(new MiddlewareStep(perCmdMids[i]));
 
             list.Add(new PipelineDefinition(
-                ClassName: "TinyDispatcherPipeline_" + NameFactory.SanitizeCommandName(cmdFqn),
+                ClassName: "TinyDispatcherPipeline_" + PipelineNameFactory.SanitizeCommandName(cmdFqn),
                 IsOpenGeneric: false,
                 CommandType: cmdFqn,
                 Steps: steps.ToImmutableArray()));
@@ -135,14 +135,14 @@ internal static class PipelinePlanner
     {
         var map = new Dictionary<string, MiddlewareRef[]>(StringComparer.Ordinal);
 
-        foreach (var p in policies.Values.OrderBy(x => TypeNames.NormalizeFqn(x.PolicyTypeFqn), StringComparer.Ordinal))
+        foreach (var p in policies.Values.OrderBy(x => PipelineTypeNames.NormalizeFqn(x.PolicyTypeFqn), StringComparer.Ordinal))
         {
-            var mids = MiddlewareSets.NormalizeDistinct(p.Middlewares);
+            var mids = PipelineMiddlewareSets.NormalizeDistinct(p.Middlewares);
             if (mids.Length == 0) continue;
 
             for (int i = 0; i < p.Commands.Length; i++)
             {
-                var cmd = TypeNames.NormalizeFqn(p.Commands[i]);
+                var cmd = PipelineTypeNames.NormalizeFqn(p.Commands[i]);
                 if (string.IsNullOrWhiteSpace(cmd)) continue;
 
                 if (!map.ContainsKey(cmd))
@@ -163,16 +163,16 @@ internal static class PipelinePlanner
         all.AddRange(global);
 
         foreach (var kv in perCommand)
-            all.AddRange(MiddlewareSets.NormalizeDistinct(kv.Value));
+            all.AddRange(PipelineMiddlewareSets.NormalizeDistinct(kv.Value));
 
         foreach (var p in policies.Values)
-            all.AddRange(MiddlewareSets.NormalizeDistinct(p.Middlewares));
+            all.AddRange(PipelineMiddlewareSets.NormalizeDistinct(p.Middlewares));
 
-        var distinct = MiddlewareSets.NormalizeDistinct(all.ToImmutableArray());
+        var distinct = PipelineMiddlewareSets.NormalizeDistinct(all.ToImmutableArray());
 
         var regs = new List<OpenGenericRegistration>(distinct.Length);
         for (int i = 0; i < distinct.Length; i++)
-            regs.Add(new OpenGenericRegistration(TypeNames.OpenGenericTypeof(distinct[i])));
+            regs.Add(new OpenGenericRegistration(PipelineTypeNames.OpenGenericTypeof(distinct[i])));
 
         return regs.ToImmutableArray();
     }
@@ -189,13 +189,13 @@ internal static class PipelinePlanner
         var perCmdSet = new HashSet<string>(perCmd.Keys, StringComparer.Ordinal);
 
         var cmdToPolicyPipelineOpen = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var p in policies.Values.OrderBy(x => TypeNames.NormalizeFqn(x.PolicyTypeFqn), StringComparer.Ordinal))
+        foreach (var p in policies.Values.OrderBy(x => PipelineTypeNames.NormalizeFqn(x.PolicyTypeFqn), StringComparer.Ordinal))
         {
-            var open = "global::" + genNs + ".TinyDispatcherPolicyPipeline_" + NameFactory.SanitizePolicyName(p.PolicyTypeFqn);
+            var open = "global::" + genNs + ".TinyDispatcherPolicyPipeline_" + PipelineNameFactory.SanitizePolicyName(p.PolicyTypeFqn);
 
             for (int i = 0; i < p.Commands.Length; i++)
             {
-                var cmd = TypeNames.NormalizeFqn(p.Commands[i]);
+                var cmd = PipelineTypeNames.NormalizeFqn(p.Commands[i]);
                 if (string.IsNullOrWhiteSpace(cmd)) continue;
 
                 if (!cmdToPolicyPipelineOpen.ContainsKey(cmd))
@@ -211,7 +211,7 @@ internal static class PipelinePlanner
         {
             regs.Add(new ServiceRegistration(
                 ServiceTypeExpression: $"{core}.ICommandPipeline<{cmd}, {ctx}>",
-                ImplementationTypeExpression: $"global::{genNs}.TinyDispatcherPipeline_{NameFactory.SanitizeCommandName(cmd)}"));
+                ImplementationTypeExpression: $"global::{genNs}.TinyDispatcherPipeline_{PipelineNameFactory.SanitizeCommandName(cmd)}"));
         }
 
         foreach (var cmd in policyCmdSet.OrderBy(x => x, StringComparer.Ordinal))
@@ -227,7 +227,7 @@ internal static class PipelinePlanner
         {
             for (int i = 0; i < discovery.Commands.Length; i++)
             {
-                var cmd = TypeNames.NormalizeFqn(discovery.Commands[i].MessageTypeFqn);
+                var cmd = PipelineTypeNames.NormalizeFqn(discovery.Commands[i].MessageTypeFqn);
                 if (string.IsNullOrWhiteSpace(cmd)) continue;
 
                 if (perCmdSet.Contains(cmd)) continue;
