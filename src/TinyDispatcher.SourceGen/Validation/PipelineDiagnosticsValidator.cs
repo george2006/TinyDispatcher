@@ -29,7 +29,7 @@ internal sealed class PipelineDiagnosticsValidator : IGeneratorValidator
 
         for (int i = 0; i < discovery.Commands.Length; i++)
         {
-            var fqn = TypeNames.NormalizeFqn(discovery.Commands[i].MessageTypeFqn);
+            var fqn = PipelineTypeNames.NormalizeFqn(discovery.Commands[i].MessageTypeFqn);
             if (!string.IsNullOrWhiteSpace(fqn))
                 set.Add(fqn);
         }
@@ -46,7 +46,7 @@ internal sealed class PipelineDiagnosticsValidator : IGeneratorValidator
 
         foreach (var kv in context.PerCommand)
         {
-            var cmd = TypeNames.NormalizeFqn(kv.Key);
+            var cmd = PipelineTypeNames.NormalizeFqn(kv.Key);
             if (string.IsNullOrWhiteSpace(cmd)) continue;
 
             if (!discoveredCommands.Contains(cmd))
@@ -68,11 +68,11 @@ internal sealed class PipelineDiagnosticsValidator : IGeneratorValidator
 
         foreach (var p in context.Policies.Values)
         {
-            var policyType = TypeNames.NormalizeFqn(p.PolicyTypeFqn);
+            var policyType = PipelineTypeNames.NormalizeFqn(p.PolicyTypeFqn);
 
             for (int i = 0; i < p.Commands.Length; i++)
             {
-                var cmd = TypeNames.NormalizeFqn(p.Commands[i]);
+                var cmd = PipelineTypeNames.NormalizeFqn(p.Commands[i]);
                 if (string.IsNullOrWhiteSpace(cmd)) continue;
 
                 if (!discoveredCommands.Contains(cmd))
@@ -97,12 +97,12 @@ internal sealed class PipelineDiagnosticsValidator : IGeneratorValidator
 
         foreach (var p in context.Policies.Values)
         {
-            var policyType = TypeNames.NormalizeFqn(p.PolicyTypeFqn);
+            var policyType = PipelineTypeNames.NormalizeFqn(p.PolicyTypeFqn);
             if (string.IsNullOrWhiteSpace(policyType)) continue;
 
             for (int i = 0; i < p.Commands.Length; i++)
             {
-                var cmd = TypeNames.NormalizeFqn(p.Commands[i]);
+                var cmd = PipelineTypeNames.NormalizeFqn(p.Commands[i]);
                 if (string.IsNullOrWhiteSpace(cmd)) continue;
 
                 if (!map.TryGetValue(cmd, out var list))
