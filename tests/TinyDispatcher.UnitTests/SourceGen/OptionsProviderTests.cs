@@ -8,7 +8,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using TinyDispatcher.SourceGen.Internal;
 using Xunit;
 
-namespace TinyDispatcher.UnitTest.SourceGen;
+namespace TinyDispatcher.UnitTests.SourceGen;
 
 public sealed class OptionsProviderTests
 {

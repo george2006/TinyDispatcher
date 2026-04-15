@@ -9,7 +9,7 @@ using TinyDispatcher.SourceGen.Emitters.Handlers;
 using TinyDispatcher.SourceGen.Generator.Models;
 using Xunit;
 
-namespace TinyDispatcher.UnitTest.SourceGen.HandlerEmitter;
+namespace TinyDispatcher.UnitTests.SourceGen.HandlerEmitter;
 
 public sealed class HandlerRegistrationsEmitterTests
 {
