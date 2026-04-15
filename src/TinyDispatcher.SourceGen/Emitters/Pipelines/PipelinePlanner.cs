@@ -10,6 +10,8 @@ namespace TinyDispatcher.SourceGen.Emitters.Pipelines;
 
 internal static class PipelinePlanner
 {
+    private static readonly MiddlewareRef[] NoMiddlewares = Array.Empty<MiddlewareRef>();
+
     public static PipelinePlan Build(
         ImmutableArray<MiddlewareRef> globalMiddlewares,
         ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> perCommand,
@@ -42,7 +44,7 @@ internal static class PipelinePlanner
                 ClassName: "TinyDispatcherGlobalPipeline",
                 IsOpenGeneric: true,
                 CommandType: "TCommand",
-                Steps: BuildSteps(global));
+                Steps: BuildSteps(global, NoMiddlewares, NoMiddlewares));
         }
 
         var policyPipelines = BuildPolicyPipelines(global, policies);
@@ -86,7 +88,7 @@ internal static class PipelinePlanner
                 ClassName: "TinyDispatcherPolicyPipeline_" + PipelineNameFactory.SanitizePolicyName(p.PolicyTypeFqn),
                 IsOpenGeneric: true,
                 CommandType: "TCommand",
-                Steps: BuildSteps(global, policyMids)));
+                Steps: BuildSteps(global, policyMids, NoMiddlewares)));
         }
 
         return list.ToImmutableArray();
@@ -107,7 +109,7 @@ internal static class PipelinePlanner
             var perCmdMids = kv.Value;
 
             if (!cmdToPolicyMids.TryGetValue(cmdFqn, out var policyMids))
-                policyMids = Array.Empty<MiddlewareRef>();
+                policyMids = NoMiddlewares;
 
             list.Add(new PipelineDefinition(
                 ClassName: "TinyDispatcherPipeline_" + PipelineNameFactory.SanitizeCommandName(cmdFqn),
@@ -119,32 +121,16 @@ internal static class PipelinePlanner
         return list.ToImmutableArray();
     }
 
-    private static ImmutableArray<MiddlewareStep> BuildSteps(MiddlewareRef[] first)
+    private static ImmutableArray<MiddlewareStep> BuildSteps(
+        MiddlewareRef[] global,
+        MiddlewareRef[] policy,
+        MiddlewareRef[] perCommand)
     {
-        var steps = new List<MiddlewareStep>(first.Length);
+        var steps = new List<MiddlewareStep>(global.Length + policy.Length + perCommand.Length);
 
-        AddSteps(steps, first);
-
-        return steps.ToImmutableArray();
-    }
-
-    private static ImmutableArray<MiddlewareStep> BuildSteps(MiddlewareRef[] first, MiddlewareRef[] second)
-    {
-        var steps = new List<MiddlewareStep>(first.Length + second.Length);
-
-        AddSteps(steps, first);
-        AddSteps(steps, second);
-
-        return steps.ToImmutableArray();
-    }
-
-    private static ImmutableArray<MiddlewareStep> BuildSteps(MiddlewareRef[] first, MiddlewareRef[] second, MiddlewareRef[] third)
-    {
-        var steps = new List<MiddlewareStep>(first.Length + second.Length + third.Length);
-
-        AddSteps(steps, first);
-        AddSteps(steps, second);
-        AddSteps(steps, third);
+        AddSteps(steps, global);
+        AddSteps(steps, policy);
+        AddSteps(steps, perCommand);
 
         return steps.ToImmutableArray();
     }
