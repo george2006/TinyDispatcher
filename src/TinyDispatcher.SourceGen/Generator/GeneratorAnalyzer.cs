@@ -151,7 +151,7 @@ internal static class GeneratorAnalyzer
 
         var globals = ordering.OrderAndDistinctGlobals(globalEntries);
         var perCommand = ordering.BuildPerCommandMap(perCmdEntries);
-        var policies = policyBuilder.Build(compilation, policyTypeSymbols);
+        var policies = policyBuilder.Build(policyTypeSymbols);
 
         return new PipelineFacts(
             globals,

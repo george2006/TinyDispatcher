@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Text;
 using TinyDispatcher.SourceGen.Abstractions;
 using TinyDispatcher.SourceGen.Generator.Models;
-using static TinyDispatcher.SourceGen.Emitters.Pipelines.PipelineEmitter;
 
 namespace TinyDispatcher.SourceGen.Emitters.Pipelines;
 
@@ -19,70 +17,151 @@ internal static class PipelinePlanner
         DiscoveryResult discovery,
         GeneratorOptions options)
     {
-        var core = "global::TinyDispatcher";
-        var genNs = options.GeneratedNamespace;
-        var ctx = PipelineTypeNames.NormalizeFqn(options.CommandContextType!);
+        var coreNamespace = "global::TinyDispatcher";
+        var generatedNamespace = options.GeneratedNamespace;
+        var contextType = PipelineTypeNames.NormalizeFqn(options.CommandContextType!);
 
         var global = PipelineMiddlewareSets.NormalizeDistinct(globalMiddlewares);
-        var hasGlobal = global.Length > 0;
+        var hasGlobalMiddlewares = global.Length > 0;
 
-        var perCmd = new Dictionary<string, MiddlewareRef[]>(StringComparer.Ordinal);
-        foreach (var kv in perCommand)
-        {
-            var cmd = PipelineTypeNames.NormalizeFqn(kv.Key);
-            var mids = PipelineMiddlewareSets.NormalizeDistinct(kv.Value);
-            if (string.IsNullOrWhiteSpace(cmd) || mids.Length == 0) continue;
-            perCmd[cmd] = mids;
-        }
-
-        var cmdToPolicyMids = BuildCommandToPolicyMiddlewares(policies);
-
-        PipelineDefinition? globalPipeline = null;
-        if (hasGlobal)
-        {
-            globalPipeline = new PipelineDefinition(
-                ClassName: "TinyDispatcherGlobalPipeline",
-                IsOpenGeneric: true,
-                CommandType: "TCommand",
-                Steps: BuildSteps(global, NoMiddlewares, NoMiddlewares));
-        }
+        var perCommandMiddlewares = NormalizePerCommandMiddlewares(perCommand);
+        var commandToPolicyMiddlewares = BuildCommandToPolicyMiddlewares(policies);
+        var globalPipeline = BuildGlobalPipeline(global);
 
         var policyPipelines = BuildPolicyPipelines(global, policies);
-        var perCommandPipelines = BuildPerCommandPipelines(global, perCmd, cmdToPolicyMids);
-        var mwRegs = BuildOpenGenericMiddlewareRegistrations(global, perCommand, policies);
-        var svcRegs = BuildServiceRegistrations(genNs, core, ctx, hasGlobal, discovery, perCmd, policies);
+        var perCommandPipelines = BuildPerCommandPipelines(
+            global,
+            perCommandMiddlewares,
+            commandToPolicyMiddlewares);
 
-        var shouldEmit =
-            globalPipeline is not null ||
-            policyPipelines.Length > 0 ||
-            perCommandPipelines.Length > 0 ||
-            mwRegs.Length > 0 ||
-            svcRegs.Length > 0;
+        var middlewareRegistrations = BuildOpenGenericMiddlewareRegistrations(
+            global,
+            perCommandMiddlewares,
+            policies);
+
+        var serviceRegistrations = PipelineRegistrationPlanner.Build(
+            generatedNamespace,
+            coreNamespace,
+            contextType,
+            hasGlobalMiddlewares,
+            discovery,
+            perCommandMiddlewares,
+            policies);
+
+        var shouldEmit = ShouldEmitPlan(
+            globalPipeline,
+            policyPipelines,
+            perCommandPipelines,
+            middlewareRegistrations,
+            serviceRegistrations);
 
         return new PipelinePlan(
-            GeneratedNamespace: genNs,
-            ContextFqn: ctx,
-            CoreFqn: core,
+            GeneratedNamespace: generatedNamespace,
+            ContextFqn: contextType,
+            CoreFqn: coreNamespace,
             ShouldEmit: shouldEmit,
             GlobalPipeline: globalPipeline,
             PolicyPipelines: policyPipelines,
             PerCommandPipelines: perCommandPipelines,
-            OpenGenericMiddlewareRegistrations: mwRegs,
-            ServiceRegistrations: svcRegs);
+            OpenGenericMiddlewareRegistrations: middlewareRegistrations,
+            ServiceRegistrations: serviceRegistrations);
+    }
+
+    private static Dictionary<string, MiddlewareRef[]> NormalizePerCommandMiddlewares(
+        ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> perCommand)
+    {
+        var normalized = new Dictionary<string, MiddlewareRef[]>(StringComparer.Ordinal);
+
+        foreach (var pair in perCommand)
+        {
+            AddNormalizedPerCommandMiddlewares(normalized, pair.Key, pair.Value);
+        }
+
+        return normalized;
+    }
+
+    private static void AddNormalizedPerCommandMiddlewares(
+        Dictionary<string, MiddlewareRef[]> normalized,
+        string commandType,
+        ImmutableArray<MiddlewareRef> middlewares)
+    {
+        var command = PipelineTypeNames.NormalizeFqn(commandType);
+        var commandIsMissing = string.IsNullOrWhiteSpace(command);
+
+        if (commandIsMissing)
+        {
+            return;
+        }
+
+        var distinctMiddlewares = PipelineMiddlewareSets.NormalizeDistinct(middlewares);
+        var hasNoMiddlewares = distinctMiddlewares.Length == 0;
+
+        if (hasNoMiddlewares)
+        {
+            return;
+        }
+
+        normalized[command] = distinctMiddlewares;
+    }
+
+    private static PipelineDefinition? BuildGlobalPipeline(MiddlewareRef[] global)
+    {
+        var hasGlobalMiddlewares = global.Length > 0;
+
+        if (!hasGlobalMiddlewares)
+        {
+            return null;
+        }
+
+        return new PipelineDefinition(
+            ClassName: "TinyDispatcherGlobalPipeline",
+            IsOpenGeneric: true,
+            CommandType: "TCommand",
+            Steps: BuildSteps(global, NoMiddlewares, NoMiddlewares));
+    }
+
+    private static bool ShouldEmitPlan(
+        PipelineDefinition? globalPipeline,
+        ImmutableArray<PipelineDefinition> policyPipelines,
+        ImmutableArray<PipelineDefinition> perCommandPipelines,
+        ImmutableArray<OpenGenericRegistration> middlewareRegistrations,
+        ImmutableArray<ServiceRegistration> serviceRegistrations)
+    {
+        var hasGlobalPipeline = globalPipeline is not null;
+        var hasPolicyPipelines = policyPipelines.Length > 0;
+        var hasPerCommandPipelines = perCommandPipelines.Length > 0;
+        var hasMiddlewareRegistrations = middlewareRegistrations.Length > 0;
+        var hasServiceRegistrations = serviceRegistrations.Length > 0;
+
+        return hasGlobalPipeline ||
+            hasPolicyPipelines ||
+            hasPerCommandPipelines ||
+            hasMiddlewareRegistrations ||
+            hasServiceRegistrations;
     }
 
     private static ImmutableArray<PipelineDefinition> BuildPolicyPipelines(
         MiddlewareRef[] global,
         ImmutableDictionary<string, PolicySpec> policies)
     {
-        if (policies.Count == 0) return ImmutableArray<PipelineDefinition>.Empty;
+        if (policies.Count == 0)
+        {
+            return ImmutableArray<PipelineDefinition>.Empty;
+        }
 
         var list = new List<PipelineDefinition>(policies.Count);
 
-        foreach (var p in policies.Values.OrderBy(x => PipelineTypeNames.NormalizeFqn(x.PolicyTypeFqn), StringComparer.Ordinal))
+        var orderedPolicies = PipelinePolicyOrdering.GetPoliciesInStableOrder(policies);
+        for (var i = 0; i < orderedPolicies.Length; i++)
         {
+            var p = orderedPolicies[i];
             var policyMids = PipelineMiddlewareSets.NormalizeDistinct(p.Middlewares);
-            if (policyMids.Length == 0) continue;
+            var hasNoPolicyMiddlewares = policyMids.Length == 0;
+
+            if (hasNoPolicyMiddlewares)
+            {
+                continue;
+            }
 
             list.Add(new PipelineDefinition(
                 ClassName: "TinyDispatcherPolicyPipeline_" + PipelineNameFactory.SanitizePolicyName(p.PolicyTypeFqn),
@@ -99,17 +178,23 @@ internal static class PipelinePlanner
         Dictionary<string, MiddlewareRef[]> perCmd,
         Dictionary<string, MiddlewareRef[]> cmdToPolicyMids)
     {
-        if (perCmd.Count == 0) return ImmutableArray<PipelineDefinition>.Empty;
+        if (perCmd.Count == 0)
+        {
+            return ImmutableArray<PipelineDefinition>.Empty;
+        }
 
         var list = new List<PipelineDefinition>(perCmd.Count);
 
-        foreach (var kv in perCmd.OrderBy(k => k.Key, StringComparer.Ordinal))
+        var orderedCommands = GetKeysInStableOrder(perCmd.Keys);
+        for (var i = 0; i < orderedCommands.Length; i++)
         {
-            var cmdFqn = kv.Key;
-            var perCmdMids = kv.Value;
+            var cmdFqn = orderedCommands[i];
+            var perCmdMids = perCmd[cmdFqn];
 
             if (!cmdToPolicyMids.TryGetValue(cmdFqn, out var policyMids))
+            {
                 policyMids = NoMiddlewares;
+            }
 
             list.Add(new PipelineDefinition(
                 ClassName: "TinyDispatcherPipeline_" + PipelineNameFactory.SanitizeCommandName(cmdFqn),
@@ -137,7 +222,7 @@ internal static class PipelinePlanner
 
     private static void AddSteps(List<MiddlewareStep> steps, MiddlewareRef[] middlewares)
     {
-        for (int i = 0; i < middlewares.Length; i++)
+        for (var i = 0; i < middlewares.Length; i++)
         {
             steps.Add(new MiddlewareStep(middlewares[i]));
         }
@@ -148,110 +233,101 @@ internal static class PipelinePlanner
     {
         var map = new Dictionary<string, MiddlewareRef[]>(StringComparer.Ordinal);
 
-        foreach (var p in policies.Values.OrderBy(x => PipelineTypeNames.NormalizeFqn(x.PolicyTypeFqn), StringComparer.Ordinal))
+        var orderedPolicies = PipelinePolicyOrdering.GetPoliciesInStableOrder(policies);
+        for (var i = 0; i < orderedPolicies.Length; i++)
         {
+            var p = orderedPolicies[i];
             var mids = PipelineMiddlewareSets.NormalizeDistinct(p.Middlewares);
-            if (mids.Length == 0) continue;
+            var hasNoPolicyMiddlewares = mids.Length == 0;
 
-            for (int i = 0; i < p.Commands.Length; i++)
+            if (hasNoPolicyMiddlewares)
             {
-                var cmd = PipelineTypeNames.NormalizeFqn(p.Commands[i]);
-                if (string.IsNullOrWhiteSpace(cmd)) continue;
-
-                if (!map.ContainsKey(cmd))
-                    map[cmd] = mids; // first wins
+                continue;
             }
+
+            AddPolicyMiddlewaresByCommand(map, p, mids);
         }
 
         return map;
     }
 
+    private static void AddPolicyMiddlewaresByCommand(
+        Dictionary<string, MiddlewareRef[]> map,
+        PolicySpec policy,
+        MiddlewareRef[] middlewares)
+    {
+        for (var commandIndex = 0; commandIndex < policy.Commands.Length; commandIndex++)
+        {
+            var command = PipelineTypeNames.NormalizeFqn(policy.Commands[commandIndex]);
+            var commandIsMissing = string.IsNullOrWhiteSpace(command);
+
+            if (commandIsMissing)
+            {
+                continue;
+            }
+
+            var commandAlreadyHasPolicy = map.ContainsKey(command);
+
+            if (commandAlreadyHasPolicy)
+            {
+                continue;
+            }
+
+            map[command] = middlewares;
+        }
+    }
+
     private static ImmutableArray<OpenGenericRegistration> BuildOpenGenericMiddlewareRegistrations(
         MiddlewareRef[] global,
-        ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> perCommand,
+        Dictionary<string, MiddlewareRef[]> perCommand,
         ImmutableDictionary<string, PolicySpec> policies)
     {
         var all = new List<MiddlewareRef>(256);
 
         all.AddRange(global);
 
-        foreach (var kv in perCommand)
-            all.AddRange(PipelineMiddlewareSets.NormalizeDistinct(kv.Value));
+        foreach (var pair in perCommand)
+        {
+            all.AddRange(pair.Value);
+        }
 
-        foreach (var p in policies.Values)
-            all.AddRange(PipelineMiddlewareSets.NormalizeDistinct(p.Middlewares));
+        foreach (var policy in policies.Values)
+        {
+            all.AddRange(PipelineMiddlewareSets.NormalizeDistinct(policy.Middlewares));
+        }
 
         var distinct = PipelineMiddlewareSets.NormalizeDistinct(all.ToImmutableArray());
 
         var regs = new List<OpenGenericRegistration>(distinct.Length);
-        for (int i = 0; i < distinct.Length; i++)
+        for (var i = 0; i < distinct.Length; i++)
+        {
             regs.Add(new OpenGenericRegistration(PipelineTypeNames.OpenGenericTypeof(distinct[i])));
+        }
 
         return regs.ToImmutableArray();
     }
 
-    private static ImmutableArray<ServiceRegistration> BuildServiceRegistrations(
-        string genNs,
-        string core,
-        string ctx,
-        bool hasGlobal,
-        DiscoveryResult discovery,
-        Dictionary<string, MiddlewareRef[]> perCmd,
-        ImmutableDictionary<string, PolicySpec> policies)
+    private static string[] GetKeysInStableOrder(IEnumerable<string> keys)
     {
-        var perCmdSet = new HashSet<string>(perCmd.Keys, StringComparer.Ordinal);
-
-        var cmdToPolicyPipelineOpen = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var p in policies.Values.OrderBy(x => PipelineTypeNames.NormalizeFqn(x.PolicyTypeFqn), StringComparer.Ordinal))
+        var ordered = new List<string>();
+        foreach (var key in keys)
         {
-            var open = "global::" + genNs + ".TinyDispatcherPolicyPipeline_" + PipelineNameFactory.SanitizePolicyName(p.PolicyTypeFqn);
-
-            for (int i = 0; i < p.Commands.Length; i++)
-            {
-                var cmd = PipelineTypeNames.NormalizeFqn(p.Commands[i]);
-                if (string.IsNullOrWhiteSpace(cmd)) continue;
-
-                if (!cmdToPolicyPipelineOpen.ContainsKey(cmd))
-                    cmdToPolicyPipelineOpen[cmd] = open;
-            }
+            ordered.Add(key);
         }
 
-        var policyCmdSet = new HashSet<string>(cmdToPolicyPipelineOpen.Keys, StringComparer.Ordinal);
+        ordered.Sort(StringComparer.Ordinal);
+        return CopyStringsToArray(ordered);
+    }
 
-        var regs = new List<ServiceRegistration>(256);
+    private static string[] CopyStringsToArray(List<string> values)
+    {
+        var result = new string[values.Count];
 
-        foreach (var cmd in perCmdSet.OrderBy(x => x, StringComparer.Ordinal))
+        for (var i = 0; i < values.Count; i++)
         {
-            regs.Add(new ServiceRegistration(
-                ServiceTypeExpression: $"{core}.ICommandPipeline<{cmd}, {ctx}>",
-                ImplementationTypeExpression: $"global::{genNs}.TinyDispatcherPipeline_{PipelineNameFactory.SanitizeCommandName(cmd)}"));
+            result[i] = values[i];
         }
 
-        foreach (var cmd in policyCmdSet.OrderBy(x => x, StringComparer.Ordinal))
-        {
-            if (perCmdSet.Contains(cmd)) continue;
-
-            regs.Add(new ServiceRegistration(
-                ServiceTypeExpression: $"{core}.ICommandPipeline<{cmd}, {ctx}>",
-                ImplementationTypeExpression: $"{cmdToPolicyPipelineOpen[cmd]}<{cmd}>"));
-        }
-
-        if (hasGlobal && discovery != null && discovery.Commands.Length > 0)
-        {
-            for (int i = 0; i < discovery.Commands.Length; i++)
-            {
-                var cmd = PipelineTypeNames.NormalizeFqn(discovery.Commands[i].MessageTypeFqn);
-                if (string.IsNullOrWhiteSpace(cmd)) continue;
-
-                if (perCmdSet.Contains(cmd)) continue;
-                if (policyCmdSet.Contains(cmd)) continue;
-
-                regs.Add(new ServiceRegistration(
-                    ServiceTypeExpression: $"{core}.ICommandPipeline<{cmd}, {ctx}>",
-                    ImplementationTypeExpression: $"global::{genNs}.TinyDispatcherGlobalPipeline<{cmd}>"));
-            }
-        }
-
-        return regs.ToImmutableArray();
+        return result;
     }
 }
