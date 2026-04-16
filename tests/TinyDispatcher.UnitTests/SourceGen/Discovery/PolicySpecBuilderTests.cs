@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
@@ -37,7 +37,7 @@ namespace TinyDispatcher
 
         var sut = new PolicySpecBuilder();
 
-        var result = sut.Build(compilation, new List<INamedTypeSymbol>());
+        var result = sut.Build(new List<INamedTypeSymbol>());
 
         Assert.Empty(result);
     }
@@ -82,7 +82,7 @@ namespace Demo
         var policy = GetNamedType(compilation, "Demo.NotAPolicy");
         var sut = new PolicySpecBuilder();
 
-        var result = sut.Build(compilation, new List<INamedTypeSymbol> { policy });
+        var result = sut.Build(new List<INamedTypeSymbol> { policy });
 
         Assert.Empty(result);
     }
@@ -135,7 +135,7 @@ namespace Demo
         var policy = GetNamedType(compilation, "Demo.CheckoutPolicy");
         var sut = new PolicySpecBuilder();
 
-        var result = sut.Build(compilation, new List<INamedTypeSymbol> { policy });
+        var result = sut.Build(new List<INamedTypeSymbol> { policy });
 
         var entry = Assert.Single(result);
         Assert.Equal("global::Demo.CheckoutPolicy", entry.Key);
@@ -192,7 +192,7 @@ namespace Demo
         var policy = GetNamedType(compilation, "Demo.PolicyWithoutMiddleware");
         var sut = new PolicySpecBuilder();
 
-        var result = sut.Build(compilation, new List<INamedTypeSymbol> { policy });
+        var result = sut.Build(new List<INamedTypeSymbol> { policy });
 
         Assert.Empty(result);
     }
@@ -236,7 +236,7 @@ namespace Demo
         var policy = GetNamedType(compilation, "Demo.PolicyWithoutCommands");
         var sut = new PolicySpecBuilder();
 
-        var result = sut.Build(compilation, new List<INamedTypeSymbol> { policy });
+        var result = sut.Build(new List<INamedTypeSymbol> { policy });
 
         Assert.Empty(result);
     }
@@ -282,7 +282,7 @@ namespace Demo
         var policy = GetNamedType(compilation, "Demo.CheckoutPolicy");
         var sut = new PolicySpecBuilder();
 
-        var result = sut.Build(compilation, new List<INamedTypeSymbol> { policy, policy });
+        var result = sut.Build(new List<INamedTypeSymbol> { policy, policy });
 
         var entry = Assert.Single(result);
         Assert.Equal("global::Demo.CheckoutPolicy", entry.Key);

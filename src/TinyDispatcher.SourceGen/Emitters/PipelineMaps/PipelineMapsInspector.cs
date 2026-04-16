@@ -78,21 +78,29 @@ internal sealed class PipelineMapInspector
     private static void Add(List<MiddlewareDescriptor> list, MiddlewareRef[] middlewares, string source)
     {
         for (var i = 0; i < middlewares.Length; i++)
+        {
             list.Add(new MiddlewareDescriptor(middlewares[i].OpenTypeFqn, source));
+        }
     }
 
     private static void AddPolicy(List<MiddlewareDescriptor> list, PolicyContribution? policy)
     {
         if (policy is null)
+        {
             return;
+        }
 
         Add(list, policy.Middlewares, "policy:" + policy.PolicyTypeFqn);
     }
 
     private void AddPerCommand(List<MiddlewareDescriptor> list, string messageFqn)
     {
-        if (!_perCommand.TryGetValue(messageFqn, out var mids))
+        var hasPerCommandMiddlewares = _perCommand.TryGetValue(messageFqn, out var mids);
+
+        if (!hasPerCommandMiddlewares)
+        {
             return;
+        }
 
         Add(list, mids, "per-command");
     }
@@ -101,7 +109,14 @@ internal sealed class PipelineMapInspector
         => _policyByCommand.TryGetValue(commandFqn, out var p) ? p : null;
 
     private static string[] PolicyApplied(PolicyContribution? policy)
-        => policy is null ? Array.Empty<string>() : new[] { policy.PolicyTypeFqn };
+    {
+        if (policy is null)
+        {
+            return Array.Empty<string>();
+        }
+
+        return new[] { policy.PolicyTypeFqn };
+    }
 
     private static IReadOnlyDictionary<string, MiddlewareRef[]> NormalizePerCommand(
         ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> perCommand)
@@ -132,26 +147,58 @@ internal sealed class PipelineMapInspector
     {
         var map = new Dictionary<string, PolicyContribution>(StringComparer.Ordinal);
 
-        foreach (var p in policies.Values.OrderBy(x => PipelineTypeNames.NormalizeFqn(x.PolicyTypeFqn), StringComparer.Ordinal))
+        var orderedPolicies = PipelinePolicyOrdering.GetPoliciesInStableOrder(policies);
+        for (var i = 0; i < orderedPolicies.Length; i++)
         {
+            var p = orderedPolicies[i];
             var policyType = PipelineTypeNames.NormalizeFqn(p.PolicyTypeFqn);
-            if (string.IsNullOrWhiteSpace(policyType))
+            var policyTypeIsMissing = string.IsNullOrWhiteSpace(policyType);
+
+            if (policyTypeIsMissing)
+            {
                 continue;
+            }
 
             var mids = PipelineMiddlewareSets.NormalizeDistinct(p.Middlewares);
-            if (mids.Length == 0)
-                continue;
+            var policyHasNoMiddlewares = mids.Length == 0;
 
-            for (var i = 0; i < p.Commands.Length; i++)
+            if (policyHasNoMiddlewares)
             {
-                var cmd = PipelineTypeNames.NormalizeFqn(p.Commands[i]);
-                if (string.IsNullOrWhiteSpace(cmd))
-                    continue;
-
-                map.Add(cmd, new PolicyContribution(policyType, mids));
+                continue;
             }
+
+            AddPolicyCommands(map, p, policyType, mids);
         }
 
         return map;
     }
+
+    private static void AddPolicyCommands(
+        Dictionary<string, PolicyContribution> map,
+        PolicySpec policy,
+        string policyType,
+        MiddlewareRef[] middlewares)
+    {
+        var contribution = new PolicyContribution(policyType, middlewares);
+
+        for (var commandIndex = 0; commandIndex < policy.Commands.Length; commandIndex++)
+        {
+            var command = PipelineTypeNames.NormalizeFqn(policy.Commands[commandIndex]);
+            var commandIsMissing = string.IsNullOrWhiteSpace(command);
+
+            if (commandIsMissing)
+            {
+                continue;
+            }
+
+            var commandAlreadyHasPolicy = map.ContainsKey(command);
+            if (commandAlreadyHasPolicy)
+            {
+                continue;
+            }
+
+            map[command] = contribution;
+        }
+    }
+
 }
