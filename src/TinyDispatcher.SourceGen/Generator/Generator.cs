@@ -13,30 +13,8 @@ public sealed class Generator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var syntax = new UseTinyDispatcherSyntax();
-
-        var handlerCandidates =
-            context.SyntaxProvider
-                .CreateSyntaxProvider(
-                    static (n, _) => n is ClassDeclarationSyntax,
-                    static (ctx, ct) =>
-                    {
-                        var node = (ClassDeclarationSyntax)ctx.Node;
-                        var model = ctx.SemanticModel;
-                        return (INamedTypeSymbol?)model.GetDeclaredSymbol(node, ct);
-                    })
-                .Collect();
-
-        var useTinyCalls =
-            context.SyntaxProvider
-                .CreateSyntaxProvider(
-                    static (n, _) => n is InvocationExpressionSyntax,
-                    (ctx, _) =>
-                    {
-                        var inv = (InvocationExpressionSyntax)ctx.Node;
-                        return syntax.IsUseTinyDispatcherInvocation(inv) ? inv : null;
-                    })
-                .Collect();
+        var handlerCandidates = GeneratorSyntaxProviders.CreateHandlerCandidates(context.SyntaxProvider);
+        var useTinyCalls = GeneratorSyntaxProviders.CreateUseTinyCalls(context.SyntaxProvider);
 
         var pipeline =
             context.CompilationProvider
