@@ -128,11 +128,8 @@ internal static class GeneratorAnalyzer
         PolicySpecBuilder policyBuilder,
         MiddlewareOrdering ordering)
     {
-        var useTinyDispatcherInvocations =
-            UseTinyDispatcherInvocationExtractor.FindAllUseTinyDispatcherCalls(compilation);
-
         var allUseTinyDispatcherCalls =
-            ctxInference.ResolveAllUseTinyDispatcherContexts(useTinyDispatcherInvocations, compilation);
+            ctxInference.ResolveAllUseTinyDispatcherContexts(useTinyCallsSyntax, compilation);
 
         // Temp collections for extractor
         var globalEntries = new List<OrderedEntry>();
