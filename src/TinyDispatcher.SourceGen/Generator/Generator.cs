@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using System.Collections.Immutable;
 using TinyDispatcher.SourceGen.Diagnostics;
+using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Validation;
 
 namespace TinyDispatcher.SourceGen.Generator;
@@ -55,62 +56,27 @@ public sealed class Generator : IIncrementalGenerator
            ImmutableArray<InvocationExpressionSyntax?> UseTinyCalls) Left,
            AnalyzerConfigOptionsProvider Options) data)
     {
-        var compilation = data.Left.Left.Compilation;
-
-        var handlerSymbols = NormalizeHandlerSymbols(data.Left.Left.Handlers);
-        var useTinyCallsSyntax = NormalizeUseTinyCalls(data.Left.UseTinyCalls);
+        var input = GeneratorInput.Create(
+            data.Left.Left.Compilation,
+            data.Left.Left.Handlers,
+            data.Left.UseTinyCalls,
+            data.Options);
 
         var roslyn = new RoslynGeneratorContext(spc);
         var diagnosticsCatalog = new DiagnosticsCatalog();
 
         var analysis = GeneratorAnalysisPhase.Analyze(
-            compilation,
-            useTinyCallsSyntax,
-            data.Options);
+            input.Compilation,
+            input.UseTinyCallsSyntax,
+            input.Options);
 
-        var extraction = new GeneratorExtractionPhase().Extract(analysis, handlerSymbols);
+        var extraction = new GeneratorExtractionPhase().Extract(analysis, input.HandlerSymbols);
         var validation = new GeneratorValidationPhase().Validate(analysis, extraction, diagnosticsCatalog);
 
         if (ReportAndHasErrors(roslyn, validation.Diagnostics))
             return;
 
         new GeneratorGenerationPhase().Generate(roslyn, analysis, extraction, validation);
-    }
-
-    private static ImmutableArray<INamedTypeSymbol> NormalizeHandlerSymbols(
-        ImmutableArray<INamedTypeSymbol?> handlers)
-    {
-        if (handlers.IsDefaultOrEmpty)
-            return ImmutableArray<INamedTypeSymbol>.Empty;
-
-        var builder = ImmutableArray.CreateBuilder<INamedTypeSymbol>(handlers.Length);
-
-        for (var i = 0; i < handlers.Length; i++)
-        {
-            var handler = handlers[i];
-            if (handler is not null)
-                builder.Add(handler);
-        }
-
-        return builder.ToImmutable();
-    }
-
-    private static ImmutableArray<InvocationExpressionSyntax> NormalizeUseTinyCalls(
-        ImmutableArray<InvocationExpressionSyntax?> useTinyCalls)
-    {
-        if (useTinyCalls.IsDefaultOrEmpty)
-            return ImmutableArray<InvocationExpressionSyntax>.Empty;
-
-        var builder = ImmutableArray.CreateBuilder<InvocationExpressionSyntax>(useTinyCalls.Length);
-
-        for (var i = 0; i < useTinyCalls.Length; i++)
-        {
-            var useTinyCall = useTinyCalls[i];
-            if (useTinyCall is not null)
-                builder.Add(useTinyCall);
-        }
-
-        return builder.ToImmutable();
     }
 
     private static bool ReportAndHasErrors(RoslynGeneratorContext ctx, DiagnosticBag bag)
