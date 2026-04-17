@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using TinyDispatcher.SourceGen.Generator.Models;
@@ -11,6 +10,11 @@ namespace TinyDispatcher.SourceGen.Discovery;
 
 internal sealed class TinyBootstrapInvocationExtractor
 {
+    private const string UseGlobalMiddlewareMethodName = "UseGlobalMiddleware";
+    private const string UseMiddlewareForMethodName = "UseMiddlewareFor";
+    private const string UsePolicyMethodName = "UsePolicy";
+    private const string UseTinyPolicyMethodName = "UseTinyPolicy";
+
     public void Extract(
         InvocationExpressionSyntax useTinyCall,
         Compilation compilation,
@@ -19,95 +23,258 @@ internal sealed class TinyBootstrapInvocationExtractor
         List<INamedTypeSymbol> policies)
     {
         if (useTinyCall.ArgumentList is null)
+        {
             return;
+        }
 
         var model = compilation.GetSemanticModel(useTinyCall.SyntaxTree);
 
         var lambda = SelectBootstrapLambda(useTinyCall, model);
         if (lambda is null)
-            return;
-
-        IEnumerable<InvocationExpressionSyntax> invocations =
-            lambda.Body switch
-            {
-                BlockSyntax block => block.DescendantNodes().OfType<InvocationExpressionSyntax>(),
-                ExpressionSyntax expr => expr.DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>(),
-                _ => Enumerable.Empty<InvocationExpressionSyntax>()
-            };
-
-        foreach (var inv in invocations)
         {
-            if (inv.Expression is not MemberAccessExpressionSyntax ma)
-                continue;
+            return;
+        }
 
-            var methodName = ma.Name.Identifier.ValueText;
+        var invocations = GetBootstrapInvocations(lambda);
 
-            if (string.Equals(methodName, "UseGlobalMiddleware", StringComparison.Ordinal))
+        for (var i = 0; i < invocations.Count; i++)
+        {
+            ExtractBootstrapInvocation(
+                invocations[i],
+                model,
+                globals,
+                perCmd,
+                policies);
+        }
+    }
+
+    private static List<InvocationExpressionSyntax> GetBootstrapInvocations(LambdaExpressionSyntax lambda)
+    {
+        var invocations = new List<InvocationExpressionSyntax>();
+
+        if (lambda.Body is BlockSyntax block)
+        {
+            AddDescendantInvocations(invocations, block);
+            return invocations;
+        }
+
+        if (lambda.Body is ExpressionSyntax expression)
+        {
+            AddSelfAndDescendantInvocations(invocations, expression);
+        }
+
+        return invocations;
+    }
+
+    private static void AddDescendantInvocations(
+        List<InvocationExpressionSyntax> invocations,
+        BlockSyntax block)
+    {
+        foreach (var node in block.DescendantNodes())
+        {
+            if (node is InvocationExpressionSyntax invocation)
             {
-                var mwOpen = TryExtractOpenGenericType(inv, model);
-                if (mwOpen is null)
-                    continue;
-
-                globals.Add(new OrderedEntry(CreateMiddlewareRef(mwOpen), OrderKey.From(inv)));
-                continue;
+                invocations.Add(invocation);
             }
+        }
+    }
 
-            if (string.Equals(methodName, "UseMiddlewareFor", StringComparison.Ordinal))
+    private static void AddSelfAndDescendantInvocations(
+        List<InvocationExpressionSyntax> invocations,
+        ExpressionSyntax expression)
+    {
+        foreach (var node in expression.DescendantNodesAndSelf())
+        {
+            if (node is InvocationExpressionSyntax invocation)
             {
-                var genericName = ma.Name as GenericNameSyntax;
-
-                if (genericName != null && genericName.TypeArgumentList.Arguments.Count == 1)
-                {
-                    var cmdType = model.GetTypeInfo(genericName.TypeArgumentList.Arguments[0]).Type;
-                    var mwOpen = TryExtractOpenGenericType(inv, model);
-                    if (cmdType is null || mwOpen is null)
-                        continue;
-
-                    var cmdFqn = Fqn.EnsureGlobal(
-                        cmdType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
-
-                    perCmd.Add(new OrderedPerCommandEntry(
-                        cmdFqn,
-                        CreateMiddlewareRef(mwOpen),
-                        OrderKey.From(inv)));
-
-                    continue;
-                }
-
-                if (TryExtractCommandAndMiddleware(inv, model, out var cmdType2, out var mwOpen2))
-                {
-                    var cmdFqn2 = Fqn.EnsureGlobal(
-                        cmdType2.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
-
-                    perCmd.Add(new OrderedPerCommandEntry(
-                        cmdFqn2,
-                        CreateMiddlewareRef(mwOpen2),
-                        OrderKey.From(inv)));
-                }
-
-                continue;
+                invocations.Add(invocation);
             }
+        }
+    }
 
-            if (string.Equals(methodName, "UsePolicy", StringComparison.Ordinal) ||
-                string.Equals(methodName, "UseTinyPolicy", StringComparison.Ordinal))
-            {
-                if (ma.Name is GenericNameSyntax g && g.TypeArgumentList.Arguments.Count == 1)
-                {
-                    var policyType = model.GetTypeInfo(g.TypeArgumentList.Arguments[0]).Type as INamedTypeSymbol;
-                    if (policyType is not null)
-                        policies.Add(policyType);
+    private static void ExtractBootstrapInvocation(
+        InvocationExpressionSyntax invocation,
+        SemanticModel model,
+        List<OrderedEntry> globals,
+        List<OrderedPerCommandEntry> perCommand,
+        List<INamedTypeSymbol> policies)
+    {
+        if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
+        {
+            return;
+        }
 
-                    continue;
-                }
+        var methodName = memberAccess.Name.Identifier.ValueText;
+        var isGlobalMiddlewareCall = string.Equals(methodName, UseGlobalMiddlewareMethodName, StringComparison.Ordinal);
+        if (isGlobalMiddlewareCall)
+        {
+            AddGlobalMiddlewareIfPresent(invocation, model, globals);
+            return;
+        }
 
-                if (inv.ArgumentList?.Arguments.Count == 1 &&
-                    inv.ArgumentList.Arguments[0].Expression is TypeOfExpressionSyntax toe)
-                {
-                    var policyType = model.GetSymbolInfo(toe.Type).Symbol as INamedTypeSymbol;
-                    if (policyType is not null)
-                        policies.Add(policyType);
-                }
-            }
+        var isPerCommandMiddlewareCall = string.Equals(methodName, UseMiddlewareForMethodName, StringComparison.Ordinal);
+        if (isPerCommandMiddlewareCall)
+        {
+            AddPerCommandMiddlewareIfPresent(invocation, memberAccess, model, perCommand);
+            return;
+        }
+
+        var isPolicyCall =
+            string.Equals(methodName, UsePolicyMethodName, StringComparison.Ordinal) ||
+            string.Equals(methodName, UseTinyPolicyMethodName, StringComparison.Ordinal);
+
+        if (isPolicyCall)
+        {
+            AddPolicyIfPresent(invocation, memberAccess, model, policies);
+        }
+    }
+
+    private static void AddGlobalMiddlewareIfPresent(
+        InvocationExpressionSyntax invocation,
+        SemanticModel model,
+        List<OrderedEntry> globals)
+    {
+        var middlewareOpenType = TryExtractOpenGenericType(invocation, model);
+        if (middlewareOpenType is null)
+        {
+            return;
+        }
+
+        globals.Add(new OrderedEntry(
+            CreateMiddlewareRef(middlewareOpenType),
+            OrderKey.From(invocation)));
+    }
+
+    private static void AddPerCommandMiddlewareIfPresent(
+        InvocationExpressionSyntax invocation,
+        MemberAccessExpressionSyntax memberAccess,
+        SemanticModel model,
+        List<OrderedPerCommandEntry> perCommand)
+    {
+        if (TryAddGenericPerCommandMiddleware(invocation, memberAccess, model, perCommand))
+        {
+            return;
+        }
+
+        AddTypeofPerCommandMiddlewareIfPresent(invocation, model, perCommand);
+    }
+
+    private static bool TryAddGenericPerCommandMiddleware(
+        InvocationExpressionSyntax invocation,
+        MemberAccessExpressionSyntax memberAccess,
+        SemanticModel model,
+        List<OrderedPerCommandEntry> perCommand)
+    {
+        if (memberAccess.Name is not GenericNameSyntax genericName)
+        {
+            return false;
+        }
+
+        var hasSingleGenericArgument = genericName.TypeArgumentList.Arguments.Count == 1;
+        if (!hasSingleGenericArgument)
+        {
+            return false;
+        }
+
+        var commandType = model.GetTypeInfo(genericName.TypeArgumentList.Arguments[0]).Type;
+        var middlewareOpenType = TryExtractOpenGenericType(invocation, model);
+
+        if (commandType is null || middlewareOpenType is null)
+        {
+            return true;
+        }
+
+        AddPerCommandMiddleware(invocation, commandType, middlewareOpenType, perCommand);
+        return true;
+    }
+
+    private static void AddTypeofPerCommandMiddlewareIfPresent(
+        InvocationExpressionSyntax invocation,
+        SemanticModel model,
+        List<OrderedPerCommandEntry> perCommand)
+    {
+        if (!TryExtractCommandAndMiddleware(invocation, model, out var commandType, out var middlewareOpenType))
+        {
+            return;
+        }
+
+        AddPerCommandMiddleware(invocation, commandType, middlewareOpenType, perCommand);
+    }
+
+    private static void AddPerCommandMiddleware(
+        InvocationExpressionSyntax invocation,
+        ITypeSymbol commandType,
+        INamedTypeSymbol middlewareOpenType,
+        List<OrderedPerCommandEntry> perCommand)
+    {
+        var commandFqn = Fqn.EnsureGlobal(
+            commandType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+
+        perCommand.Add(new OrderedPerCommandEntry(
+            commandFqn,
+            CreateMiddlewareRef(middlewareOpenType),
+            OrderKey.From(invocation)));
+    }
+
+    private static void AddPolicyIfPresent(
+        InvocationExpressionSyntax invocation,
+        MemberAccessExpressionSyntax memberAccess,
+        SemanticModel model,
+        List<INamedTypeSymbol> policies)
+    {
+        if (TryAddGenericPolicy(memberAccess, model, policies))
+        {
+            return;
+        }
+
+        AddTypeofPolicyIfPresent(invocation, model, policies);
+    }
+
+    private static bool TryAddGenericPolicy(
+        MemberAccessExpressionSyntax memberAccess,
+        SemanticModel model,
+        List<INamedTypeSymbol> policies)
+    {
+        if (memberAccess.Name is not GenericNameSyntax genericName)
+        {
+            return false;
+        }
+
+        var hasSingleGenericArgument = genericName.TypeArgumentList.Arguments.Count == 1;
+        if (!hasSingleGenericArgument)
+        {
+            return false;
+        }
+
+        var policyType = model.GetTypeInfo(genericName.TypeArgumentList.Arguments[0]).Type as INamedTypeSymbol;
+        if (policyType is not null)
+        {
+            policies.Add(policyType);
+        }
+
+        return true;
+    }
+
+    private static void AddTypeofPolicyIfPresent(
+        InvocationExpressionSyntax invocation,
+        SemanticModel model,
+        List<INamedTypeSymbol> policies)
+    {
+        var hasSingleArgument = invocation.ArgumentList?.Arguments.Count == 1;
+        if (!hasSingleArgument)
+        {
+            return;
+        }
+
+        if (invocation.ArgumentList!.Arguments[0].Expression is not TypeOfExpressionSyntax typeOfExpression)
+        {
+            return;
+        }
+
+        var policyType = model.GetSymbolInfo(typeOfExpression.Type).Symbol as INamedTypeSymbol;
+        if (policyType is not null)
+        {
+            policies.Add(policyType);
         }
     }
 
@@ -115,20 +282,43 @@ internal sealed class TinyBootstrapInvocationExtractor
         InvocationExpressionSyntax useTinyCall,
         SemanticModel model)
     {
-        foreach (var arg in useTinyCall.ArgumentList!.Arguments)
+        if (useTinyCall.ArgumentList is null)
         {
-            if (arg.Expression is not LambdaExpressionSyntax lambda)
-                continue;
-
-            if (IsTinyBootstrapDelegate(lambda, model))
-                return lambda;
+            return null;
         }
 
-        // Fallback: old behavior (first lambda)
-        return useTinyCall.ArgumentList.Arguments
-            .Select(a => a.Expression)
-            .OfType<LambdaExpressionSyntax>()
-            .FirstOrDefault();
+        foreach (var arg in useTinyCall.ArgumentList.Arguments)
+        {
+            if (arg.Expression is not LambdaExpressionSyntax lambda)
+            {
+                continue;
+            }
+
+            if (IsTinyBootstrapDelegate(lambda, model))
+            {
+                return lambda;
+            }
+        }
+
+        return SelectFirstLambda(useTinyCall);
+    }
+
+    private static LambdaExpressionSyntax? SelectFirstLambda(InvocationExpressionSyntax useTinyCall)
+    {
+        if (useTinyCall.ArgumentList is null)
+        {
+            return null;
+        }
+
+        foreach (var argument in useTinyCall.ArgumentList.Arguments)
+        {
+            if (argument.Expression is LambdaExpressionSyntax lambda)
+            {
+                return lambda;
+            }
+        }
+
+        return null;
     }
 
     private static bool IsTinyBootstrapDelegate(LambdaExpressionSyntax lambda, SemanticModel model)
@@ -136,19 +326,23 @@ internal sealed class TinyBootstrapInvocationExtractor
         var converted = model.GetTypeInfo(lambda).ConvertedType as INamedTypeSymbol;
         var invoke = converted?.DelegateInvokeMethod;
         if (invoke is null)
+        {
             return false;
+        }
 
         if (invoke.Parameters.Length != 1)
+        {
             return false;
+        }
 
-        var p0 = invoke.Parameters[0].Type;
+        var parameterType = invoke.Parameters[0].Type;
 
-        // Fast path:
-        if (p0.Name == "TinyBootstrap")
+        if (parameterType.Name == "TinyBootstrap")
+        {
             return true;
+        }
 
-        // Safer path (avoids false positives if multiple TinyBootstrap types exist):
-        var fqn = p0.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        var fqn = parameterType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         return string.Equals(fqn, "global::TinyDispatcher.TinyBootstrap", StringComparison.Ordinal);
     }
 
@@ -167,7 +361,14 @@ internal sealed class TinyBootstrapInvocationExtractor
     private static string StripGenericSuffix(string fqn)
     {
         var idx = fqn.IndexOf('<');
-        return idx < 0 ? fqn : fqn.Substring(0, idx);
+        var hasGenericSuffix = idx >= 0;
+
+        if (!hasGenericSuffix)
+        {
+            return fqn;
+        }
+
+        return fqn.Substring(0, idx);
     }
 
     private static INamedTypeSymbol? TryExtractOpenGenericType(
@@ -175,10 +376,14 @@ internal sealed class TinyBootstrapInvocationExtractor
         SemanticModel model)
     {
         if (inv.ArgumentList?.Arguments.Count != 1)
+        {
             return null;
+        }
 
         if (inv.ArgumentList.Arguments[0].Expression is not TypeOfExpressionSyntax toe)
+        {
             return null;
+        }
 
         var sym = model.GetSymbolInfo(toe.Type).Symbol as INamedTypeSymbol;
         return sym?.OriginalDefinition;
@@ -193,23 +398,36 @@ internal sealed class TinyBootstrapInvocationExtractor
         commandType = null!;
         middlewareOpenType = null!;
 
-        if (inv.ArgumentList?.Arguments.Count < 2)
+        var argumentList = inv.ArgumentList;
+        if (argumentList is null)
+        {
             return false;
+        }
 
-        var a0 = inv.ArgumentList!.Arguments[0].Expression as TypeOfExpressionSyntax;
-        var a1 = inv.ArgumentList.Arguments[1].Expression as TypeOfExpressionSyntax;
-
-        if (a0 is null || a1 is null)
+        var hasTooFewArguments = argumentList.Arguments.Count < 2;
+        if (hasTooFewArguments)
+        {
             return false;
+        }
 
-        var cmdSym = model.GetSymbolInfo(a0.Type).Symbol as ITypeSymbol;
-        var mwSym = model.GetSymbolInfo(a1.Type).Symbol as INamedTypeSymbol;
+        var commandTypeOf = argumentList.Arguments[0].Expression as TypeOfExpressionSyntax;
+        var middlewareTypeOf = argumentList.Arguments[1].Expression as TypeOfExpressionSyntax;
 
-        if (cmdSym is null || mwSym is null)
+        if (commandTypeOf is null || middlewareTypeOf is null)
+        {
             return false;
+        }
 
-        commandType = cmdSym;
-        middlewareOpenType = mwSym.OriginalDefinition;
+        var commandSymbol = model.GetSymbolInfo(commandTypeOf.Type).Symbol as ITypeSymbol;
+        var middlewareSymbol = model.GetSymbolInfo(middlewareTypeOf.Type).Symbol as INamedTypeSymbol;
+
+        if (commandSymbol is null || middlewareSymbol is null)
+        {
+            return false;
+        }
+
+        commandType = commandSymbol;
+        middlewareOpenType = middlewareSymbol.OriginalDefinition;
         return true;
     }
 }
