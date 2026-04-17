@@ -4,7 +4,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using System.Collections.Immutable;
-using TinyDispatcher.SourceGen.Diagnostics;
 using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen.Generator;
@@ -62,19 +61,6 @@ public sealed class Generator : IIncrementalGenerator
             data.Options);
 
         var roslyn = new RoslynGeneratorContext(spc);
-        var diagnosticsCatalog = new DiagnosticsCatalog();
-
-        var analysis = GeneratorAnalysisPhase.Analyze(
-            input.Compilation,
-            input.UseTinyCallsSyntax,
-            input.Options);
-
-        var extraction = new GeneratorExtractionPhase().Extract(analysis, input.HandlerSymbols);
-        var validation = new GeneratorValidationPhase().Validate(analysis, extraction, diagnosticsCatalog);
-
-        if (GeneratorDiagnosticReporter.ReportAndHasErrors(roslyn, validation.Diagnostics))
-            return;
-
-        new GeneratorGenerationPhase().Generate(roslyn, analysis, extraction, validation);
+        new GeneratorPipeline().Execute(roslyn, input);
     }
 }
