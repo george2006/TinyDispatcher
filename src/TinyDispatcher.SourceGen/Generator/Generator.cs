@@ -5,11 +5,6 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using System.Collections.Immutable;
 using TinyDispatcher.SourceGen.Diagnostics;
-using TinyDispatcher.SourceGen.Emitters.Handlers;
-using TinyDispatcher.SourceGen.Emitters.ModuleInitializer;
-using TinyDispatcher.SourceGen.Emitters.PipelineMaps;
-using TinyDispatcher.SourceGen.Emitters.Pipelines;
-using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Validation;
 
 namespace TinyDispatcher.SourceGen.Generator;
@@ -75,14 +70,12 @@ public sealed class Generator : IIncrementalGenerator
             data.Options,
             diagnosticsCatalog);
 
-        var bag = GeneratorValidator.Validate(analysis.ValidationContext);
+        var bag = new GeneratorValidationPhase().Validate(analysis);
 
         if (ReportAndHasErrors(roslyn, bag))
             return;
 
-        var emitOptions = BuildEmitOptions(analysis);
-
-        Emit(roslyn, analysis, emitOptions);
+        new GeneratorGenerationPhase().Generate(roslyn, analysis);
     }
 
     private static ImmutableArray<INamedTypeSymbol> NormalizeHandlerSymbols(
@@ -131,64 +124,5 @@ public sealed class Generator : IIncrementalGenerator
             ctx.ReportDiagnostic(arr[i]);
 
         return bag.HasErrors;
-    }
-
-    private static GeneratorOptions BuildEmitOptions(GeneratorAnalysis analysis)
-    {
-        var vctx = analysis.ValidationContext;
-
-        if (string.IsNullOrWhiteSpace(vctx.ExpectedContextFqn))
-            return analysis.EffectiveOptions;
-
-        var o = analysis.EffectiveOptions;
-
-        return new GeneratorOptions(
-            GeneratedNamespace: o.GeneratedNamespace,
-            EmitDiExtensions: o.EmitDiExtensions,
-            EmitHandlerRegistrations: o.EmitHandlerRegistrations,
-            IncludeNamespacePrefix: o.IncludeNamespacePrefix,
-            CommandContextType: vctx.ExpectedContextFqn,
-            EmitPipelineMap: o.EmitPipelineMap,
-            PipelineMapFormat: o.PipelineMapFormat);
-    }
-
-    private static void Emit(
-        RoslynGeneratorContext roslyn,
-        GeneratorAnalysis analysis,
-        GeneratorOptions emitOptions)
-    {
-        var vctx = analysis.ValidationContext;
-
-        new ModuleInitializerEmitter().Emit(roslyn, analysis.Discovery, emitOptions);
-        new EmptyPipelineContributionEmitter().Emit(roslyn, analysis.Discovery, emitOptions);
-        new HandlerRegistrationsEmitter().Emit(roslyn, analysis.Discovery, emitOptions);
-
-        if (emitOptions.EmitPipelineMap) 
-        {
-            new PipelineMapsEmitter(vctx.Globals, vctx.PerCommand, vctx.Policies).Emit(roslyn, analysis.Discovery, emitOptions);
-        }
-
-        if (!vctx.IsHostProject) 
-        {
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(vctx.ExpectedContextFqn)) 
-        {
-            return;
-        }
-           
-        var hasAnyPipelineContributions =
-            vctx.Globals.Length > 0 ||
-            vctx.PerCommand.Count > 0 ||
-            vctx.Policies.Count > 0;
-
-        if (!hasAnyPipelineContributions) 
-        {
-            return;
-        }
-        
-        new PipelineEmitter(vctx.Globals, vctx.PerCommand, vctx.Policies)
-            .Emit(roslyn, analysis.Discovery, emitOptions);
     }
 }
