@@ -67,15 +67,14 @@ public sealed class Generator : IIncrementalGenerator
             compilation,
             handlerSymbols,
             useTinyCallsSyntax,
-            data.Options,
-            diagnosticsCatalog);
+            data.Options);
 
-        var bag = new GeneratorValidationPhase().Validate(analysis);
+        var validation = new GeneratorValidationPhase().Validate(analysis, diagnosticsCatalog);
 
-        if (ReportAndHasErrors(roslyn, bag))
+        if (ReportAndHasErrors(roslyn, validation.Diagnostics))
             return;
 
-        new GeneratorGenerationPhase().Generate(roslyn, analysis);
+        new GeneratorGenerationPhase().Generate(roslyn, analysis, validation);
     }
 
     private static ImmutableArray<INamedTypeSymbol> NormalizeHandlerSymbols(
