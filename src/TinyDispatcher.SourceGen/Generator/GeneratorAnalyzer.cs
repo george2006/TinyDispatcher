@@ -14,7 +14,6 @@ internal static class GeneratorAnalyzer
 {
     public static GeneratorAnalysis Analyze(
         Compilation compilation,
-        ImmutableArray<INamedTypeSymbol> handlerSymbols,
         ImmutableArray<InvocationExpressionSyntax> useTinyCallsSyntax,
         AnalyzerConfigOptionsProvider optionsProvider)
     {
@@ -22,7 +21,6 @@ internal static class GeneratorAnalyzer
 
         var contextInference = new ContextInference();
         var optionsFactory = new GeneratorOptionsFactory(new OptionsProvider());
-        var extractionPhase = new GeneratorExtractionPhase();
 
         var effectiveOptions = ResolveEffectiveOptions(
             compilation,
@@ -31,17 +29,10 @@ internal static class GeneratorAnalyzer
             contextInference,
             optionsFactory);
 
-        var extraction = extractionPhase.Extract(
-            compilation,
-            handlerSymbols,
-            useTinyCallsSyntax,
-            effectiveOptions);
-
         return new GeneratorAnalysis(
             Compilation: compilation,
             UseTinyCallsSyntax: useTinyCallsSyntax,
-            EffectiveOptions: effectiveOptions,
-            Extraction: extraction);
+            EffectiveOptions: effectiveOptions);
     }
 
     private static void GuardInputs(Compilation compilation)

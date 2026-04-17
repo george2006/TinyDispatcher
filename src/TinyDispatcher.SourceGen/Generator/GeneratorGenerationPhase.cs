@@ -15,11 +15,11 @@ internal sealed class GeneratorGenerationPhase
     public void Generate(
         IGeneratorContext context,
         GeneratorAnalysis analysis,
+        GeneratorExtraction extraction,
         GeneratorValidationResult validation)
     {
         var validationContext = validation.Context;
         var emitOptions = BuildEmitOptions(analysis, validationContext);
-        var extraction = analysis.Extraction;
 
         new ModuleInitializerEmitter().Emit(context, extraction.Discovery, emitOptions);
         new EmptyPipelineContributionEmitter().Emit(context, extraction.Discovery, emitOptions);

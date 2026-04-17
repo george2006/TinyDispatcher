@@ -38,8 +38,7 @@ public sealed class GeneratorGenerationPhaseTests
         var analysis = new GeneratorAnalysis(
             Compilation: CreateCompilation(),
             UseTinyCallsSyntax: ImmutableArray<InvocationExpressionSyntax>.Empty,
-            EffectiveOptions: Options(commandContextType: "MyApp.AppContext"),
-            Extraction: extraction);
+            EffectiveOptions: Options(commandContextType: "MyApp.AppContext"));
 
         var validation = new GeneratorValidationResult(
             Context: new GeneratorValidationContext.Builder(
@@ -57,7 +56,7 @@ public sealed class GeneratorGenerationPhaseTests
                 .Build(),
             Diagnostics: new DiagnosticBag());
 
-        new GeneratorGenerationPhase().Generate(context, analysis, validation);
+        new GeneratorGenerationPhase().Generate(context, analysis, extraction, validation);
 
         Assert.DoesNotContain(
             context.Sources,
