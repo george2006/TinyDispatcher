@@ -55,6 +55,67 @@ namespace TinyDispatcher
             n => string.Equals(n, "TinyDispatcherPipeline.g.cs", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void Does_not_treat_unrelated_UseTinyDispatcher_extension_as_host_bootstrap()
+    {
+        var source = @"
+using System;
+using Microsoft.Extensions.DependencyInjection;
+using MyFramework;
+
+namespace Microsoft.Extensions.DependencyInjection
+{
+    public interface IServiceCollection { }
+}
+
+namespace MyFramework
+{
+    public static class ServiceCollectionExtensions
+    {
+        public static IServiceCollection UseTinyDispatcher<TContext>(
+            this IServiceCollection services,
+            Action<object> configure)
+            => services;
+    }
+}
+
+namespace ConsoleApp
+{
+    public sealed class Ctx { }
+
+    public static class Startup
+    {
+        public static void Configure(IServiceCollection services)
+        {
+            services.UseTinyDispatcher<Ctx>(_ => { });
+        }
+    }
+}
+";
+
+        var compilation = CreateCompilation(source);
+
+        var generator = new Generator();
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(generator);
+
+        driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out _, out var diagnostics);
+
+        Assert.DoesNotContain(diagnostics, d => d.Id == "DISP110" || d.Id == "DISP111");
+
+        var run = driver.GetRunResult();
+        var generatedNames = run.Results
+            .SelectMany(r => r.GeneratedSources)
+            .Select(s => s.HintName)
+            .ToArray();
+
+        Assert.DoesNotContain(
+            generatedNames,
+            n => string.Equals(n, "TinyDispatcherPipeline.g.cs", StringComparison.Ordinal));
+        Assert.DoesNotContain(
+            generatedNames,
+            n => string.Equals(n, "DispatcherModuleInitializer.g.cs", StringComparison.Ordinal));
+    }
+
     private static CSharpCompilation CreateCompilation(string source)
     {
         var refs =

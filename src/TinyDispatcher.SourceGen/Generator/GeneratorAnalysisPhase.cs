@@ -20,18 +20,20 @@ internal static class GeneratorAnalysisPhase
         GuardInputs(compilation);
 
         var contextInference = new ContextInference();
+        var semanticFilter = new UseTinyDispatcherSemanticFilter();
         var optionsFactory = new GeneratorOptionsFactory(new OptionsProvider());
+        var confirmedUseTinyCallsSyntax = semanticFilter.Filter(compilation, useTinyCallsSyntax);
 
         var effectiveOptions = ResolveEffectiveOptions(
             compilation,
             optionsProvider,
-            useTinyCallsSyntax,
+            confirmedUseTinyCallsSyntax,
             contextInference,
             optionsFactory);
 
         return new GeneratorAnalysis(
             Compilation: compilation,
-            UseTinyCallsSyntax: useTinyCallsSyntax,
+            UseTinyCallsSyntax: confirmedUseTinyCallsSyntax,
             EffectiveOptions: effectiveOptions);
     }
 
