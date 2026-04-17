@@ -65,16 +65,16 @@ public sealed class Generator : IIncrementalGenerator
 
         var analysis = GeneratorAnalyzer.Analyze(
             compilation,
-            handlerSymbols,
             useTinyCallsSyntax,
             data.Options);
 
-        var validation = new GeneratorValidationPhase().Validate(analysis, diagnosticsCatalog);
+        var extraction = new GeneratorExtractionPhase().Extract(analysis, handlerSymbols);
+        var validation = new GeneratorValidationPhase().Validate(analysis, extraction, diagnosticsCatalog);
 
         if (ReportAndHasErrors(roslyn, validation.Diagnostics))
             return;
 
-        new GeneratorGenerationPhase().Generate(roslyn, analysis, validation);
+        new GeneratorGenerationPhase().Generate(roslyn, analysis, extraction, validation);
     }
 
     private static ImmutableArray<INamedTypeSymbol> NormalizeHandlerSymbols(

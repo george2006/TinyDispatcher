@@ -32,10 +32,9 @@ public sealed class GeneratorValidationPhaseTests
         var analysis = new GeneratorAnalysis(
             Compilation: compilation,
             UseTinyCallsSyntax: ImmutableArray.Create(invocation),
-            EffectiveOptions: Options(commandContextType: "MyApp.AppContext"),
-            Extraction: extraction);
+            EffectiveOptions: Options(commandContextType: "MyApp.AppContext"));
 
-        var result = new GeneratorValidationPhase().Validate(analysis, new DiagnosticsCatalog());
+        var result = new GeneratorValidationPhase().Validate(analysis, extraction, new DiagnosticsCatalog());
 
         Assert.Same(discovery, result.Context.DiscoveryResult);
         Assert.True(result.Context.IsHostProject);
@@ -48,18 +47,19 @@ public sealed class GeneratorValidationPhaseTests
     [Fact]
     public void Validate_marks_project_as_non_host_when_no_UseTinyDispatcher_calls_exist()
     {
+        var extraction = new GeneratorExtraction(
+            EmptyDiscovery(),
+            ImmutableArray<MiddlewareRef>.Empty,
+            ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
+            ImmutableDictionary<string, PolicySpec>.Empty,
+            ImmutableArray<UseTinyDispatcherCall>.Empty);
+
         var analysis = new GeneratorAnalysis(
             Compilation: CreateCompilation(),
             UseTinyCallsSyntax: ImmutableArray<InvocationExpressionSyntax>.Empty,
-            EffectiveOptions: Options(commandContextType: null),
-            Extraction: new GeneratorExtraction(
-                EmptyDiscovery(),
-                ImmutableArray<MiddlewareRef>.Empty,
-                ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
-                ImmutableDictionary<string, PolicySpec>.Empty,
-                ImmutableArray<UseTinyDispatcherCall>.Empty));
+            EffectiveOptions: Options(commandContextType: null));
 
-        var result = new GeneratorValidationPhase().Validate(analysis, new DiagnosticsCatalog());
+        var result = new GeneratorValidationPhase().Validate(analysis, extraction, new DiagnosticsCatalog());
 
         Assert.False(result.Context.IsHostProject);
         Assert.Equal(string.Empty, result.Context.ExpectedContextFqn);

@@ -10,9 +10,10 @@ internal sealed class GeneratorValidationPhase
 {
     public GeneratorValidationResult Validate(
         GeneratorAnalysis analysis,
+        GeneratorExtraction extraction,
         DiagnosticsCatalog diagnosticsCatalog)
     {
-        var validationContext = BuildValidationContext(analysis, diagnosticsCatalog);
+        var validationContext = BuildValidationContext(analysis, extraction, diagnosticsCatalog);
         var diagnostics = GeneratorValidator.Validate(validationContext);
 
         return new GeneratorValidationResult(validationContext, diagnostics);
@@ -20,10 +21,9 @@ internal sealed class GeneratorValidationPhase
 
     private static GeneratorValidationContext BuildValidationContext(
         GeneratorAnalysis analysis,
+        GeneratorExtraction extraction,
         DiagnosticsCatalog diagnosticsCatalog)
     {
-        var extraction = analysis.Extraction;
-
         return new GeneratorValidationContext.Builder(
                 analysis.Compilation,
                 extraction.Discovery,
