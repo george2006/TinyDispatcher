@@ -25,7 +25,7 @@ internal sealed class GeneratorOptionsFactory
             EmitHandlerRegistrations: true,
             IncludeNamespacePrefix: null,
             CommandContextType: null,
-            EmitPipelineMap: true,
+            EmitPipelineMap: false,
             PipelineMapFormat: "json");
     }
 
