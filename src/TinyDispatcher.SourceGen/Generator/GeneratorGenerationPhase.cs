@@ -12,10 +12,13 @@ namespace TinyDispatcher.SourceGen.Generator;
 
 internal sealed class GeneratorGenerationPhase
 {
-    public void Generate(IGeneratorContext context, GeneratorAnalysis analysis)
+    public void Generate(
+        IGeneratorContext context,
+        GeneratorAnalysis analysis,
+        GeneratorValidationResult validation)
     {
-        var emitOptions = BuildEmitOptions(analysis);
-        var validationContext = analysis.ValidationContext;
+        var validationContext = validation.Context;
+        var emitOptions = BuildEmitOptions(analysis, validationContext);
         var extraction = analysis.Extraction;
 
         new ModuleInitializerEmitter().Emit(context, extraction.Discovery, emitOptions);
@@ -43,10 +46,10 @@ internal sealed class GeneratorGenerationPhase
             .Emit(context, extraction.Discovery, emitOptions);
     }
 
-    private static GeneratorOptions BuildEmitOptions(GeneratorAnalysis analysis)
+    private static GeneratorOptions BuildEmitOptions(
+        GeneratorAnalysis analysis,
+        GeneratorValidationContext validationContext)
     {
-        var validationContext = analysis.ValidationContext;
-
         if (string.IsNullOrWhiteSpace(validationContext.ExpectedContextFqn))
         {
             return analysis.EffectiveOptions;
