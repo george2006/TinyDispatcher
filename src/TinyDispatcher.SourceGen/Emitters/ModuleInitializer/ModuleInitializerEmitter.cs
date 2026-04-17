@@ -11,7 +11,16 @@ internal sealed class ModuleInitializerEmitter : ICodeEmitter
 {
     public void Emit(IGeneratorContext context, DiscoveryResult result, GeneratorOptions options)
     {
-        var plan = ModuleInitializerPlanner.Build(result, options);
+        Emit(context, result, options, hasPipelineContributions: false);
+    }
+
+    public void Emit(
+        IGeneratorContext context,
+        DiscoveryResult result,
+        GeneratorOptions options,
+        bool hasPipelineContributions)
+    {
+        var plan = ModuleInitializerPlanner.Build(result, options, hasPipelineContributions);
         if (!plan.ShouldEmit)
             return;
 
