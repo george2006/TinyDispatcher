@@ -1,15 +1,11 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Diagnostics;
-using Microsoft.CodeAnalysis.Text;
-using TinyDispatcher.SourceGen.Abstractions;
 using TinyDispatcher.SourceGen.Generator;
 using TinyDispatcher.SourceGen.Generator.Models;
 using Xunit;
@@ -94,47 +90,4 @@ namespace MyApp
             .ToImmutableArray();
     }
 
-    private sealed class CapturingGeneratorContext : IGeneratorContext
-    {
-        public List<(string HintName, string Content)> Sources { get; } = new();
-        public List<Diagnostic> Diagnostics { get; } = new();
-
-        public void AddSource(string hintName, SourceText sourceText)
-        {
-            Sources.Add((hintName, sourceText.ToString()));
-        }
-
-        public void ReportDiagnostic(Diagnostic diagnostic)
-        {
-            Diagnostics.Add(diagnostic);
-        }
-    }
-
-    private sealed class EmptyAnalyzerConfigOptionsProvider : AnalyzerConfigOptionsProvider
-    {
-        public static readonly EmptyAnalyzerConfigOptionsProvider Instance = new();
-
-        public override AnalyzerConfigOptions GlobalOptions => EmptyAnalyzerConfigOptions.Instance;
-
-        public override AnalyzerConfigOptions GetOptions(SyntaxTree tree)
-        {
-            return EmptyAnalyzerConfigOptions.Instance;
-        }
-
-        public override AnalyzerConfigOptions GetOptions(AdditionalText textFile)
-        {
-            return EmptyAnalyzerConfigOptions.Instance;
-        }
-    }
-
-    private sealed class EmptyAnalyzerConfigOptions : AnalyzerConfigOptions
-    {
-        public static readonly EmptyAnalyzerConfigOptions Instance = new();
-
-        public override bool TryGetValue(string key, out string value)
-        {
-            value = string.Empty;
-            return false;
-        }
-    }
 }

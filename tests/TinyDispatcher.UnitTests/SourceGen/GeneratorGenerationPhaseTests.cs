@@ -1,13 +1,10 @@
 #nullable enable
 
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Text;
 using TinyDispatcher.SourceGen;
-using TinyDispatcher.SourceGen.Abstractions;
 using TinyDispatcher.SourceGen.Diagnostics;
 using TinyDispatcher.SourceGen.Generator;
 using TinyDispatcher.SourceGen.Generator.Models;
@@ -95,18 +92,4 @@ public sealed class GeneratorGenerationPhaseTests
             PipelineMapFormat: null);
     }
 
-    private sealed class CapturingGeneratorContext : IGeneratorContext
-    {
-        public List<(string HintName, string Content)> Sources { get; } = new();
-
-        public void AddSource(string hintName, SourceText sourceText)
-        {
-            Sources.Add((hintName, sourceText.ToString()));
-        }
-
-        public void ReportDiagnostic(Diagnostic diagnostic)
-        {
-            throw new System.NotImplementedException();
-        }
-    }
 }
