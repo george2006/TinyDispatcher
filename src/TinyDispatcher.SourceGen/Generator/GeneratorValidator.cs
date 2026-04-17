@@ -8,7 +8,6 @@ internal static class GeneratorValidator
 {
     private static readonly ContextConsistencyValidator _contextConsistency = new();
     private static readonly DuplicateHandlerValidator _duplicateHandler = new();
-    private static readonly MissingHandlerValidator _missingHandler = new();
     private static readonly MiddlewareRefShapeValidator _middlewareRefShape = new();
     private static readonly PipelineDiagnosticsValidator _pipelineDiagnostics = new();
 
@@ -18,7 +17,6 @@ internal static class GeneratorValidator
 
         _contextConsistency.Validate(vctx, bag);
         _duplicateHandler.Validate(vctx, bag);
-        _missingHandler.Validate(vctx, bag);
         _middlewareRefShape.Validate(vctx, bag);
         _pipelineDiagnostics.Validate(vctx, bag);
 

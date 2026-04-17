@@ -99,7 +99,7 @@ namespace ConsoleApp
 }
 "));
 
-        Assert.Contains(diags, d => d.Id == "DISP410" && d.Severity == DiagnosticSeverity.Warning);
+        Assert.Single(diags, d => d.Id == "DISP410" && d.Severity == DiagnosticSeverity.Warning);
     }
 
     [Fact]
@@ -208,7 +208,7 @@ namespace ConsoleApp
 }
 "));
 
-        Assert.Contains(diags, d => d.Id == "DISP411" && d.Severity == DiagnosticSeverity.Warning);
+        Assert.Single(diags, d => d.Id == "DISP411" && d.Severity == DiagnosticSeverity.Warning);
     }
 
     [Fact]
