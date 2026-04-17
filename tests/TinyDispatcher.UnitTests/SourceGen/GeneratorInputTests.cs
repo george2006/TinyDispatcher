@@ -4,7 +4,6 @@ using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Diagnostics;
 using TinyDispatcher.SourceGen.Generator.Models;
 using Xunit;
 
@@ -50,31 +49,4 @@ public sealed class GeneratorInputTests
         return Assert.IsType<InvocationExpressionSyntax>(SyntaxFactory.ParseExpression(expression));
     }
 
-    private sealed class EmptyAnalyzerConfigOptionsProvider : AnalyzerConfigOptionsProvider
-    {
-        public static readonly EmptyAnalyzerConfigOptionsProvider Instance = new();
-
-        public override AnalyzerConfigOptions GlobalOptions => EmptyAnalyzerConfigOptions.Instance;
-
-        public override AnalyzerConfigOptions GetOptions(SyntaxTree tree)
-        {
-            return EmptyAnalyzerConfigOptions.Instance;
-        }
-
-        public override AnalyzerConfigOptions GetOptions(AdditionalText textFile)
-        {
-            return EmptyAnalyzerConfigOptions.Instance;
-        }
-    }
-
-    private sealed class EmptyAnalyzerConfigOptions : AnalyzerConfigOptions
-    {
-        public static readonly EmptyAnalyzerConfigOptions Instance = new();
-
-        public override bool TryGetValue(string key, out string value)
-        {
-            value = string.Empty;
-            return false;
-        }
-    }
 }

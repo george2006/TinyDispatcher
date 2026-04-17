@@ -1,9 +1,6 @@
 #nullable enable
 
-using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.Text;
-using TinyDispatcher.SourceGen.Abstractions;
 using TinyDispatcher.SourceGen.Generator;
 using TinyDispatcher.SourceGen.Validation;
 using Xunit;
@@ -56,17 +53,4 @@ public sealed class GeneratorDiagnosticReporterTests
             Location.None);
     }
 
-    private sealed class CapturingGeneratorContext : IGeneratorContext
-    {
-        public List<Diagnostic> Diagnostics { get; } = new();
-
-        public void AddSource(string hintName, SourceText sourceText)
-        {
-        }
-
-        public void ReportDiagnostic(Diagnostic diagnostic)
-        {
-            Diagnostics.Add(diagnostic);
-        }
-    }
 }
