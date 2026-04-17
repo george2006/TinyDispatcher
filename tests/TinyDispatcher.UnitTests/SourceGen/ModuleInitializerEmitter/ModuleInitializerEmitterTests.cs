@@ -32,6 +32,30 @@ public sealed class ModuleInitializerEmitterTests
     }
 
     [Fact]
+    public void Planner_emits_when_pipeline_contributions_exist_without_handlers()
+    {
+        var discovery = new DiscoveryResult(
+            Commands: ImmutableArray<HandlerContract>.Empty,
+            Queries: ImmutableArray<QueryHandlerContract>.Empty);
+
+        var options = new GeneratorOptions(
+            GeneratedNamespace: "MyApp.Generated",
+            EmitDiExtensions: false,
+            EmitHandlerRegistrations: false,
+            IncludeNamespacePrefix: null,
+            CommandContextType: "global::MyApp.AppContext",
+            EmitPipelineMap: false,
+            PipelineMapFormat: null);
+
+        var plan = ModuleInitializerPlanner.Build(
+            discovery,
+            options,
+            hasPipelineContributions: true);
+
+        Assert.True(plan.ShouldEmit);
+    }
+
+    [Fact]
     public void Planner_emits_when_any_command_handler_exists()
     {
         var discovery = new DiscoveryResult(

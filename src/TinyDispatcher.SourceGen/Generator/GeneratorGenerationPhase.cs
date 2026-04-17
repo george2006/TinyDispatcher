@@ -20,8 +20,13 @@ internal sealed class GeneratorGenerationPhase
     {
         var validationContext = validation.Context;
         var emitOptions = BuildEmitOptions(analysis, validationContext);
+        var shouldEmitPipelines = ShouldEmitPipelines(validationContext);
 
-        new ModuleInitializerEmitter().Emit(context, extraction.Discovery, emitOptions);
+        new ModuleInitializerEmitter().Emit(
+            context,
+            extraction.Discovery,
+            emitOptions,
+            hasPipelineContributions: shouldEmitPipelines);
         new EmptyPipelineContributionEmitter().Emit(context, extraction.Discovery, emitOptions);
         new HandlerRegistrationsEmitter().Emit(context, extraction.Discovery, emitOptions);
 
@@ -34,7 +39,7 @@ internal sealed class GeneratorGenerationPhase
                 .Emit(context, extraction.Discovery, emitOptions);
         }
 
-        if (!ShouldEmitPipelines(validationContext))
+        if (!shouldEmitPipelines)
         {
             return;
         }
