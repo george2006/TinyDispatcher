@@ -16,10 +16,11 @@ internal sealed class GeneratorGenerationPhase
     {
         var emitOptions = BuildEmitOptions(analysis);
         var validationContext = analysis.ValidationContext;
+        var extraction = analysis.Extraction;
 
-        new ModuleInitializerEmitter().Emit(context, analysis.Discovery, emitOptions);
-        new EmptyPipelineContributionEmitter().Emit(context, analysis.Discovery, emitOptions);
-        new HandlerRegistrationsEmitter().Emit(context, analysis.Discovery, emitOptions);
+        new ModuleInitializerEmitter().Emit(context, extraction.Discovery, emitOptions);
+        new EmptyPipelineContributionEmitter().Emit(context, extraction.Discovery, emitOptions);
+        new HandlerRegistrationsEmitter().Emit(context, extraction.Discovery, emitOptions);
 
         if (emitOptions.EmitPipelineMap)
         {
@@ -27,7 +28,7 @@ internal sealed class GeneratorGenerationPhase
                     validationContext.Globals,
                     validationContext.PerCommand,
                     validationContext.Policies)
-                .Emit(context, analysis.Discovery, emitOptions);
+                .Emit(context, extraction.Discovery, emitOptions);
         }
 
         if (!ShouldEmitPipelines(validationContext))
@@ -39,7 +40,7 @@ internal sealed class GeneratorGenerationPhase
                 validationContext.Globals,
                 validationContext.PerCommand,
                 validationContext.Policies)
-            .Emit(context, analysis.Discovery, emitOptions);
+            .Emit(context, extraction.Discovery, emitOptions);
     }
 
     private static GeneratorOptions BuildEmitOptions(GeneratorAnalysis analysis)
