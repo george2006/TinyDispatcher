@@ -6,7 +6,6 @@ using Microsoft.CodeAnalysis.Diagnostics;
 using System.Collections.Immutable;
 using TinyDispatcher.SourceGen.Diagnostics;
 using TinyDispatcher.SourceGen.Generator.Models;
-using TinyDispatcher.SourceGen.Validation;
 
 namespace TinyDispatcher.SourceGen.Generator;
 
@@ -73,21 +72,9 @@ public sealed class Generator : IIncrementalGenerator
         var extraction = new GeneratorExtractionPhase().Extract(analysis, input.HandlerSymbols);
         var validation = new GeneratorValidationPhase().Validate(analysis, extraction, diagnosticsCatalog);
 
-        if (ReportAndHasErrors(roslyn, validation.Diagnostics))
+        if (GeneratorDiagnosticReporter.ReportAndHasErrors(roslyn, validation.Diagnostics))
             return;
 
         new GeneratorGenerationPhase().Generate(roslyn, analysis, extraction, validation);
-    }
-
-    private static bool ReportAndHasErrors(RoslynGeneratorContext ctx, DiagnosticBag bag)
-    {
-        if (bag.Count == 0)
-            return false;
-
-        var arr = bag.ToImmutable();
-        for (var i = 0; i < arr.Length; i++)
-            ctx.ReportDiagnostic(arr[i]);
-
-        return bag.HasErrors;
     }
 }
