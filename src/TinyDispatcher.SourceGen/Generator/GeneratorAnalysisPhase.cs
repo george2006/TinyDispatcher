@@ -10,7 +10,7 @@ using TinyDispatcher.SourceGen.Internal;
 
 namespace TinyDispatcher.SourceGen.Generator;
 
-internal static class GeneratorAnalyzer
+internal static class GeneratorAnalysisPhase
 {
     public static GeneratorAnalysis Analyze(
         Compilation compilation,

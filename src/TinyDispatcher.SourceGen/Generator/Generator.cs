@@ -63,7 +63,7 @@ public sealed class Generator : IIncrementalGenerator
         var roslyn = new RoslynGeneratorContext(spc);
         var diagnosticsCatalog = new DiagnosticsCatalog();
 
-        var analysis = GeneratorAnalyzer.Analyze(
+        var analysis = GeneratorAnalysisPhase.Analyze(
             compilation,
             useTinyCallsSyntax,
             data.Options);
