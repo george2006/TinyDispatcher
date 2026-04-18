@@ -151,7 +151,7 @@ internal static class PipelinePlanner
 
         var list = new List<PipelineDefinition>(policies.Count);
 
-        var orderedPolicies = PipelinePolicyOrdering.GetPoliciesInStableOrder(policies);
+        var orderedPolicies = PipelineOrdering.GetPoliciesInStableOrder(policies);
         for (var i = 0; i < orderedPolicies.Length; i++)
         {
             var p = orderedPolicies[i];
@@ -185,7 +185,7 @@ internal static class PipelinePlanner
 
         var list = new List<PipelineDefinition>(perCmd.Count);
 
-        var orderedCommands = GetKeysInStableOrder(perCmd.Keys);
+        var orderedCommands = PipelineOrdering.GetStringsInStableOrder(perCmd.Keys);
         for (var i = 0; i < orderedCommands.Length; i++)
         {
             var cmdFqn = orderedCommands[i];
@@ -233,7 +233,7 @@ internal static class PipelinePlanner
     {
         var map = new Dictionary<string, MiddlewareRef[]>(StringComparer.Ordinal);
 
-        var orderedPolicies = PipelinePolicyOrdering.GetPoliciesInStableOrder(policies);
+        var orderedPolicies = PipelineOrdering.GetPoliciesInStableOrder(policies);
         for (var i = 0; i < orderedPolicies.Length; i++)
         {
             var p = orderedPolicies[i];
@@ -307,27 +307,4 @@ internal static class PipelinePlanner
         return regs.ToImmutableArray();
     }
 
-    private static string[] GetKeysInStableOrder(IEnumerable<string> keys)
-    {
-        var ordered = new List<string>();
-        foreach (var key in keys)
-        {
-            ordered.Add(key);
-        }
-
-        ordered.Sort(StringComparer.Ordinal);
-        return CopyStringsToArray(ordered);
-    }
-
-    private static string[] CopyStringsToArray(List<string> values)
-    {
-        var result = new string[values.Count];
-
-        for (var i = 0; i < values.Count; i++)
-        {
-            result[i] = values[i];
-        }
-
-        return result;
-    }
 }

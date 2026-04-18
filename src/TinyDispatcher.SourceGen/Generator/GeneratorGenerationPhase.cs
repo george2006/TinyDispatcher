@@ -22,13 +22,19 @@ internal sealed class GeneratorGenerationPhase
         var emitOptions = BuildEmitOptions(analysis, validationContext);
         var shouldEmitPipelines = ShouldEmitPipelines(validationContext);
 
-        new ModuleInitializerEmitter().Emit(
-            context,
+        var moduleInitializerPlan = ModuleInitializerPlanner.Build(
             extraction.Discovery,
             emitOptions,
             hasPipelineContributions: shouldEmitPipelines);
-        new EmptyPipelineContributionEmitter().Emit(context, extraction.Discovery, emitOptions);
-        new HandlerRegistrationsEmitter().Emit(context, extraction.Discovery, emitOptions);
+
+        new ModuleInitializerEmitter().Emit(context, moduleInitializerPlan);
+        new EmptyPipelineContributionEmitter().Emit(context, emitOptions);
+
+        var handlerRegistrationsPlan = HandlerRegistrationsPlanner.Build(
+            extraction.Discovery,
+            emitOptions);
+
+        new HandlerRegistrationsEmitter().Emit(context, handlerRegistrationsPlan);
 
         if (emitOptions.EmitPipelineMap)
         {
@@ -44,11 +50,19 @@ internal sealed class GeneratorGenerationPhase
             return;
         }
 
-        new PipelineEmitter(
+        var pipelinePlan = PipelinePlanner.Build(
                 validationContext.Globals,
                 validationContext.PerCommand,
-                validationContext.Policies)
-            .Emit(context, extraction.Discovery, emitOptions);
+                validationContext.Policies,
+                extraction.Discovery,
+                emitOptions);
+
+        if (!pipelinePlan.ShouldEmit)
+        {
+            return;
+        }
+
+        new PipelineEmitter().Emit(context, pipelinePlan);
     }
 
     private static GeneratorOptions BuildEmitOptions(

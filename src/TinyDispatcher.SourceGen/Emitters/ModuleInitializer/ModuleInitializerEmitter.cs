@@ -3,24 +3,13 @@
 using System.Text;
 using Microsoft.CodeAnalysis.Text;
 using TinyDispatcher.SourceGen.Abstractions;
-using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen.Emitters.ModuleInitializer;
 
-internal sealed class ModuleInitializerEmitter : ICodeEmitter
+internal sealed class ModuleInitializerEmitter
 {
-    public void Emit(IGeneratorContext context, DiscoveryResult result, GeneratorOptions options)
+    public void Emit(IGeneratorContext context, ModuleInitializerPlan plan)
     {
-        Emit(context, result, options, hasPipelineContributions: false);
-    }
-
-    public void Emit(
-        IGeneratorContext context,
-        DiscoveryResult result,
-        GeneratorOptions options,
-        bool hasPipelineContributions)
-    {
-        var plan = ModuleInitializerPlanner.Build(result, options, hasPipelineContributions);
         if (!plan.ShouldEmit)
             return;
 

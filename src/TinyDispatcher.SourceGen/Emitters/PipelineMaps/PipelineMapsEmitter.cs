@@ -7,7 +7,7 @@ using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen.Emitters.PipelineMaps;
 
-internal sealed class PipelineMapsEmitter : ICodeEmitter
+internal sealed class PipelineMapsEmitter
 {
     private readonly ImmutableArray<MiddlewareRef> _globals;
     private readonly ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> _perCommand;

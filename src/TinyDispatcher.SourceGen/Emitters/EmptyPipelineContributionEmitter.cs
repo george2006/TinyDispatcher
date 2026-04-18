@@ -5,9 +5,9 @@ using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen;
 
-internal sealed class EmptyPipelineContributionEmitter : ICodeEmitter
+internal sealed class EmptyPipelineContributionEmitter
 {
-    public void Emit(IGeneratorContext context, DiscoveryResult result, GeneratorOptions options)
+    public void Emit(IGeneratorContext context, GeneratorOptions options)
     {
         var ns = options.GeneratedNamespace;
 

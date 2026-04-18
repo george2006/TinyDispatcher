@@ -34,8 +34,9 @@ public sealed class HandlerRegistrationsEmitterTests
             PipelineMapFormat: null);
 
         var sut = new HandlerRegistrationsEmitter();
+        var plan = HandlerRegistrationsPlanner.Build(result, options);
 
-        sut.Emit(ctx, result, options);
+        sut.Emit(ctx, plan);
 
         Assert.Single(ctx.Sources);
         Assert.True(ctx.Sources.ContainsKey("ThisAssemblyHandlerRegistrations.g.cs"));
