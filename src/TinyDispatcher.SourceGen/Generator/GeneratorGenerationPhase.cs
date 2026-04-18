@@ -21,6 +21,10 @@ internal sealed class GeneratorGenerationPhase
         var validationContext = validation.Context;
         var emitOptions = BuildEmitOptions(analysis, validationContext);
         var shouldEmitPipelines = ShouldEmitPipelines(validationContext);
+        var pipelineContributions = PipelineContributions.Create(
+            validationContext.Globals,
+            validationContext.PerCommand,
+            validationContext.Policies);
 
         var moduleInitializerPlan = ModuleInitializerPlanner.Build(
             extraction.Discovery,
@@ -38,9 +42,7 @@ internal sealed class GeneratorGenerationPhase
 
         var pipelineMapsPlan = PipelineMapsPlanner.Build(
             extraction.Discovery,
-            validationContext.Globals,
-            validationContext.PerCommand,
-            validationContext.Policies,
+            pipelineContributions,
             emitOptions);
 
         new PipelineMapsEmitter().Emit(context, pipelineMapsPlan);
@@ -51,9 +53,7 @@ internal sealed class GeneratorGenerationPhase
         }
 
         var pipelinePlan = PipelinePlanner.Build(
-                validationContext.Globals,
-                validationContext.PerCommand,
-                validationContext.Policies,
+                pipelineContributions,
                 extraction.Discovery,
                 emitOptions);
 

@@ -14,14 +14,12 @@ internal sealed class PipelineMapInspector
     private readonly string _contextFqn;
 
     public PipelineMapInspector(
-        ImmutableArray<MiddlewareRef> globals,
-        ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> perCommand,
-        ImmutableDictionary<string, PolicySpec> policies,
+        PipelineContributions contributions,
         GeneratorOptions options)
     {
-        _globals = PipelineMiddlewareSets.NormalizeDistinct(globals);
-        _perCommand = PipelinePerCommandMiddlewareMap.Build(perCommand);
-        _policyByCommand = BuildPolicyIndex(policies);
+        _globals = contributions.Globals;
+        _perCommand = contributions.PerCommand;
+        _policyByCommand = BuildPolicyIndex(contributions.Policies);
         _contextFqn = PipelineTypeNames.NormalizeFqn(options.CommandContextType!);
     }
 

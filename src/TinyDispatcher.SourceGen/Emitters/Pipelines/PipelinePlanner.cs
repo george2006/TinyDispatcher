@@ -11,9 +11,7 @@ internal static class PipelinePlanner
     private static readonly MiddlewareRef[] NoMiddlewares = Array.Empty<MiddlewareRef>();
 
     public static PipelinePlan Build(
-        ImmutableArray<MiddlewareRef> globalMiddlewares,
-        ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> perCommand,
-        ImmutableDictionary<string, PolicySpec> policies,
+        PipelineContributions contributions,
         DiscoveryResult discovery,
         GeneratorOptions options)
     {
@@ -21,10 +19,11 @@ internal static class PipelinePlanner
         var generatedNamespace = options.GeneratedNamespace;
         var contextType = PipelineTypeNames.NormalizeFqn(options.CommandContextType!);
 
-        var global = PipelineMiddlewareSets.NormalizeDistinct(globalMiddlewares);
+        var global = contributions.Globals;
         var hasGlobalMiddlewares = global.Length > 0;
 
-        var perCommandMiddlewares = PipelinePerCommandMiddlewareMap.Build(perCommand);
+        var perCommandMiddlewares = contributions.PerCommand;
+        var policies = contributions.Policies;
         var commandToPolicyMiddlewares = BuildCommandToPolicyMiddlewares(policies);
         var globalPipeline = BuildGlobalPipeline(global);
 
@@ -138,7 +137,7 @@ internal static class PipelinePlanner
 
     private static ImmutableArray<PipelineDefinition> BuildPerCommandPipelines(
         MiddlewareRef[] global,
-        Dictionary<string, MiddlewareRef[]> perCmd,
+        IReadOnlyDictionary<string, MiddlewareRef[]> perCmd,
         Dictionary<string, MiddlewareRef[]> cmdToPolicyMids)
     {
         if (perCmd.Count == 0)
@@ -216,7 +215,7 @@ internal static class PipelinePlanner
 
     private static ImmutableArray<OpenGenericRegistration> BuildOpenGenericMiddlewareRegistrations(
         MiddlewareRef[] global,
-        Dictionary<string, MiddlewareRef[]> perCommand,
+        IReadOnlyDictionary<string, MiddlewareRef[]> perCommand,
         ImmutableDictionary<string, PolicySpec> policies)
     {
         var all = new List<MiddlewareRef>(256);
