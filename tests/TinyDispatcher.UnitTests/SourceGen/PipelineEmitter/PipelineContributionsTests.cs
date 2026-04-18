@@ -66,6 +66,11 @@ public sealed class PipelineContributionsTests
             contributions.Policies[0].Commands);
 
         Assert.Equal("global::MyApp.Policies.ZuluPolicy", contributions.Policies[1].PolicyTypeFqn);
+
+        Assert.True(contributions.PolicyByCommand.TryGetValue(
+            "global::MyApp.Commands.Checkout",
+            out var winningPolicy));
+        Assert.Equal("global::MyApp.Policies.AlphaPolicy", winningPolicy.PolicyTypeFqn);
     }
 
     private static MiddlewareRef Middleware(string openTypeFqn)
