@@ -33,10 +33,7 @@ internal sealed class GeneratorValidationPhase
                 isHost: analysis.UseTinyCallsSyntax.Length > 0)
             .WithUseTinyDispatcherCalls(extraction.UseTinyDispatcherCalls)
             .WithExpectedContext(GetExpectedContextFqn(analysis.EffectiveOptions))
-            .WithPipelineConfig(
-                extraction.Globals,
-                extraction.PerCommand,
-                extraction.Policies)
+            .WithPipelineConfig(extraction.Pipeline)
             .Build();
     }
 

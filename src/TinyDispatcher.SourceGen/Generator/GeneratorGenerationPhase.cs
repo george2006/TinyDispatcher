@@ -21,10 +21,7 @@ internal sealed class GeneratorGenerationPhase
         var validationContext = validation.Context;
         var emitOptions = BuildEmitOptions(analysis, validationContext);
         var shouldEmitPipelines = ShouldEmitPipelines(validationContext);
-        var pipelineContributions = PipelineContributions.Create(
-            validationContext.Globals,
-            validationContext.PerCommand,
-            validationContext.Policies);
+        var pipelineContributions = PipelineContributions.Create(validationContext.Pipeline);
 
         var moduleInitializerPlan = ModuleInitializerPlanner.Build(
             extraction.Discovery,
@@ -98,13 +95,13 @@ internal sealed class GeneratorGenerationPhase
             return false;
         }
 
-        return HasAnyPipelineContributions(validationContext);
+        return HasAnyPipelineContributions(validationContext.Pipeline);
     }
 
-    private static bool HasAnyPipelineContributions(GeneratorValidationContext validationContext)
+    private static bool HasAnyPipelineContributions(PipelineConfig pipeline)
     {
-        return validationContext.Globals.Length > 0 ||
-               validationContext.PerCommand.Count > 0 ||
-               validationContext.Policies.Count > 0;
+        return pipeline.Globals.Length > 0 ||
+               pipeline.PerCommand.Count > 0 ||
+               pipeline.Policies.Count > 0;
     }
 }
