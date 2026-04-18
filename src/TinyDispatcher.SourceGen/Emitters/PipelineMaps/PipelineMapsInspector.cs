@@ -167,38 +167,11 @@ internal sealed class PipelineMapInspector
                 continue;
             }
 
-            AddPolicyCommands(map, p, policyType, mids);
+            var contribution = new PolicyContribution(policyType, mids);
+            PipelinePolicyCommandMap.AddFirstPolicyWins(map, p.Commands, contribution);
         }
 
         return map;
-    }
-
-    private static void AddPolicyCommands(
-        Dictionary<string, PolicyContribution> map,
-        PolicySpec policy,
-        string policyType,
-        MiddlewareRef[] middlewares)
-    {
-        var contribution = new PolicyContribution(policyType, middlewares);
-
-        for (var commandIndex = 0; commandIndex < policy.Commands.Length; commandIndex++)
-        {
-            var command = PipelineTypeNames.NormalizeFqn(policy.Commands[commandIndex]);
-            var commandIsMissing = string.IsNullOrWhiteSpace(command);
-
-            if (commandIsMissing)
-            {
-                continue;
-            }
-
-            var commandAlreadyHasPolicy = map.ContainsKey(command);
-            if (commandAlreadyHasPolicy)
-            {
-                continue;
-            }
-
-            map[command] = contribution;
-        }
     }
 
 }
