@@ -55,8 +55,7 @@ internal sealed class ContextInference
             if (ctxType is IErrorTypeSymbol)
                 continue;
 
-            var ctxFqn = Fqn.EnsureGlobal(
-                ctxType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+            var ctxFqn = Fqn.FromType(ctxType);
 
             builder.Add(new UseTinyDispatcherCall(ctxFqn, inv.GetLocation()));
         }
