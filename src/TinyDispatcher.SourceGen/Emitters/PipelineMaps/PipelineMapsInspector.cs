@@ -20,7 +20,7 @@ internal sealed class PipelineMapInspector
         GeneratorOptions options)
     {
         _globals = PipelineMiddlewareSets.NormalizeDistinct(globals);
-        _perCommand = NormalizePerCommand(perCommand);
+        _perCommand = PipelinePerCommandMiddlewareMap.Build(perCommand);
         _policyByCommand = BuildPolicyIndex(policies);
         _contextFqn = PipelineTypeNames.NormalizeFqn(options.CommandContextType!);
     }
@@ -116,27 +116,6 @@ internal sealed class PipelineMapInspector
         }
 
         return new[] { policy.PolicyTypeFqn };
-    }
-
-    private static IReadOnlyDictionary<string, MiddlewareRef[]> NormalizePerCommand(
-        ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> perCommand)
-    {
-        var dict = new Dictionary<string, MiddlewareRef[]>(StringComparer.Ordinal);
-
-        foreach (var kv in perCommand)
-        {
-            var cmd = PipelineTypeNames.NormalizeFqn(kv.Key);
-            if (string.IsNullOrWhiteSpace(cmd))
-                continue;
-
-            var mids = PipelineMiddlewareSets.NormalizeDistinct(kv.Value);
-            if (mids.Length == 0)
-                continue;
-
-            dict[cmd] = mids;
-        }
-
-        return dict;
     }
 
     private sealed record PolicyContribution(string PolicyTypeFqn, MiddlewareRef[] Middlewares);

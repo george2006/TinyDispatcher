@@ -24,7 +24,7 @@ internal static class PipelinePlanner
         var global = PipelineMiddlewareSets.NormalizeDistinct(globalMiddlewares);
         var hasGlobalMiddlewares = global.Length > 0;
 
-        var perCommandMiddlewares = NormalizePerCommandMiddlewares(perCommand);
+        var perCommandMiddlewares = PipelinePerCommandMiddlewareMap.Build(perCommand);
         var commandToPolicyMiddlewares = BuildCommandToPolicyMiddlewares(policies);
         var globalPipeline = BuildGlobalPipeline(global);
 
@@ -65,43 +65,6 @@ internal static class PipelinePlanner
             PerCommandPipelines: perCommandPipelines,
             OpenGenericMiddlewareRegistrations: middlewareRegistrations,
             ServiceRegistrations: serviceRegistrations);
-    }
-
-    private static Dictionary<string, MiddlewareRef[]> NormalizePerCommandMiddlewares(
-        ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> perCommand)
-    {
-        var normalized = new Dictionary<string, MiddlewareRef[]>(StringComparer.Ordinal);
-
-        foreach (var pair in perCommand)
-        {
-            AddNormalizedPerCommandMiddlewares(normalized, pair.Key, pair.Value);
-        }
-
-        return normalized;
-    }
-
-    private static void AddNormalizedPerCommandMiddlewares(
-        Dictionary<string, MiddlewareRef[]> normalized,
-        string commandType,
-        ImmutableArray<MiddlewareRef> middlewares)
-    {
-        var command = PipelineTypeNames.NormalizeFqn(commandType);
-        var commandIsMissing = string.IsNullOrWhiteSpace(command);
-
-        if (commandIsMissing)
-        {
-            return;
-        }
-
-        var distinctMiddlewares = PipelineMiddlewareSets.NormalizeDistinct(middlewares);
-        var hasNoMiddlewares = distinctMiddlewares.Length == 0;
-
-        if (hasNoMiddlewares)
-        {
-            return;
-        }
-
-        normalized[command] = distinctMiddlewares;
     }
 
     private static PipelineDefinition? BuildGlobalPipeline(MiddlewareRef[] global)
