@@ -36,14 +36,14 @@ internal sealed class GeneratorGenerationPhase
 
         new HandlerRegistrationsEmitter().Emit(context, handlerRegistrationsPlan);
 
-        if (emitOptions.EmitPipelineMap)
-        {
-            new PipelineMapsEmitter(
-                    validationContext.Globals,
-                    validationContext.PerCommand,
-                    validationContext.Policies)
-                .Emit(context, extraction.Discovery, emitOptions);
-        }
+        var pipelineMapsPlan = PipelineMapsPlanner.Build(
+            extraction.Discovery,
+            validationContext.Globals,
+            validationContext.PerCommand,
+            validationContext.Policies,
+            emitOptions);
+
+        new PipelineMapsEmitter().Emit(context, pipelineMapsPlan);
 
         if (!shouldEmitPipelines)
         {
