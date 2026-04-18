@@ -141,7 +141,7 @@ internal sealed class TinyBootstrapInvocationExtractor
         }
 
         globals.Add(new OrderedEntry(
-            CreateMiddlewareRef(middlewareOpenType),
+            MiddlewareRefFactory.Create(middlewareOpenType),
             OrderKey.From(invocation)));
     }
 
@@ -207,12 +207,11 @@ internal sealed class TinyBootstrapInvocationExtractor
         INamedTypeSymbol middlewareOpenType,
         List<OrderedPerCommandEntry> perCommand)
     {
-        var commandFqn = Fqn.EnsureGlobal(
-            commandType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+        var commandFqn = Fqn.FromType(commandType);
 
         perCommand.Add(new OrderedPerCommandEntry(
             commandFqn,
-            CreateMiddlewareRef(middlewareOpenType),
+            MiddlewareRefFactory.Create(middlewareOpenType),
             OrderKey.From(invocation)));
     }
 
@@ -342,33 +341,8 @@ internal sealed class TinyBootstrapInvocationExtractor
             return true;
         }
 
-        var fqn = parameterType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        var fqn = Fqn.FromType(parameterType);
         return string.Equals(fqn, "global::TinyDispatcher.TinyBootstrap", StringComparison.Ordinal);
-    }
-
-    private static MiddlewareRef CreateMiddlewareRef(INamedTypeSymbol middlewareOpenType)
-    {
-        var open = middlewareOpenType.OriginalDefinition;
-
-        var fqnWithArgs = Fqn.EnsureGlobal(
-            open.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
-
-        var baseFqn = StripGenericSuffix(fqnWithArgs);
-
-        return new MiddlewareRef(open, baseFqn, open.Arity);
-    }
-
-    private static string StripGenericSuffix(string fqn)
-    {
-        var idx = fqn.IndexOf('<');
-        var hasGenericSuffix = idx >= 0;
-
-        if (!hasGenericSuffix)
-        {
-            return fqn;
-        }
-
-        return fqn.Substring(0, idx);
     }
 
     private static INamedTypeSymbol? TryExtractOpenGenericType(

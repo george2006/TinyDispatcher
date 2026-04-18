@@ -4,7 +4,6 @@ using Microsoft.CodeAnalysis;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using TinyDispatcher.SourceGen.Generator;
 using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen.Discovery;
@@ -34,8 +33,7 @@ internal sealed class PolicySpecBuilder
         for (var i = 0; i < policies.Count; i++)
         {
             var p = policies[i];
-            var key = Fqn.EnsureGlobal(
-                p.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+            var key = Fqn.FromType(p);
 
             var policyWasAlreadySeen = distinctPolicies.ContainsKey(key);
             if (policyWasAlreadySeen)
@@ -146,7 +144,7 @@ internal sealed class PolicySpecBuilder
             return;
         }
 
-        middlewares.Add(CreateMiddlewareRef(middlewareNamedType));
+        middlewares.Add(MiddlewareRefFactory.Create(middlewareNamedType));
     }
 
     private static void AddCommandIfPresent(AttributeData attribute, List<string> commands)
@@ -161,35 +159,9 @@ internal sealed class PolicySpecBuilder
             return;
         }
 
-        var commandFqn = Fqn.EnsureGlobal(
-            commandType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+        var commandFqn = Fqn.FromType(commandType);
 
         commands.Add(commandFqn);
-    }
-
-    private static MiddlewareRef CreateMiddlewareRef(INamedTypeSymbol middlewareType)
-    {
-        var open = middlewareType.OriginalDefinition;
-
-        var fqnWithArgs = Fqn.EnsureGlobal(
-            open.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
-
-        var baseFqn = StripGenericSuffix(fqnWithArgs);
-
-        return new MiddlewareRef(open, baseFqn, open.Arity);
-    }
-
-    private static string StripGenericSuffix(string fqn)
-    {
-        var idx = fqn.IndexOf('<');
-        var hasGenericSuffix = idx >= 0;
-
-        if (!hasGenericSuffix)
-        {
-            return fqn;
-        }
-
-        return fqn.Substring(0, idx);
     }
 
     private static bool HasAttribute(INamedTypeSymbol symbol, string fullName)
