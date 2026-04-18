@@ -12,6 +12,14 @@ internal sealed record PipelineContributions(
     PipelinePolicyContribution[] Policies,
     IReadOnlyDictionary<string, PipelinePolicyContribution> PolicyByCommand)
 {
+    public static PipelineContributions Create(PipelineConfig pipeline)
+    {
+        return Create(
+            pipeline.Globals,
+            pipeline.PerCommand,
+            pipeline.Policies);
+    }
+
     public static PipelineContributions Create(
         ImmutableArray<MiddlewareRef> globals,
         ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> perCommand,
