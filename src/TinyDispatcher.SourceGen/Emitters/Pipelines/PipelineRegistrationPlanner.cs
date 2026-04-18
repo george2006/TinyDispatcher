@@ -13,7 +13,7 @@ internal static class PipelineRegistrationPlanner
         string contextTypeFqn,
         bool hasGlobal,
         DiscoveryResult discovery,
-        Dictionary<string, MiddlewareRef[]> perCommand,
+        IReadOnlyDictionary<string, MiddlewareRef[]> perCommand,
         ImmutableDictionary<string, PolicySpec> policies)
     {
         var perCommandSet = new HashSet<string>(perCommand.Keys, StringComparer.Ordinal);

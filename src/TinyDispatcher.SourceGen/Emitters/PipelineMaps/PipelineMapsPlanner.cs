@@ -1,6 +1,7 @@
 #nullable enable
 
 using System.Collections.Immutable;
+using TinyDispatcher.SourceGen.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen.Emitters.PipelineMaps;
@@ -9,9 +10,7 @@ internal static class PipelineMapsPlanner
 {
     public static PipelineMapsPlan Build(
         DiscoveryResult discovery,
-        ImmutableArray<MiddlewareRef> globals,
-        ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> perCommand,
-        ImmutableDictionary<string, PolicySpec> policies,
+        PipelineContributions contributions,
         GeneratorOptions options)
     {
         if (!options.EmitPipelineMap)
@@ -25,7 +24,7 @@ internal static class PipelineMapsPlanner
         }
 
         var formats = PipelineMapOutputFormats.ParseOrDefault(options.PipelineMapFormat);
-        var inspector = new PipelineMapInspector(globals, perCommand, policies, options);
+        var inspector = new PipelineMapInspector(contributions, options);
         var descriptors = ImmutableArray.CreateBuilder<PipelineDescriptor>(
             discovery.Commands.Length + discovery.Queries.Length);
 

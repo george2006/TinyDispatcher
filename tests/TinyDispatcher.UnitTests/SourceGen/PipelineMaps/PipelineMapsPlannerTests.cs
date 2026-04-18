@@ -3,6 +3,7 @@
 using System.Collections.Immutable;
 using TinyDispatcher.SourceGen;
 using TinyDispatcher.SourceGen.Emitters.PipelineMaps;
+using TinyDispatcher.SourceGen.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 using Xunit;
 
@@ -15,9 +16,7 @@ public sealed class PipelineMapsPlannerTests
     {
         var plan = PipelineMapsPlanner.Build(
             Discovery("global::MyApp.Ping", "global::MyApp.PingHandler"),
-            ImmutableArray<MiddlewareRef>.Empty,
-            ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
-            ImmutableDictionary<string, PolicySpec>.Empty,
+            EmptyContributions(),
             Options(emitPipelineMap: false, pipelineMapFormat: "json"));
 
         Assert.False(plan.ShouldEmit);
@@ -29,9 +28,7 @@ public sealed class PipelineMapsPlannerTests
     {
         var plan = PipelineMapsPlanner.Build(
             Discovery("global::MyApp.Ping", "global::MyApp.PingHandler"),
-            ImmutableArray<MiddlewareRef>.Empty,
-            ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
-            ImmutableDictionary<string, PolicySpec>.Empty,
+            EmptyContributions(),
             Options(emitPipelineMap: true, pipelineMapFormat: "bogus"));
 
         Assert.True(plan.ShouldEmit);
@@ -45,6 +42,14 @@ public sealed class PipelineMapsPlannerTests
         return new DiscoveryResult(
             Commands: ImmutableArray.Create(new HandlerContract(commandFqn, handlerFqn)),
             Queries: ImmutableArray<QueryHandlerContract>.Empty);
+    }
+
+    private static PipelineContributions EmptyContributions()
+    {
+        return PipelineContributions.Create(
+            ImmutableArray<MiddlewareRef>.Empty,
+            ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
+            ImmutableDictionary<string, PolicySpec>.Empty);
     }
 
     private static GeneratorOptions Options(bool emitPipelineMap, string? pipelineMapFormat)
