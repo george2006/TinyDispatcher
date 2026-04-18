@@ -104,32 +104,24 @@ internal static class PipelinePlanner
 
     private static ImmutableArray<PipelineDefinition> BuildPolicyPipelines(
         MiddlewareRef[] global,
-        ImmutableDictionary<string, PolicySpec> policies)
+        PipelinePolicyContribution[] policies)
     {
-        if (policies.Count == 0)
+        if (policies.Length == 0)
         {
             return ImmutableArray<PipelineDefinition>.Empty;
         }
 
-        var list = new List<PipelineDefinition>(policies.Count);
+        var list = new List<PipelineDefinition>(policies.Length);
 
-        var orderedPolicies = PipelineOrdering.GetPoliciesInStableOrder(policies);
-        for (var i = 0; i < orderedPolicies.Length; i++)
+        for (var i = 0; i < policies.Length; i++)
         {
-            var p = orderedPolicies[i];
-            var policyMids = PipelineMiddlewareSets.NormalizeDistinct(p.Middlewares);
-            var hasNoPolicyMiddlewares = policyMids.Length == 0;
-
-            if (hasNoPolicyMiddlewares)
-            {
-                continue;
-            }
+            var policy = policies[i];
 
             list.Add(new PipelineDefinition(
-                ClassName: "TinyDispatcherPolicyPipeline_" + PipelineNameFactory.SanitizePolicyName(p.PolicyTypeFqn),
+                ClassName: "TinyDispatcherPolicyPipeline_" + PipelineNameFactory.SanitizePolicyName(policy.PolicyTypeFqn),
                 IsOpenGeneric: true,
                 CommandType: "TCommand",
-                Steps: BuildSteps(global, policyMids, NoMiddlewares)));
+                Steps: BuildSteps(global, policy.Middlewares, NoMiddlewares)));
         }
 
         return list.ToImmutableArray();
@@ -191,23 +183,14 @@ internal static class PipelinePlanner
     }
 
     private static Dictionary<string, MiddlewareRef[]> BuildCommandToPolicyMiddlewares(
-        ImmutableDictionary<string, PolicySpec> policies)
+        PipelinePolicyContribution[] policies)
     {
         var map = new Dictionary<string, MiddlewareRef[]>(StringComparer.Ordinal);
 
-        var orderedPolicies = PipelineOrdering.GetPoliciesInStableOrder(policies);
-        for (var i = 0; i < orderedPolicies.Length; i++)
+        for (var i = 0; i < policies.Length; i++)
         {
-            var p = orderedPolicies[i];
-            var mids = PipelineMiddlewareSets.NormalizeDistinct(p.Middlewares);
-            var hasNoPolicyMiddlewares = mids.Length == 0;
-
-            if (hasNoPolicyMiddlewares)
-            {
-                continue;
-            }
-
-            PipelinePolicyCommandMap.AddFirstPolicyWins(map, p.Commands, mids);
+            var policy = policies[i];
+            PipelinePolicyCommandMap.AddFirstPolicyWins(map, policy.Commands, policy.Middlewares);
         }
 
         return map;
@@ -216,7 +199,7 @@ internal static class PipelinePlanner
     private static ImmutableArray<OpenGenericRegistration> BuildOpenGenericMiddlewareRegistrations(
         MiddlewareRef[] global,
         IReadOnlyDictionary<string, MiddlewareRef[]> perCommand,
-        ImmutableDictionary<string, PolicySpec> policies)
+        PipelinePolicyContribution[] policies)
     {
         var all = new List<MiddlewareRef>(256);
 
@@ -227,9 +210,9 @@ internal static class PipelinePlanner
             all.AddRange(pair.Value);
         }
 
-        foreach (var policy in policies.Values)
+        for (var i = 0; i < policies.Length; i++)
         {
-            all.AddRange(PipelineMiddlewareSets.NormalizeDistinct(policy.Middlewares));
+            all.AddRange(policies[i].Middlewares);
         }
 
         var distinct = PipelineMiddlewareSets.NormalizeDistinct(all.ToImmutableArray());

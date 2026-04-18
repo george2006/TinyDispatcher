@@ -14,7 +14,7 @@ internal static class PipelineRegistrationPlanner
         bool hasGlobal,
         DiscoveryResult discovery,
         IReadOnlyDictionary<string, MiddlewareRef[]> perCommand,
-        ImmutableDictionary<string, PolicySpec> policies)
+        PipelinePolicyContribution[] policies)
     {
         var perCommandSet = new HashSet<string>(perCommand.Keys, StringComparer.Ordinal);
         var commandToPolicyPipeline = BuildCommandToPolicyPipelineNames(generatedNamespace, policies);
@@ -30,14 +30,13 @@ internal static class PipelineRegistrationPlanner
 
     private static Dictionary<string, string> BuildCommandToPolicyPipelineNames(
         string generatedNamespace,
-        ImmutableDictionary<string, PolicySpec> policies)
+        PipelinePolicyContribution[] policies)
     {
         var map = new Dictionary<string, string>(StringComparer.Ordinal);
-        var orderedPolicies = PipelineOrdering.GetPoliciesInStableOrder(policies);
 
-        for (var i = 0; i < orderedPolicies.Length; i++)
+        for (var i = 0; i < policies.Length; i++)
         {
-            var policy = orderedPolicies[i];
+            var policy = policies[i];
             var pipelineName = GetPolicyPipelineTypeName(generatedNamespace, policy);
 
             PipelinePolicyCommandMap.AddFirstPolicyWins(map, policy.Commands, pipelineName);
@@ -46,7 +45,7 @@ internal static class PipelineRegistrationPlanner
         return map;
     }
 
-    private static string GetPolicyPipelineTypeName(string generatedNamespace, PolicySpec policy)
+    private static string GetPolicyPipelineTypeName(string generatedNamespace, PipelinePolicyContribution policy)
     {
         return "global::" +
             generatedNamespace +

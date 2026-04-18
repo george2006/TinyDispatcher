@@ -116,39 +116,21 @@ internal sealed class PipelineMapInspector
         return new[] { policy.PolicyTypeFqn };
     }
 
-    private sealed record PolicyContribution(string PolicyTypeFqn, MiddlewareRef[] Middlewares);
-
-    // First policy wins (ordered by policy type name, deterministic)
     private static IReadOnlyDictionary<string, PolicyContribution> BuildPolicyIndex(
-        ImmutableDictionary<string, PolicySpec> policies)
+        PipelinePolicyContribution[] policies)
     {
         var map = new Dictionary<string, PolicyContribution>(StringComparer.Ordinal);
 
-        var orderedPolicies = PipelineOrdering.GetPoliciesInStableOrder(policies);
-        for (var i = 0; i < orderedPolicies.Length; i++)
+        for (var i = 0; i < policies.Length; i++)
         {
-            var p = orderedPolicies[i];
-            var policyType = PipelineTypeNames.NormalizeFqn(p.PolicyTypeFqn);
-            var policyTypeIsMissing = string.IsNullOrWhiteSpace(policyType);
-
-            if (policyTypeIsMissing)
-            {
-                continue;
-            }
-
-            var mids = PipelineMiddlewareSets.NormalizeDistinct(p.Middlewares);
-            var policyHasNoMiddlewares = mids.Length == 0;
-
-            if (policyHasNoMiddlewares)
-            {
-                continue;
-            }
-
-            var contribution = new PolicyContribution(policyType, mids);
-            PipelinePolicyCommandMap.AddFirstPolicyWins(map, p.Commands, contribution);
+            var policy = policies[i];
+            var contribution = new PolicyContribution(policy.PolicyTypeFqn, policy.Middlewares);
+            PipelinePolicyCommandMap.AddFirstPolicyWins(map, policy.Commands, contribution);
         }
 
         return map;
     }
+
+    private sealed record PolicyContribution(string PolicyTypeFqn, MiddlewareRef[] Middlewares);
 
 }
