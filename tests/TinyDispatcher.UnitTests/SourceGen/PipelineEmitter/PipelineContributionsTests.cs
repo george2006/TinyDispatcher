@@ -29,6 +29,45 @@ public sealed class PipelineContributionsTests
             contributions.PerCommand["global::MyApp.Commands.Ping"][0].OpenTypeFqn);
     }
 
+    [Fact]
+    public void Create_normalizes_policies_in_stable_order_and_skips_empty_middleware_policies()
+    {
+        var policies = ImmutableDictionary<string, PolicySpec>.Empty
+            .Add(
+                "global::MyApp.Policies.ZuluPolicy",
+                new PolicySpec(
+                    PolicyTypeFqn: "MyApp.Policies.ZuluPolicy",
+                    Middlewares: ImmutableArray.Create(Middleware("MyApp.Middleware.ZuluMiddleware")),
+                    Commands: ImmutableArray.Create("MyApp.Commands.Checkout")))
+            .Add(
+                "global::MyApp.Policies.AlphaPolicy",
+                new PolicySpec(
+                    PolicyTypeFqn: "MyApp.Policies.AlphaPolicy",
+                    Middlewares: ImmutableArray.Create(Middleware("MyApp.Middleware.AlphaMiddleware")),
+                    Commands: ImmutableArray.Create("MyApp.Commands.Checkout", " ")))
+            .Add(
+                "global::MyApp.Policies.EmptyPolicy",
+                new PolicySpec(
+                    PolicyTypeFqn: "MyApp.Policies.EmptyPolicy",
+                    Middlewares: ImmutableArray<MiddlewareRef>.Empty,
+                    Commands: ImmutableArray.Create("MyApp.Commands.Checkout")));
+
+        var contributions = PipelineContributions.Create(
+            ImmutableArray<MiddlewareRef>.Empty,
+            ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
+            policies);
+
+        Assert.Equal(2, contributions.Policies.Length);
+
+        Assert.Equal("global::MyApp.Policies.AlphaPolicy", contributions.Policies[0].PolicyTypeFqn);
+        Assert.Equal("global::MyApp.Middleware.AlphaMiddleware", contributions.Policies[0].Middlewares[0].OpenTypeFqn);
+        Assert.Equal(
+            new[] { "global::MyApp.Commands.Checkout" },
+            contributions.Policies[0].Commands);
+
+        Assert.Equal("global::MyApp.Policies.ZuluPolicy", contributions.Policies[1].PolicyTypeFqn);
+    }
+
     private static MiddlewareRef Middleware(string openTypeFqn)
     {
         return new MiddlewareRef(
