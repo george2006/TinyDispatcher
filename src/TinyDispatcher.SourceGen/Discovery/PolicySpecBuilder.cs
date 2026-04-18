@@ -79,13 +79,9 @@ internal sealed class PolicySpecBuilder
             return null;
         }
 
-        var middlewares = new List<MiddlewareRef>();
-        var commands = new List<string>();
-
-        ReadPolicyAttributes(policy, middlewares, commands);
-
-        var distinctMiddlewares = DistinctMiddlewares(middlewares);
-        var distinctCommands = DistinctCommands(commands);
+        var attributes = ReadPolicyAttributes(policy);
+        var distinctMiddlewares = DistinctMiddlewares(attributes.Middlewares);
+        var distinctCommands = DistinctCommands(attributes.Commands);
         var policyIsIncomplete = distinctMiddlewares.Length == 0 || distinctCommands.Length == 0;
 
         if (policyIsIncomplete)
@@ -99,15 +95,17 @@ internal sealed class PolicySpecBuilder
             Commands: distinctCommands);
     }
 
-    private static void ReadPolicyAttributes(
-        INamedTypeSymbol policy,
-        List<MiddlewareRef> middlewares,
-        List<string> commands)
+    private static PolicyAttributes ReadPolicyAttributes(INamedTypeSymbol policy)
     {
+        var middlewares = new List<MiddlewareRef>();
+        var commands = new List<string>();
+
         foreach (var attribute in policy.GetAttributes())
         {
             ReadPolicyAttribute(attribute, middlewares, commands);
         }
+
+        return new PolicyAttributes(middlewares, commands);
     }
 
     private static void ReadPolicyAttribute(
@@ -240,4 +238,8 @@ internal sealed class PolicySpecBuilder
 
         return false;
     }
+
+    private sealed record PolicyAttributes(
+        List<MiddlewareRef> Middlewares,
+        List<string> Commands);
 }
