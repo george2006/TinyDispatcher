@@ -24,14 +24,13 @@ internal static class PipelinePlanner
 
         var perCommandMiddlewares = contributions.PerCommand;
         var policies = contributions.Policies;
-        var commandToPolicyMiddlewares = BuildCommandToPolicyMiddlewares(policies);
         var globalPipeline = BuildGlobalPipeline(global);
 
         var policyPipelines = BuildPolicyPipelines(global, policies);
         var perCommandPipelines = BuildPerCommandPipelines(
             global,
             perCommandMiddlewares,
-            commandToPolicyMiddlewares);
+            contributions.PolicyByCommand);
 
         var middlewareRegistrations = BuildOpenGenericMiddlewareRegistrations(
             global,
@@ -130,7 +129,7 @@ internal static class PipelinePlanner
     private static ImmutableArray<PipelineDefinition> BuildPerCommandPipelines(
         MiddlewareRef[] global,
         IReadOnlyDictionary<string, MiddlewareRef[]> perCmd,
-        Dictionary<string, MiddlewareRef[]> cmdToPolicyMids)
+        IReadOnlyDictionary<string, PipelinePolicyContribution> policyByCommand)
     {
         if (perCmd.Count == 0)
         {
@@ -144,8 +143,13 @@ internal static class PipelinePlanner
         {
             var cmdFqn = orderedCommands[i];
             var perCmdMids = perCmd[cmdFqn];
+            MiddlewareRef[] policyMids;
 
-            if (!cmdToPolicyMids.TryGetValue(cmdFqn, out var policyMids))
+            if (policyByCommand.TryGetValue(cmdFqn, out var policy))
+            {
+                policyMids = policy.Middlewares;
+            }
+            else
             {
                 policyMids = NoMiddlewares;
             }
@@ -180,20 +184,6 @@ internal static class PipelinePlanner
         {
             steps.Add(new MiddlewareStep(middlewares[i]));
         }
-    }
-
-    private static Dictionary<string, MiddlewareRef[]> BuildCommandToPolicyMiddlewares(
-        PipelinePolicyContribution[] policies)
-    {
-        var map = new Dictionary<string, MiddlewareRef[]>(StringComparer.Ordinal);
-
-        for (var i = 0; i < policies.Length; i++)
-        {
-            var policy = policies[i];
-            PipelinePolicyCommandMap.AddFirstPolicyWins(map, policy.Commands, policy.Middlewares);
-        }
-
-        return map;
     }
 
     private static ImmutableArray<OpenGenericRegistration> BuildOpenGenericMiddlewareRegistrations(

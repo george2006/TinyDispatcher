@@ -9,17 +9,21 @@ namespace TinyDispatcher.SourceGen.Emitters.Pipelines;
 internal sealed record PipelineContributions(
     MiddlewareRef[] Globals,
     IReadOnlyDictionary<string, MiddlewareRef[]> PerCommand,
-    PipelinePolicyContribution[] Policies)
+    PipelinePolicyContribution[] Policies,
+    IReadOnlyDictionary<string, PipelinePolicyContribution> PolicyByCommand)
 {
     public static PipelineContributions Create(
         ImmutableArray<MiddlewareRef> globals,
         ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> perCommand,
         ImmutableDictionary<string, PolicySpec> policies)
     {
+        var normalizedPolicies = BuildPolicies(policies);
+
         return new PipelineContributions(
             Globals: PipelineMiddlewareSets.NormalizeDistinct(globals),
             PerCommand: PipelinePerCommandMiddlewareMap.Build(perCommand),
-            Policies: BuildPolicies(policies));
+            Policies: normalizedPolicies,
+            PolicyByCommand: BuildPolicyByCommand(normalizedPolicies));
     }
 
     private static PipelinePolicyContribution[] BuildPolicies(
@@ -54,6 +58,20 @@ internal sealed record PipelineContributions(
         }
 
         return normalizedPolicies.ToArray();
+    }
+
+    private static IReadOnlyDictionary<string, PipelinePolicyContribution> BuildPolicyByCommand(
+        PipelinePolicyContribution[] policies)
+    {
+        var map = new Dictionary<string, PipelinePolicyContribution>(StringComparer.Ordinal);
+
+        for (var i = 0; i < policies.Length; i++)
+        {
+            var policy = policies[i];
+            PipelinePolicyCommandMap.AddFirstPolicyWins(map, policy.Commands, policy);
+        }
+
+        return map;
     }
 
     private static ImmutableArray<string> NormalizeCommands(ImmutableArray<string> commands)

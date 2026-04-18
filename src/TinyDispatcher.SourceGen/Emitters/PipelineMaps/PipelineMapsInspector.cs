@@ -10,7 +10,7 @@ internal sealed class PipelineMapInspector
 {
     private readonly MiddlewareRef[] _globals;
     private readonly IReadOnlyDictionary<string, MiddlewareRef[]> _perCommand;
-    private readonly IReadOnlyDictionary<string, PolicyContribution> _policyByCommand;
+    private readonly IReadOnlyDictionary<string, PipelinePolicyContribution> _policyByCommand;
     private readonly string _contextFqn;
 
     public PipelineMapInspector(
@@ -19,7 +19,7 @@ internal sealed class PipelineMapInspector
     {
         _globals = contributions.Globals;
         _perCommand = contributions.PerCommand;
-        _policyByCommand = BuildPolicyIndex(contributions.Policies);
+        _policyByCommand = contributions.PolicyByCommand;
         _contextFqn = PipelineTypeNames.NormalizeFqn(options.CommandContextType!);
     }
 
@@ -62,7 +62,7 @@ internal sealed class PipelineMapInspector
     }
 
     // ORDER: Global -> Policy -> PerCommand (same mental model as pipelines)
-    private IReadOnlyList<MiddlewareDescriptor> Compose(string messageFqn, PolicyContribution? policy)
+    private IReadOnlyList<MiddlewareDescriptor> Compose(string messageFqn, PipelinePolicyContribution? policy)
     {
         var list = new List<MiddlewareDescriptor>();
 
@@ -81,7 +81,7 @@ internal sealed class PipelineMapInspector
         }
     }
 
-    private static void AddPolicy(List<MiddlewareDescriptor> list, PolicyContribution? policy)
+    private static void AddPolicy(List<MiddlewareDescriptor> list, PipelinePolicyContribution? policy)
     {
         if (policy is null)
         {
@@ -103,10 +103,10 @@ internal sealed class PipelineMapInspector
         Add(list, mids, "per-command");
     }
 
-    private PolicyContribution? FindPolicy(string commandFqn)
+    private PipelinePolicyContribution? FindPolicy(string commandFqn)
         => _policyByCommand.TryGetValue(commandFqn, out var p) ? p : null;
 
-    private static string[] PolicyApplied(PolicyContribution? policy)
+    private static string[] PolicyApplied(PipelinePolicyContribution? policy)
     {
         if (policy is null)
         {
@@ -115,22 +115,5 @@ internal sealed class PipelineMapInspector
 
         return new[] { policy.PolicyTypeFqn };
     }
-
-    private static IReadOnlyDictionary<string, PolicyContribution> BuildPolicyIndex(
-        PipelinePolicyContribution[] policies)
-    {
-        var map = new Dictionary<string, PolicyContribution>(StringComparer.Ordinal);
-
-        for (var i = 0; i < policies.Length; i++)
-        {
-            var policy = policies[i];
-            var contribution = new PolicyContribution(policy.PolicyTypeFqn, policy.Middlewares);
-            PipelinePolicyCommandMap.AddFirstPolicyWins(map, policy.Commands, contribution);
-        }
-
-        return map;
-    }
-
-    private sealed record PolicyContribution(string PolicyTypeFqn, MiddlewareRef[] Middlewares);
 
 }
