@@ -147,7 +147,7 @@ internal sealed class PipelineMapInspector
     {
         var map = new Dictionary<string, PolicyContribution>(StringComparer.Ordinal);
 
-        var orderedPolicies = PipelinePolicyOrdering.GetPoliciesInStableOrder(policies);
+        var orderedPolicies = PipelineOrdering.GetPoliciesInStableOrder(policies);
         for (var i = 0; i < orderedPolicies.Length; i++)
         {
             var p = orderedPolicies[i];

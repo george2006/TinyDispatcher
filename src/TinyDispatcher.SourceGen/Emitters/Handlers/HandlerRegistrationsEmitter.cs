@@ -1,16 +1,13 @@
 ﻿using Microsoft.CodeAnalysis.Text;
 using System.Text;
 using TinyDispatcher.SourceGen.Abstractions;
-using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen.Emitters.Handlers;
 
-internal sealed class HandlerRegistrationsEmitter : ICodeEmitter
+internal sealed class HandlerRegistrationsEmitter
 {
-    public void Emit(IGeneratorContext context, DiscoveryResult result, GeneratorOptions options)
+    public void Emit(IGeneratorContext context, HandlerRegistrationsPlan plan)
     {
-        var plan = HandlerRegistrationsPlanner.Build(result, options);
-
         var sourceWriter = new HandlerRegistrationsSourceWriter();
         var source = sourceWriter.Write(plan);
 

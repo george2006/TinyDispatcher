@@ -5,8 +5,21 @@ using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen.Emitters.Pipelines;
 
-internal static class PipelinePolicyOrdering
+internal static class PipelineOrdering
 {
+    public static string[] GetStringsInStableOrder(IEnumerable<string> values)
+    {
+        var ordered = new List<string>();
+        foreach (var value in values)
+        {
+            ordered.Add(value);
+        }
+
+        ordered.Sort(StringComparer.Ordinal);
+
+        return CopyStringsToArray(ordered);
+    }
+
     public static PolicySpec[] GetPoliciesInStableOrder(ImmutableDictionary<string, PolicySpec> policies)
     {
         if (policies.Count == 0)
@@ -31,6 +44,18 @@ internal static class PipelinePolicyOrdering
         var rightPolicyName = PipelineTypeNames.NormalizeFqn(right.PolicyTypeFqn);
 
         return string.Compare(leftPolicyName, rightPolicyName, StringComparison.Ordinal);
+    }
+
+    private static string[] CopyStringsToArray(List<string> values)
+    {
+        var result = new string[values.Count];
+
+        for (var i = 0; i < values.Count; i++)
+        {
+            result[i] = values[i];
+        }
+
+        return result;
     }
 
     private static PolicySpec[] CopyPoliciesToArray(List<PolicySpec> policies)

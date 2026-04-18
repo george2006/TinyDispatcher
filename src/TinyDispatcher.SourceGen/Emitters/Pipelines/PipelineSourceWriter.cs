@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using TinyDispatcher.SourceGen.Generator.Models;
-using static TinyDispatcher.SourceGen.Emitters.Pipelines.PipelineEmitter;
 
 namespace TinyDispatcher.SourceGen.Emitters.Pipelines;
 
