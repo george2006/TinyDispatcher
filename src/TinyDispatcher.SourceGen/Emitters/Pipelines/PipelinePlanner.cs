@@ -245,36 +245,10 @@ internal static class PipelinePlanner
                 continue;
             }
 
-            AddPolicyMiddlewaresByCommand(map, p, mids);
+            PipelinePolicyCommandMap.AddFirstPolicyWins(map, p.Commands, mids);
         }
 
         return map;
-    }
-
-    private static void AddPolicyMiddlewaresByCommand(
-        Dictionary<string, MiddlewareRef[]> map,
-        PolicySpec policy,
-        MiddlewareRef[] middlewares)
-    {
-        for (var commandIndex = 0; commandIndex < policy.Commands.Length; commandIndex++)
-        {
-            var command = PipelineTypeNames.NormalizeFqn(policy.Commands[commandIndex]);
-            var commandIsMissing = string.IsNullOrWhiteSpace(command);
-
-            if (commandIsMissing)
-            {
-                continue;
-            }
-
-            var commandAlreadyHasPolicy = map.ContainsKey(command);
-
-            if (commandAlreadyHasPolicy)
-            {
-                continue;
-            }
-
-            map[command] = middlewares;
-        }
     }
 
     private static ImmutableArray<OpenGenericRegistration> BuildOpenGenericMiddlewareRegistrations(
