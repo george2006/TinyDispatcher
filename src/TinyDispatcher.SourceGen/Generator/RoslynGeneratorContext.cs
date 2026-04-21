@@ -1,6 +1,8 @@
-﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
 using TinyDispatcher.SourceGen.Abstractions;
+
+namespace TinyDispatcher.SourceGen.Generator;
 
 internal sealed class RoslynGeneratorContext : IGeneratorContext
 {
