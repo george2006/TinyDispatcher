@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using TinyDispatcher.SourceGen;
 using TinyDispatcher.SourceGen.Emitters.ModuleInitializer;
 using TinyDispatcher.SourceGen.Generator.Models;
+using TinyDispatcher.SourceGen.Generator.Options;
 using Xunit;
 
 namespace TinyDispatcher.UnitTests.SourceGen.Emitters;

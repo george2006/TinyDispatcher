@@ -2,7 +2,7 @@
 
 using Microsoft.CodeAnalysis.CSharp;
 using TinyDispatcher.SourceGen.Generator.Analysis;
-using TinyDispatcher.SourceGen.Internal;
+using TinyDispatcher.SourceGen.Generator.Options;
 using Xunit;
 
 namespace TinyDispatcher.UnitTests.SourceGen;

@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 using System;
 using System.Collections.Immutable;
 using TinyDispatcher.SourceGen.Generator.Models;
-using TinyDispatcher.SourceGen.Internal;
+using TinyDispatcher.SourceGen.Generator.Options;
 
 namespace TinyDispatcher.SourceGen.Generator.Analysis;
 

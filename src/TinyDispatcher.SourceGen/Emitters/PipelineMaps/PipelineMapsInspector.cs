@@ -4,6 +4,8 @@ using System.Collections.Immutable;
 using TinyDispatcher.SourceGen.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 
+using TinyDispatcher.SourceGen.Generator.Options;
+
 namespace TinyDispatcher.SourceGen.Emitters.PipelineMaps;
 
 internal sealed class PipelineMapInspector

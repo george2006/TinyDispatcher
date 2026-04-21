@@ -1,6 +1,5 @@
 ﻿using Microsoft.CodeAnalysis;
 using TinyDispatcher.SourceGen;
-using TinyDispatcher.SourceGen.Abstractions;
 
 namespace TinyDispatcher.SourceGen.Diagnostics
 {

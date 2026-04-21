@@ -1,10 +1,8 @@
-﻿// TinyDispatcher.SourceGen/Internal/OptionsProvider.cs
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using System;
-using TinyDispatcher.SourceGen.Abstractions;
 
-namespace TinyDispatcher.SourceGen.Internal;
+namespace TinyDispatcher.SourceGen.Generator.Options;
 
 public sealed class OptionsProvider
 {
@@ -12,12 +10,10 @@ public sealed class OptionsProvider
     {
         if (compilation is null) throw new ArgumentNullException(nameof(compilation));
 
-        // 1) Assembly attribute wins
         var fromAttr = TryReadFromAssemblyAttribute(compilation);
         if (fromAttr is not null)
             return fromAttr;
 
-        // 2) Fallback to build props (back-compat)
         if (optionsProvider is null)
             return null;
 
@@ -47,7 +43,6 @@ public sealed class OptionsProvider
 
     private static GeneratorOptions? TryReadFromAssemblyAttribute(Compilation compilation)
     {
-        // Attribute type lives in runtime: TinyDispatcher.TinyDispatcherGeneratorOptionsAttribute
         var attrType = compilation.GetTypeByMetadataName("TinyDispatcher.TinyDispatcherGeneratorOptionsAttribute");
         if (attrType is null)
             return null;
@@ -60,7 +55,7 @@ public sealed class OptionsProvider
             string? genNs = GetNamedString(attr, "GeneratedNamespace");
             string? includePrefix = GetNamedString(attr, "IncludeNamespacePrefix");
 
-            var ctxType = GetNamedType(attr, "CommandContextType"); // Type?
+            var ctxType = GetNamedType(attr, "CommandContextType");
             var ctxFqn = ctxType is null ? null : EnsureGlobal(ctxType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
 
             var emitMap = GetNamedBool(attr, "EmitPipelineMap") ?? false;
@@ -85,16 +80,22 @@ public sealed class OptionsProvider
     private static string? GetNamedString(AttributeData attr, string name)
     {
         foreach (var kv in attr.NamedArguments)
+        {
             if (kv.Key == name && kv.Value.Value is string s)
                 return s;
+        }
+
         return null;
     }
 
     private static bool? GetNamedBool(AttributeData attr, string name)
     {
         foreach (var kv in attr.NamedArguments)
+        {
             if (kv.Key == name && kv.Value.Value is bool b)
                 return b;
+        }
+
         return null;
     }
 
@@ -102,15 +103,23 @@ public sealed class OptionsProvider
     {
         foreach (var kv in attr.NamedArguments)
         {
-            if (kv.Key != name) continue;
+            if (kv.Key != name)
+                continue;
+
             if (kv.Value.Kind == TypedConstantKind.Type && kv.Value.Value is ITypeSymbol ts)
                 return ts;
         }
+
         return null;
     }
 
     private static string? NormalizeOptional(string? value)
-        => string.IsNullOrWhiteSpace(value) ? null : value!.Trim();
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        return value!.Trim();
+    }
 
     private static string EnsureGlobal(string fqn)
     {

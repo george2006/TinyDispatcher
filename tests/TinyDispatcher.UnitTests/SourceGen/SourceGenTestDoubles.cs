@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Text;
-using TinyDispatcher.SourceGen.Abstractions;
+using TinyDispatcher.SourceGen.Generator;
 
 namespace TinyDispatcher.UnitTests.SourceGen;
 

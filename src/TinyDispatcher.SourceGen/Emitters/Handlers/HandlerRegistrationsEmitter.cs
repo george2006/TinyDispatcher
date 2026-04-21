@@ -1,6 +1,7 @@
 ﻿using Microsoft.CodeAnalysis.Text;
 using System.Text;
-using TinyDispatcher.SourceGen.Abstractions;
+
+using TinyDispatcher.SourceGen.Generator;
 
 namespace TinyDispatcher.SourceGen.Emitters.Handlers;
 

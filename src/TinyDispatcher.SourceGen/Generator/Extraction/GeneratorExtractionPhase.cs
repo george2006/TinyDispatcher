@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Immutable;
 using TinyDispatcher.SourceGen.Generator.Models;
+using TinyDispatcher.SourceGen.Generator.Options;
 
 namespace TinyDispatcher.SourceGen.Generator.Extraction;
 

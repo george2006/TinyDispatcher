@@ -1,7 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using System;
-using TinyDispatcher.SourceGen.Internal;
+using TinyDispatcher.SourceGen.Generator.Options;
 
 namespace TinyDispatcher.SourceGen.Generator.Analysis;
 

@@ -1,6 +1,6 @@
 #nullable enable
 
-using TinyDispatcher.SourceGen.Abstractions;
+using TinyDispatcher.SourceGen.Generator;
 
 namespace TinyDispatcher.SourceGen.Emitters.PipelineMaps;
 

@@ -3,7 +3,7 @@
 using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
-using TinyDispatcher.SourceGen.Abstractions;
+using TinyDispatcher.SourceGen.Generator;
 using TinyDispatcher.SourceGen.Emitters.PipelineMaps;
 using Xunit;
 

@@ -1,11 +1,11 @@
 #nullable enable
 
-using TinyDispatcher.SourceGen.Abstractions;
 using TinyDispatcher.SourceGen.Diagnostics;
 using TinyDispatcher.SourceGen.Generator.Analysis;
 using TinyDispatcher.SourceGen.Generator.Generation;
 using TinyDispatcher.SourceGen.Generator.Extraction;
 using TinyDispatcher.SourceGen.Generator.Models;
+using TinyDispatcher.SourceGen.Generator.Options;
 using TinyDispatcher.SourceGen.Generator.Validation;
 
 namespace TinyDispatcher.SourceGen.Generator;

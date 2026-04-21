@@ -1,11 +1,11 @@
 #nullable enable
 
-using TinyDispatcher.SourceGen.Abstractions;
 using TinyDispatcher.SourceGen.Emitters.Handlers;
 using TinyDispatcher.SourceGen.Emitters.ModuleInitializer;
 using TinyDispatcher.SourceGen.Emitters.PipelineMaps;
 using TinyDispatcher.SourceGen.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
+using TinyDispatcher.SourceGen.Generator.Options;
 using TinyDispatcher.SourceGen.Validation;
 
 namespace TinyDispatcher.SourceGen.Generator.Generation;

@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using TinyDispatcher.SourceGen.Internal;
+using TinyDispatcher.SourceGen.Generator.Options;
 using Xunit;
 
 namespace TinyDispatcher.UnitTests.SourceGen;
