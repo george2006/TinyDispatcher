@@ -28,7 +28,7 @@ internal sealed class GeneratorPipeline
         var extraction = _extractionPhase.Extract(
             input.Compilation,
             input.HandlerSymbols,
-            analysisResult.ConfirmedUseTinyCallsSyntax,
+            analysisResult.ConfirmedBootstrapLambdas,
             analysis.EffectiveOptions);
         var validation = _validationPhase.Validate(
             input.Compilation,

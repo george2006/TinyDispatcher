@@ -15,11 +15,11 @@ internal sealed class GeneratorExtractionPhase
     public GeneratorExtraction Extract(
         Compilation compilation,
         ImmutableArray<INamedTypeSymbol> handlerSymbols,
-        ImmutableArray<InvocationExpressionSyntax> useTinyCallsSyntax,
+        ImmutableArray<ConfirmedBootstrapLambda> confirmedBootstrapLambdas,
         GeneratorOptions options)
     {
         var discovery = _handlerDiscoveryExtractor.Extract(compilation, handlerSymbols, options);
-        var pipeline = _pipelineConfigExtractor.Extract(compilation, useTinyCallsSyntax);
+        var pipeline = _pipelineConfigExtractor.Extract(confirmedBootstrapLambdas);
 
         return new GeneratorExtraction(
             discovery,

@@ -20,9 +20,12 @@ internal static class GeneratorAnalysisPhase
         GuardInputs(compilation);
 
         var contextInference = new ContextInference();
+        var bootstrapLambdaExtractor = new BootstrapLambdaExtractor();
         var semanticFilter = new UseTinyDispatcherSemanticFilter();
         var optionsFactory = new GeneratorOptionsFactory(new OptionsProvider());
         var confirmedUseTinyCallsSyntax = semanticFilter.Filter(compilation, useTinyCallsSyntax);
+        var confirmedBootstrapLambdas =
+            bootstrapLambdaExtractor.Extract(compilation, confirmedUseTinyCallsSyntax);
         var useTinyDispatcherCalls =
             contextInference.ResolveAllUseTinyDispatcherContexts(confirmedUseTinyCallsSyntax, compilation);
 
@@ -42,7 +45,7 @@ internal static class GeneratorAnalysisPhase
             Analysis: new GeneratorAnalysis(
                 EffectiveOptions: effectiveOptions,
                 HostBootstrap: hostBootstrap),
-            ConfirmedUseTinyCallsSyntax: confirmedUseTinyCallsSyntax);
+            ConfirmedBootstrapLambdas: confirmedBootstrapLambdas);
     }
 
     private static void GuardInputs(Compilation compilation)

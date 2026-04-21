@@ -1,7 +1,6 @@
 #nullable enable
 
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using TinyDispatcher.SourceGen.Discovery;
@@ -15,17 +14,15 @@ internal sealed class PipelineConfigExtractor
     private readonly PolicySpecBuilder _policyBuilder = new();
     private readonly MiddlewareOrdering _ordering = new();
 
-    public PipelineConfig Extract(
-        Compilation compilation,
-        ImmutableArray<InvocationExpressionSyntax> useTinyCallsSyntax)
+    public PipelineConfig Extract(ImmutableArray<ConfirmedBootstrapLambda> confirmedBootstrapLambdas)
     {
         var globalEntries = new List<OrderedEntry>();
         var perCommandEntries = new List<OrderedPerCommandEntry>();
         var policyTypeSymbols = new List<INamedTypeSymbol>();
 
-        for (var i = 0; i < useTinyCallsSyntax.Length; i++)
+        for (var i = 0; i < confirmedBootstrapLambdas.Length; i++)
         {
-            var contributions = _invocationExtractor.Extract(useTinyCallsSyntax[i], compilation);
+            var contributions = _invocationExtractor.Extract(confirmedBootstrapLambdas[i]);
 
             globalEntries.AddRange(contributions.Globals);
             perCommandEntries.AddRange(contributions.PerCommand);
