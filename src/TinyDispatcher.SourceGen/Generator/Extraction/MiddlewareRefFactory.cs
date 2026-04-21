@@ -3,7 +3,7 @@
 using Microsoft.CodeAnalysis;
 using TinyDispatcher.SourceGen.Generator.Models;
 
-namespace TinyDispatcher.SourceGen.Discovery;
+namespace TinyDispatcher.SourceGen.Generator.Extraction;
 
 internal static class MiddlewareRefFactory
 {

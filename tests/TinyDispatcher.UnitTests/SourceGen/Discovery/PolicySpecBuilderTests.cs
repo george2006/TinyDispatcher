@@ -3,7 +3,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using TinyDispatcher.SourceGen.Discovery;
+using TinyDispatcher.SourceGen.Generator.Extraction;
 using Xunit;
 
 namespace TinyDispatcher.UnitTests.SourceGen.Discovery;

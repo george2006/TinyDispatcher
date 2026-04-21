@@ -5,10 +5,9 @@ using System.Collections.Generic;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
-using TinyDispatcher.SourceGen.Generator.Extraction;
 using TinyDispatcher.SourceGen.Generator.Models;
 
-namespace TinyDispatcher.SourceGen.Discovery;
+namespace TinyDispatcher.SourceGen.Generator.Extraction;
 
 internal sealed class TinyBootstrapInvocationExtractor
 {

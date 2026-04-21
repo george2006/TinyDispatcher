@@ -1,10 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using TinyDispatcher.SourceGen.Generator;
 using TinyDispatcher.SourceGen.Generator.Models;
 
-namespace TinyDispatcher.SourceGen.Discovery;
+namespace TinyDispatcher.SourceGen.Generator.Extraction;
 
 internal sealed class MiddlewareOrdering
 {
