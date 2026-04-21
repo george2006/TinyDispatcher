@@ -28,20 +28,10 @@ internal sealed class GeneratorValidationPhase
                 analysis.Compilation,
                 extraction.Discovery,
                 diagnosticsCatalog)
-            .WithHostGate(isHost: analysis.UseTinyCallsSyntax.Length > 0)
-            .WithUseTinyDispatcherCalls(extraction.UseTinyDispatcherCalls)
-            .WithExpectedContext(GetExpectedContextFqn(analysis.EffectiveOptions))
+            .WithHostGate(isHost: analysis.HostBootstrap.IsHostProject)
+            .WithUseTinyDispatcherCalls(analysis.HostBootstrap.UseTinyDispatcherCalls)
+            .WithExpectedContext(analysis.HostBootstrap.ExpectedContextFqn)
             .WithPipelineConfig(extraction.Pipeline)
             .Build();
-    }
-
-    private static string GetExpectedContextFqn(GeneratorOptions options)
-    {
-        if (string.IsNullOrWhiteSpace(options.CommandContextType))
-        {
-            return string.Empty;
-        }
-
-        return Fqn.EnsureGlobal(options.CommandContextType!);
     }
 }

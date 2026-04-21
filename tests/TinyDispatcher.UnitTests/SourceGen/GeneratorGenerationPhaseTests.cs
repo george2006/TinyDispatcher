@@ -30,13 +30,16 @@ public sealed class GeneratorGenerationPhaseTests
                     new PolicySpec(
                         "global::MyApp.Policy",
                         ImmutableArray<MiddlewareRef>.Empty,
-                        ImmutableArray<string>.Empty))),
-            ImmutableArray<UseTinyDispatcherCall>.Empty);
+                        ImmutableArray<string>.Empty))));
 
         var analysis = new GeneratorAnalysis(
             Compilation: CreateCompilation(),
             UseTinyCallsSyntax: ImmutableArray<InvocationExpressionSyntax>.Empty,
-            EffectiveOptions: Options(commandContextType: "MyApp.AppContext"));
+            EffectiveOptions: Options(commandContextType: "MyApp.AppContext"),
+            HostBootstrap: new HostBootstrapInfo(
+                IsHostProject: false,
+                ExpectedContextFqn: "global::MyApp.AppContext",
+                UseTinyDispatcherCalls: ImmutableArray<UseTinyDispatcherCall>.Empty));
 
         var validation = new GeneratorValidationResult(
             Context: new GeneratorValidationContext.Builder(

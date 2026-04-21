@@ -73,6 +73,13 @@ internal sealed class ContextInference
     {
         // We resolve using the same logic as the semantic resolver, but accept the syntax list.
         var all = ResolveAllUseTinyDispatcherContexts(useTinyCallsSyntax, compilation);
+        return TryInferContextTypeFromResolvedCalls(all);
+    }
+
+    public string? TryInferContextTypeFromResolvedCalls(
+        ImmutableArray<UseTinyDispatcherCall> useTinyDispatcherCalls)
+    {
+        var all = useTinyDispatcherCalls;
         if (all.IsDefaultOrEmpty)
             return null;
 

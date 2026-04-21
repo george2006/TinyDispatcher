@@ -15,7 +15,6 @@ internal sealed class GeneratorExtractionPhase
     private readonly TinyBootstrapInvocationExtractor _invocationExtractor = new();
     private readonly PolicySpecBuilder _policyBuilder = new();
     private readonly MiddlewareOrdering _ordering = new();
-    private readonly ContextInference _contextInference = new();
 
     public GeneratorExtraction Extract(
         GeneratorAnalysis analysis,
@@ -36,13 +35,10 @@ internal sealed class GeneratorExtractionPhase
     {
         var discovery = DiscoverHandlers(compilation, handlerSymbols, options);
         var pipeline = ExtractPipelines(compilation, useTinyCallsSyntax);
-        var useTinyDispatcherCalls =
-            _contextInference.ResolveAllUseTinyDispatcherContexts(useTinyCallsSyntax, compilation);
 
         return new GeneratorExtraction(
             discovery,
-            pipeline,
-            useTinyDispatcherCalls);
+            pipeline);
     }
 
     private static DiscoveryResult DiscoverHandlers(

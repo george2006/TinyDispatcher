@@ -25,15 +25,18 @@ public sealed class GeneratorValidationPhaseTests
             new PipelineConfig(
                 ImmutableArray<MiddlewareRef>.Empty,
                 ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
-                ImmutableDictionary<string, PolicySpec>.Empty),
-            ImmutableArray.Create(new UseTinyDispatcherCall(
-                "global::MyApp.AppContext",
-                Location.None)));
+                ImmutableDictionary<string, PolicySpec>.Empty));
 
         var analysis = new GeneratorAnalysis(
             Compilation: compilation,
             UseTinyCallsSyntax: ImmutableArray.Create(invocation),
-            EffectiveOptions: Options(commandContextType: "MyApp.AppContext"));
+            EffectiveOptions: Options(commandContextType: "MyApp.AppContext"),
+            HostBootstrap: new HostBootstrapInfo(
+                IsHostProject: true,
+                ExpectedContextFqn: "global::MyApp.AppContext",
+                UseTinyDispatcherCalls: ImmutableArray.Create(new UseTinyDispatcherCall(
+                    "global::MyApp.AppContext",
+                    Location.None))));
 
         var result = new GeneratorValidationPhase().Validate(analysis, extraction, new DiagnosticsCatalog());
 
@@ -52,13 +55,16 @@ public sealed class GeneratorValidationPhaseTests
             new PipelineConfig(
                 ImmutableArray<MiddlewareRef>.Empty,
                 ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
-                ImmutableDictionary<string, PolicySpec>.Empty),
-            ImmutableArray<UseTinyDispatcherCall>.Empty);
+                ImmutableDictionary<string, PolicySpec>.Empty));
 
         var analysis = new GeneratorAnalysis(
             Compilation: CreateCompilation(),
             UseTinyCallsSyntax: ImmutableArray<InvocationExpressionSyntax>.Empty,
-            EffectiveOptions: Options(commandContextType: null));
+            EffectiveOptions: Options(commandContextType: null),
+            HostBootstrap: new HostBootstrapInfo(
+                IsHostProject: false,
+                ExpectedContextFqn: string.Empty,
+                UseTinyDispatcherCalls: ImmutableArray<UseTinyDispatcherCall>.Empty));
 
         var result = new GeneratorValidationPhase().Validate(analysis, extraction, new DiagnosticsCatalog());
 
