@@ -25,7 +25,11 @@ internal sealed class GeneratorPipeline
             input.Options);
 
         var extraction = _extractionPhase.Extract(analysis, input.HandlerSymbols);
-        var validation = _validationPhase.Validate(analysis, extraction, _diagnosticsCatalog);
+        var validation = _validationPhase.Validate(
+            analysis.Compilation,
+            analysis.HostBootstrap,
+            extraction,
+            _diagnosticsCatalog);
 
         if (GeneratorDiagnosticReporter.ReportAndHasErrors(context, validation.Diagnostics))
         {

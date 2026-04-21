@@ -1,5 +1,6 @@
 #nullable enable
 
+using Microsoft.CodeAnalysis;
 using TinyDispatcher.SourceGen.Diagnostics;
 using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Validation;
@@ -9,28 +10,34 @@ namespace TinyDispatcher.SourceGen.Generator.Validation;
 internal sealed class GeneratorValidationPhase
 {
     public GeneratorValidationResult Validate(
-        GeneratorAnalysis analysis,
+        Compilation compilation,
+        HostBootstrapInfo hostBootstrap,
         GeneratorExtraction extraction,
         DiagnosticsCatalog diagnosticsCatalog)
     {
-        var validationContext = BuildValidationContext(analysis, extraction, diagnosticsCatalog);
+        var validationContext = BuildValidationContext(
+            compilation,
+            hostBootstrap,
+            extraction,
+            diagnosticsCatalog);
         var diagnostics = GeneratorValidator.Validate(validationContext);
 
         return new GeneratorValidationResult(validationContext, diagnostics);
     }
 
     private static GeneratorValidationContext BuildValidationContext(
-        GeneratorAnalysis analysis,
+        Compilation compilation,
+        HostBootstrapInfo hostBootstrap,
         GeneratorExtraction extraction,
         DiagnosticsCatalog diagnosticsCatalog)
     {
         return new GeneratorValidationContext.Builder(
-                analysis.Compilation,
+                compilation,
                 extraction.Discovery,
                 diagnosticsCatalog)
-            .WithHostGate(isHost: analysis.HostBootstrap.IsHostProject)
-            .WithUseTinyDispatcherCalls(analysis.HostBootstrap.UseTinyDispatcherCalls)
-            .WithExpectedContext(analysis.HostBootstrap.ExpectedContextFqn)
+            .WithHostGate(isHost: hostBootstrap.IsHostProject)
+            .WithUseTinyDispatcherCalls(hostBootstrap.UseTinyDispatcherCalls)
+            .WithExpectedContext(hostBootstrap.ExpectedContextFqn)
             .WithPipelineConfig(extraction.Pipeline)
             .Build();
     }

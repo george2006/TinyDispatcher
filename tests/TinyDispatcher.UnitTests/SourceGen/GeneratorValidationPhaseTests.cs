@@ -38,7 +38,11 @@ public sealed class GeneratorValidationPhaseTests
                     "global::MyApp.AppContext",
                     Location.None))));
 
-        var result = new GeneratorValidationPhase().Validate(analysis, extraction, new DiagnosticsCatalog());
+        var result = new GeneratorValidationPhase().Validate(
+            analysis.Compilation,
+            analysis.HostBootstrap,
+            extraction,
+            new DiagnosticsCatalog());
 
         Assert.Same(discovery, result.Context.DiscoveryResult);
         Assert.True(result.Context.IsHostProject);
@@ -66,7 +70,11 @@ public sealed class GeneratorValidationPhaseTests
                 ExpectedContextFqn: string.Empty,
                 UseTinyDispatcherCalls: ImmutableArray<UseTinyDispatcherCall>.Empty));
 
-        var result = new GeneratorValidationPhase().Validate(analysis, extraction, new DiagnosticsCatalog());
+        var result = new GeneratorValidationPhase().Validate(
+            analysis.Compilation,
+            analysis.HostBootstrap,
+            extraction,
+            new DiagnosticsCatalog());
 
         Assert.False(result.Context.IsHostProject);
         Assert.Equal(string.Empty, result.Context.ExpectedContextFqn);
