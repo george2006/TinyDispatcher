@@ -25,12 +25,11 @@ internal sealed class PipelineConfigExtractor
 
         for (var i = 0; i < useTinyCallsSyntax.Length; i++)
         {
-            _invocationExtractor.Extract(
-                useTinyCallsSyntax[i],
-                compilation,
-                globalEntries,
-                perCommandEntries,
-                policyTypeSymbols);
+            var contributions = _invocationExtractor.Extract(useTinyCallsSyntax[i], compilation);
+
+            globalEntries.AddRange(contributions.Globals);
+            perCommandEntries.AddRange(contributions.PerCommand);
+            policyTypeSymbols.AddRange(contributions.Policies);
         }
 
         return new PipelineConfig(

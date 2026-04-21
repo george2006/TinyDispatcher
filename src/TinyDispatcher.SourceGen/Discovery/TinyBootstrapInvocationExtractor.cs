@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System.Collections.Immutable;
+using TinyDispatcher.SourceGen.Generator.Extraction;
 using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen.Discovery;
@@ -15,16 +17,17 @@ internal sealed class TinyBootstrapInvocationExtractor
     private const string UsePolicyMethodName = "UsePolicy";
     private const string UseTinyPolicyMethodName = "UseTinyPolicy";
 
-    public void Extract(
+    public BootstrapPipelineContributions Extract(
         InvocationExpressionSyntax useTinyCall,
-        Compilation compilation,
-        List<OrderedEntry> globals,
-        List<OrderedPerCommandEntry> perCmd,
-        List<INamedTypeSymbol> policies)
+        Compilation compilation)
     {
+        var globals = new List<OrderedEntry>();
+        var perCommand = new List<OrderedPerCommandEntry>();
+        var policies = new List<INamedTypeSymbol>();
+
         if (useTinyCall.ArgumentList is null)
         {
-            return;
+            return BuildResult(globals, perCommand, policies);
         }
 
         var model = compilation.GetSemanticModel(useTinyCall.SyntaxTree);
@@ -32,7 +35,7 @@ internal sealed class TinyBootstrapInvocationExtractor
         var lambda = SelectBootstrapLambda(useTinyCall, model);
         if (lambda is null)
         {
-            return;
+            return BuildResult(globals, perCommand, policies);
         }
 
         var invocations = GetBootstrapInvocations(lambda);
@@ -43,9 +46,22 @@ internal sealed class TinyBootstrapInvocationExtractor
                 invocations[i],
                 model,
                 globals,
-                perCmd,
+                perCommand,
                 policies);
         }
+
+        return BuildResult(globals, perCommand, policies);
+    }
+
+    private static BootstrapPipelineContributions BuildResult(
+        List<OrderedEntry> globals,
+        List<OrderedPerCommandEntry> perCommand,
+        List<INamedTypeSymbol> policies)
+    {
+        return new BootstrapPipelineContributions(
+            Globals: globals.ToImmutableArray(),
+            PerCommand: perCommand.ToImmutableArray(),
+            Policies: policies.ToImmutableArray());
     }
 
     private static List<InvocationExpressionSyntax> GetBootstrapInvocations(LambdaExpressionSyntax lambda)
