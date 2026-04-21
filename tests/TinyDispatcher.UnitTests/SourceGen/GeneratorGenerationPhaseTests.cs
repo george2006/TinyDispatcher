@@ -8,6 +8,7 @@ using TinyDispatcher.SourceGen;
 using TinyDispatcher.SourceGen.Diagnostics;
 using TinyDispatcher.SourceGen.Generator.Generation;
 using TinyDispatcher.SourceGen.Generator.Models;
+using TinyDispatcher.SourceGen.Generator.Options;
 using TinyDispatcher.SourceGen.Validation;
 using Xunit;
 

@@ -5,6 +5,7 @@ using TinyDispatcher.SourceGen;
 using TinyDispatcher.SourceGen.Emitters.PipelineMaps;
 using TinyDispatcher.SourceGen.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
+using TinyDispatcher.SourceGen.Generator.Options;
 using Xunit;
 
 namespace TinyDispatcher.UnitTests.SourceGen.PipelineMaps;
