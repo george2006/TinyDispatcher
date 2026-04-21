@@ -33,7 +33,7 @@ public sealed class PipelinePlannerTests
 
         var options = FakeOptions("MyApp.Generated", "global::MyApp.AppContext");
 
-        var plan = PipelinePlanner.Build(global, perCommand, policies, discovery, options);
+        var plan = PipelinePlanner.Build(Contributions(global, perCommand, policies), discovery, options);
 
         Assert.True(plan.ShouldEmit);
         Assert.NotNull(plan.GlobalPipeline);
@@ -69,7 +69,7 @@ public sealed class PipelinePlannerTests
         var discovery = FakeDiscovery("global::MyApp.CmdA", "global::MyApp.CmdB");
         var options = FakeOptions("MyApp.Generated", "global::MyApp.AppContext");
 
-        var plan = PipelinePlanner.Build(global, perCommand, policies, discovery, options);
+        var plan = PipelinePlanner.Build(Contributions(global, perCommand, policies), discovery, options);
 
         Assert.True(plan.ShouldEmit);
         Assert.Null(plan.GlobalPipeline);
@@ -104,7 +104,7 @@ public sealed class PipelinePlannerTests
         var discovery = FakeDiscovery("global::MyApp.CmdA");
         var options = FakeOptions("MyApp.Generated", "global::MyApp.AppContext");
 
-        var plan = PipelinePlanner.Build(global, perCommand, policies, discovery, options);
+        var plan = PipelinePlanner.Build(Contributions(global, perCommand, policies), discovery, options);
 
         Assert.Single(plan.PolicyPipelines);
         AssertStepNames(
@@ -133,7 +133,7 @@ public sealed class PipelinePlannerTests
         var discovery = FakeDiscovery("global::MyApp.CmdA");
         var options = FakeOptions("MyApp.Generated", "global::MyApp.AppContext");
 
-        var plan = PipelinePlanner.Build(global, perCommand, policies, discovery, options);
+        var plan = PipelinePlanner.Build(Contributions(global, perCommand, policies), discovery, options);
 
         Assert.Single(plan.PerCommandPipelines);
 
@@ -165,7 +165,7 @@ public sealed class PipelinePlannerTests
         var discovery = FakeDiscovery("global::MyApp.CmdA");
         var options = FakeOptions("MyApp.Generated", "global::MyApp.AppContext");
 
-        var plan = PipelinePlanner.Build(global, perCommand, policies, discovery, options);
+        var plan = PipelinePlanner.Build(Contributions(global, perCommand, policies), discovery, options);
 
         var reg = plan.ServiceRegistrations.Single(r =>
             r.ServiceTypeExpression.Contains("ICommandPipeline<global::MyApp.CmdA", StringComparison.Ordinal));
@@ -191,6 +191,14 @@ public sealed class PipelinePlannerTests
                 .Select(fqn => new HandlerContract(MessageTypeFqn: fqn, HandlerTypeFqn: "global::MyApp.DummyHandler"))
                 .ToImmutableArray(),
             Queries: ImmutableArray<QueryHandlerContract>.Empty);
+
+    private static PipelineContributions Contributions(
+        ImmutableArray<MiddlewareRef> globals,
+        ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> perCommand,
+        ImmutableDictionary<string, PolicySpec> policies)
+    {
+        return PipelineContributions.Create(globals, perCommand, policies);
+    }
 
     private static void AssertStepNames(ImmutableArray<MiddlewareStep> steps, params string[] expected)
     {

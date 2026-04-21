@@ -13,8 +13,8 @@ internal static class PipelineRegistrationPlanner
         string contextTypeFqn,
         bool hasGlobal,
         DiscoveryResult discovery,
-        Dictionary<string, MiddlewareRef[]> perCommand,
-        ImmutableDictionary<string, PolicySpec> policies)
+        IReadOnlyDictionary<string, MiddlewareRef[]> perCommand,
+        PipelinePolicyContribution[] policies)
     {
         var perCommandSet = new HashSet<string>(perCommand.Keys, StringComparer.Ordinal);
         var commandToPolicyPipeline = BuildCommandToPolicyPipelineNames(generatedNamespace, policies);
@@ -30,54 +30,27 @@ internal static class PipelineRegistrationPlanner
 
     private static Dictionary<string, string> BuildCommandToPolicyPipelineNames(
         string generatedNamespace,
-        ImmutableDictionary<string, PolicySpec> policies)
+        PipelinePolicyContribution[] policies)
     {
         var map = new Dictionary<string, string>(StringComparer.Ordinal);
-        var orderedPolicies = PipelinePolicyOrdering.GetPoliciesInStableOrder(policies);
 
-        for (var i = 0; i < orderedPolicies.Length; i++)
+        for (var i = 0; i < policies.Length; i++)
         {
-            var policy = orderedPolicies[i];
+            var policy = policies[i];
             var pipelineName = GetPolicyPipelineTypeName(generatedNamespace, policy);
 
-            AddPolicyPipelineNamesByCommand(map, policy, pipelineName);
+            PipelinePolicyCommandMap.AddFirstPolicyWins(map, policy.Commands, pipelineName);
         }
 
         return map;
     }
 
-    private static string GetPolicyPipelineTypeName(string generatedNamespace, PolicySpec policy)
+    private static string GetPolicyPipelineTypeName(string generatedNamespace, PipelinePolicyContribution policy)
     {
         return "global::" +
             generatedNamespace +
             ".TinyDispatcherPolicyPipeline_" +
             PipelineNameFactory.SanitizePolicyName(policy.PolicyTypeFqn);
-    }
-
-    private static void AddPolicyPipelineNamesByCommand(
-        Dictionary<string, string> map,
-        PolicySpec policy,
-        string pipelineName)
-    {
-        for (var commandIndex = 0; commandIndex < policy.Commands.Length; commandIndex++)
-        {
-            var command = PipelineTypeNames.NormalizeFqn(policy.Commands[commandIndex]);
-            var commandIsMissing = string.IsNullOrWhiteSpace(command);
-
-            if (commandIsMissing)
-            {
-                continue;
-            }
-
-            var commandAlreadyHasPolicy = map.ContainsKey(command);
-
-            if (commandAlreadyHasPolicy)
-            {
-                continue;
-            }
-
-            map[command] = pipelineName;
-        }
     }
 
     private static void AddPerCommandRegistrations(
@@ -87,7 +60,7 @@ internal static class PipelineRegistrationPlanner
         string contextTypeFqn,
         HashSet<string> perCommandSet)
     {
-        var orderedCommands = GetKeysInStableOrder(perCommandSet);
+        var orderedCommands = PipelineOrdering.GetStringsInStableOrder(perCommandSet);
 
         for (var i = 0; i < orderedCommands.Length; i++)
         {
@@ -107,7 +80,7 @@ internal static class PipelineRegistrationPlanner
         HashSet<string> policyCommandSet,
         Dictionary<string, string> commandToPolicyPipeline)
     {
-        var orderedCommands = GetKeysInStableOrder(policyCommandSet);
+        var orderedCommands = PipelineOrdering.GetStringsInStableOrder(policyCommandSet);
 
         for (var i = 0; i < orderedCommands.Length; i++)
         {
@@ -190,27 +163,4 @@ internal static class PipelineRegistrationPlanner
             ImplementationTypeExpression: $"global::{generatedNamespace}.TinyDispatcherGlobalPipeline<{command}>"));
     }
 
-    private static string[] GetKeysInStableOrder(IEnumerable<string> keys)
-    {
-        var ordered = new List<string>();
-        foreach (var key in keys)
-        {
-            ordered.Add(key);
-        }
-
-        ordered.Sort(StringComparer.Ordinal);
-        return CopyStringsToArray(ordered);
-    }
-
-    private static string[] CopyStringsToArray(List<string> values)
-    {
-        var result = new string[values.Count];
-
-        for (var i = 0; i < values.Count; i++)
-        {
-            result[i] = values[i];
-        }
-
-        return result;
-    }
 }

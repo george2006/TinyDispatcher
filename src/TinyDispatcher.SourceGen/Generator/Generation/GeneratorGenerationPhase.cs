@@ -21,34 +21,45 @@ internal sealed class GeneratorGenerationPhase
         var validationContext = validation.Context;
         var emitOptions = BuildEmitOptions(analysis, validationContext);
         var shouldEmitPipelines = ShouldEmitPipelines(validationContext);
+        var pipelineContributions = PipelineContributions.Create(validationContext.Pipeline);
 
-        new ModuleInitializerEmitter().Emit(
-            context,
+        var moduleInitializerPlan = ModuleInitializerPlanner.Build(
             extraction.Discovery,
             emitOptions,
             hasPipelineContributions: shouldEmitPipelines);
-        new EmptyPipelineContributionEmitter().Emit(context, extraction.Discovery, emitOptions);
-        new HandlerRegistrationsEmitter().Emit(context, extraction.Discovery, emitOptions);
 
-        if (emitOptions.EmitPipelineMap)
-        {
-            new PipelineMapsEmitter(
-                    validationContext.Globals,
-                    validationContext.PerCommand,
-                    validationContext.Policies)
-                .Emit(context, extraction.Discovery, emitOptions);
-        }
+        new ModuleInitializerEmitter().Emit(context, moduleInitializerPlan);
+        new EmptyPipelineContributionEmitter().Emit(context, emitOptions);
+
+        var handlerRegistrationsPlan = HandlerRegistrationsPlanner.Build(
+            extraction.Discovery,
+            emitOptions);
+
+        new HandlerRegistrationsEmitter().Emit(context, handlerRegistrationsPlan);
+
+        var pipelineMapsPlan = PipelineMapsPlanner.Build(
+            extraction.Discovery,
+            pipelineContributions,
+            emitOptions);
+
+        new PipelineMapsEmitter().Emit(context, pipelineMapsPlan);
 
         if (!shouldEmitPipelines)
         {
             return;
         }
 
-        new PipelineEmitter(
-                validationContext.Globals,
-                validationContext.PerCommand,
-                validationContext.Policies)
-            .Emit(context, extraction.Discovery, emitOptions);
+        var pipelinePlan = PipelinePlanner.Build(
+                pipelineContributions,
+                extraction.Discovery,
+                emitOptions);
+
+        if (!pipelinePlan.ShouldEmit)
+        {
+            return;
+        }
+
+        new PipelineEmitter().Emit(context, pipelinePlan);
     }
 
     private static GeneratorOptions BuildEmitOptions(
@@ -84,13 +95,13 @@ internal sealed class GeneratorGenerationPhase
             return false;
         }
 
-        return HasAnyPipelineContributions(validationContext);
+        return HasAnyPipelineContributions(validationContext.Pipeline);
     }
 
-    private static bool HasAnyPipelineContributions(GeneratorValidationContext validationContext)
+    private static bool HasAnyPipelineContributions(PipelineConfig pipeline)
     {
-        return validationContext.Globals.Length > 0 ||
-               validationContext.PerCommand.Count > 0 ||
-               validationContext.Policies.Count > 0;
+        return pipeline.Globals.Length > 0 ||
+               pipeline.PerCommand.Count > 0 ||
+               pipeline.Policies.Count > 0;
     }
 }

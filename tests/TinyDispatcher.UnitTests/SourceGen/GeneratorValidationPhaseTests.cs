@@ -22,9 +22,10 @@ public sealed class GeneratorValidationPhaseTests
         var discovery = EmptyDiscovery();
         var extraction = new GeneratorExtraction(
             discovery,
-            ImmutableArray<MiddlewareRef>.Empty,
-            ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
-            ImmutableDictionary<string, PolicySpec>.Empty,
+            new PipelineConfig(
+                ImmutableArray<MiddlewareRef>.Empty,
+                ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
+                ImmutableDictionary<string, PolicySpec>.Empty),
             ImmutableArray.Create(new UseTinyDispatcherCall(
                 "global::MyApp.AppContext",
                 Location.None)));
@@ -49,9 +50,10 @@ public sealed class GeneratorValidationPhaseTests
     {
         var extraction = new GeneratorExtraction(
             EmptyDiscovery(),
-            ImmutableArray<MiddlewareRef>.Empty,
-            ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
-            ImmutableDictionary<string, PolicySpec>.Empty,
+            new PipelineConfig(
+                ImmutableArray<MiddlewareRef>.Empty,
+                ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
+                ImmutableDictionary<string, PolicySpec>.Empty),
             ImmutableArray<UseTinyDispatcherCall>.Empty);
 
         var analysis = new GeneratorAnalysis(

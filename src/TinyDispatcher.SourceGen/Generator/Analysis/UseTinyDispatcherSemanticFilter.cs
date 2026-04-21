@@ -98,8 +98,7 @@ internal sealed class UseTinyDispatcherSemanticFilter
             return false;
         }
 
-        var firstParameterType = Fqn.EnsureGlobal(
-            method.Parameters[0].Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+        var firstParameterType = Fqn.FromType(method.Parameters[0].Type);
 
         return string.Equals(firstParameterType, ServiceCollectionFqn, StringComparison.Ordinal);
     }

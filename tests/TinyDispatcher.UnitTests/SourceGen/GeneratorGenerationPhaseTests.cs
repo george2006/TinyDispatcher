@@ -22,14 +22,15 @@ public sealed class GeneratorGenerationPhaseTests
         var discovery = EmptyDiscovery();
         var extraction = new GeneratorExtraction(
             discovery,
-            ImmutableArray<MiddlewareRef>.Empty,
-            ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
-            ImmutableDictionary<string, PolicySpec>.Empty.Add(
-                "global::MyApp.Policy",
-                new PolicySpec(
+            new PipelineConfig(
+                ImmutableArray<MiddlewareRef>.Empty,
+                ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
+                ImmutableDictionary<string, PolicySpec>.Empty.Add(
                     "global::MyApp.Policy",
-                    ImmutableArray<MiddlewareRef>.Empty,
-                    ImmutableArray<string>.Empty)),
+                    new PolicySpec(
+                        "global::MyApp.Policy",
+                        ImmutableArray<MiddlewareRef>.Empty,
+                        ImmutableArray<string>.Empty))),
             ImmutableArray<UseTinyDispatcherCall>.Empty);
 
         var analysis = new GeneratorAnalysis(
@@ -46,10 +47,7 @@ public sealed class GeneratorGenerationPhaseTests
                     ImmutableArray<InvocationExpressionSyntax>.Empty,
                     isHost: false)
                 .WithExpectedContext("global::MyApp.AppContext")
-                .WithPipelineConfig(
-                    extraction.Globals,
-                    extraction.PerCommand,
-                    extraction.Policies)
+                .WithPipelineConfig(extraction.Pipeline)
                 .Build(),
             Diagnostics: new DiagnosticBag());
 

@@ -25,9 +25,10 @@ internal sealed class GeneratorValidationContext
 
         ExpectedContextFqn = b.ExpectedContextFqn ?? string.Empty;
 
-        Globals = b.Globals;
-        PerCommand = b.PerCommand ?? ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty;
-        Policies = b.Policies ?? ImmutableDictionary<string, PolicySpec>.Empty;
+        Pipeline = b.Pipeline ?? new PipelineConfig(
+            ImmutableArray<MiddlewareRef>.Empty,
+            ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
+            ImmutableDictionary<string, PolicySpec>.Empty);
 
         // Resolver cache (optional)
         _middlewareSymbolCache = b.MiddlewareSymbolCache;
@@ -46,9 +47,10 @@ internal sealed class GeneratorValidationContext
     public string ExpectedContextFqn { get; }
 
     // Pipeline config
-    public ImmutableArray<MiddlewareRef> Globals { get; }
-    public ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> PerCommand { get; }
-    public ImmutableDictionary<string, PolicySpec> Policies { get; }
+    public PipelineConfig Pipeline { get; }
+    public ImmutableArray<MiddlewareRef> Globals => Pipeline.Globals;
+    public ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> PerCommand => Pipeline.PerCommand;
+    public ImmutableDictionary<string, PolicySpec> Policies => Pipeline.Policies;
 
     private readonly ImmutableDictionary<string, INamedTypeSymbol>? _middlewareSymbolCache;
 
@@ -115,12 +117,7 @@ internal sealed class GeneratorValidationContext
 
         public string? ExpectedContextFqn { get; private set; }
 
-        public ImmutableArray<MiddlewareRef> Globals { get; private set; } =
-            ImmutableArray<MiddlewareRef>.Empty;
-
-        public ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>? PerCommand { get; private set; }
-
-        public ImmutableDictionary<string, PolicySpec>? Policies { get; private set; }
+        public PipelineConfig? Pipeline { get; private set; }
 
         public ImmutableDictionary<string, INamedTypeSymbol>? MiddlewareSymbolCache { get; private set; }
 
@@ -143,14 +140,9 @@ internal sealed class GeneratorValidationContext
             return this;
         }
 
-        public Builder WithPipelineConfig(
-            ImmutableArray<MiddlewareRef> globals,
-            ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> perCommand,
-            ImmutableDictionary<string, PolicySpec> policies)
+        public Builder WithPipelineConfig(PipelineConfig pipeline)
         {
-            Globals = globals;
-            PerCommand = perCommand;
-            Policies = policies;
+            Pipeline = pipeline;
             return this;
         }
 

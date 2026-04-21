@@ -41,9 +41,7 @@ internal sealed class GeneratorExtractionPhase
 
         return new GeneratorExtraction(
             discovery,
-            pipeline.Globals,
-            pipeline.PerCommand,
-            pipeline.Policies,
+            pipeline,
             useTinyDispatcherCalls);
     }
 
@@ -60,7 +58,7 @@ internal sealed class GeneratorExtractionPhase
         return handlerDiscovery.Discover(compilation, handlerSymbols);
     }
 
-    private PipelineExtraction ExtractPipelines(
+    private PipelineConfig ExtractPipelines(
         Compilation compilation,
         ImmutableArray<InvocationExpressionSyntax> useTinyCallsSyntax)
     {
@@ -78,14 +76,9 @@ internal sealed class GeneratorExtractionPhase
                 policyTypeSymbols);
         }
 
-        return new PipelineExtraction(
+        return new PipelineConfig(
             _ordering.OrderAndDistinctGlobals(globalEntries),
             _ordering.BuildPerCommandMap(perCommandEntries),
             _policyBuilder.Build(policyTypeSymbols));
     }
-
-    private sealed record PipelineExtraction(
-        ImmutableArray<MiddlewareRef> Globals,
-        ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> PerCommand,
-        ImmutableDictionary<string, PolicySpec> Policies);
 }

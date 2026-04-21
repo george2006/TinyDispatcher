@@ -17,14 +17,6 @@ namespace TinyDispatcher.SourceGen.Abstractions
     }
 
     // ---------------------------------------------------------------------
-    // Emitter abstraction (ModuleInitializerEmitter, ContributionEmitter, etc.)
-    // ---------------------------------------------------------------------
-    internal interface ICodeEmitter
-    {
-        void Emit(IGeneratorContext context, DiscoveryResult result, GeneratorOptions options);
-    }
-
-    // ---------------------------------------------------------------------
     // Handler discovery abstraction (RoslynHandlerDiscovery implements this)
     // ---------------------------------------------------------------------
     internal interface IHandlerDiscovery

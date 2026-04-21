@@ -3,6 +3,7 @@
 using System.Collections.Immutable;
 using TinyDispatcher.SourceGen;
 using TinyDispatcher.SourceGen.Emitters.PipelineMaps;
+using TinyDispatcher.SourceGen.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 using Xunit;
 
@@ -18,7 +19,8 @@ public sealed class PipelineMapInspectorTests
         var policies = CreatePoliciesInReverseInsertionOrder();
         var options = FakeOptions();
 
-        var sut = new PipelineMapInspector(globals, perCommand, policies, options);
+        var contributions = PipelineContributions.Create(globals, perCommand, policies);
+        var sut = new PipelineMapInspector(contributions, options);
 
         var descriptor = sut.InspectCommand(new HandlerContract(
             MessageTypeFqn: "global::MyApp.Commands.Checkout",
