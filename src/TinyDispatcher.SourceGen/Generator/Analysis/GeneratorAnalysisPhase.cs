@@ -8,7 +8,7 @@ using System.Collections.Immutable;
 using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Internal;
 
-namespace TinyDispatcher.SourceGen.Generator;
+namespace TinyDispatcher.SourceGen.Generator.Analysis;
 
 internal static class GeneratorAnalysisPhase
 {

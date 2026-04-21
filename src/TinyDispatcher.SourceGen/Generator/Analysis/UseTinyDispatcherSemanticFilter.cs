@@ -6,7 +6,7 @@ using System;
 using System.Collections.Immutable;
 using TinyDispatcher.SourceGen.Generator.Models;
 
-namespace TinyDispatcher.SourceGen.Generator;
+namespace TinyDispatcher.SourceGen.Generator.Analysis;
 
 internal sealed class UseTinyDispatcherSemanticFilter
 {

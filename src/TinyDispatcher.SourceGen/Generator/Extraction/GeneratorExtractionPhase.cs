@@ -5,9 +5,10 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using TinyDispatcher.SourceGen.Discovery;
+using TinyDispatcher.SourceGen.Generator.Analysis;
 using TinyDispatcher.SourceGen.Generator.Models;
 
-namespace TinyDispatcher.SourceGen.Generator;
+namespace TinyDispatcher.SourceGen.Generator.Extraction;
 
 internal sealed class GeneratorExtractionPhase
 {

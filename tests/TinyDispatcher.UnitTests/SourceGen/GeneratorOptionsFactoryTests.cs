@@ -1,7 +1,7 @@
 #nullable enable
 
 using Microsoft.CodeAnalysis.CSharp;
-using TinyDispatcher.SourceGen.Generator;
+using TinyDispatcher.SourceGen.Generator.Analysis;
 using TinyDispatcher.SourceGen.Internal;
 using Xunit;
 

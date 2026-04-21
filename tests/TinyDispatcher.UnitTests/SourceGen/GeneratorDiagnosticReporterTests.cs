@@ -1,8 +1,8 @@
 #nullable enable
 
 using Microsoft.CodeAnalysis;
-using TinyDispatcher.SourceGen.Generator;
 using TinyDispatcher.SourceGen.Validation;
+using TinyDispatcher.SourceGen.Generator.Validation;
 using Xunit;
 
 namespace TinyDispatcher.UnitTests.SourceGen;

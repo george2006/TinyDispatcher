@@ -6,8 +6,8 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using TinyDispatcher.SourceGen;
 using TinyDispatcher.SourceGen.Diagnostics;
-using TinyDispatcher.SourceGen.Generator;
 using TinyDispatcher.SourceGen.Generator.Models;
+using TinyDispatcher.SourceGen.Generator.Validation;
 using Xunit;
 
 namespace TinyDispatcher.UnitTests.SourceGen;
