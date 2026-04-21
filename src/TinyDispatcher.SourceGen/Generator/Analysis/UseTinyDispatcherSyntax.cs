@@ -1,9 +1,7 @@
 ﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace TinyDispatcher.SourceGen.Generator;
+namespace TinyDispatcher.SourceGen.Generator.Analysis;
 
 internal sealed class UseTinyDispatcherSyntax
 {

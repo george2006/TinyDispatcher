@@ -1,11 +1,9 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using TinyDispatcher.SourceGen.Internal;
 
-namespace TinyDispatcher.SourceGen.Generator;
+namespace TinyDispatcher.SourceGen.Generator.Analysis;
 
 internal sealed class GeneratorOptionsFactory
 {

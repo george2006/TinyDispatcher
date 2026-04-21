@@ -2,7 +2,7 @@
 
 using TinyDispatcher.SourceGen.Validation;
 
-namespace TinyDispatcher.SourceGen.Generator;
+namespace TinyDispatcher.SourceGen.Generator.Validation;
 
 internal static class GeneratorValidator
 {

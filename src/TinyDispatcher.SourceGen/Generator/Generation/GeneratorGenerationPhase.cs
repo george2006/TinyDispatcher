@@ -8,7 +8,7 @@ using TinyDispatcher.SourceGen.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Validation;
 
-namespace TinyDispatcher.SourceGen.Generator;
+namespace TinyDispatcher.SourceGen.Generator.Generation;
 
 internal sealed class GeneratorGenerationPhase
 {

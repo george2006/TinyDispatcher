@@ -4,7 +4,7 @@ using TinyDispatcher.SourceGen.Diagnostics;
 using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Validation;
 
-namespace TinyDispatcher.SourceGen.Generator;
+namespace TinyDispatcher.SourceGen.Generator.Validation;
 
 internal sealed class GeneratorValidationPhase
 {
