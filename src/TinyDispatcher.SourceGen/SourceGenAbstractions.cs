@@ -1,9 +1,7 @@
 ﻿#nullable enable
 
-using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
-using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen.Abstractions
 {
@@ -14,13 +12,5 @@ namespace TinyDispatcher.SourceGen.Abstractions
     {
         void AddSource(string hintName, SourceText sourceText);
         void ReportDiagnostic(Diagnostic diagnostic);
-    }
-
-    // ---------------------------------------------------------------------
-    // Handler discovery abstraction (RoslynHandlerDiscovery implements this)
-    // ---------------------------------------------------------------------
-    internal interface IHandlerDiscovery
-    {
-        DiscoveryResult Discover(Compilation compilation, ImmutableArray<INamedTypeSymbol> candidates);
     }
 }
