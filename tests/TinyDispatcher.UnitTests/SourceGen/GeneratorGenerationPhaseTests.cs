@@ -52,7 +52,11 @@ public sealed class GeneratorGenerationPhaseTests
                 .Build(),
             Diagnostics: new DiagnosticBag());
 
-        new GeneratorGenerationPhase().Generate(context, analysis, extraction, validation);
+        new GeneratorGenerationPhase().Generate(
+            context,
+            analysis.EffectiveOptions,
+            extraction,
+            validation);
 
         Assert.DoesNotContain(
             context.Sources,

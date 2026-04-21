@@ -32,6 +32,6 @@ internal sealed class GeneratorPipeline
             return;
         }
 
-        _generationPhase.Generate(context, analysis, extraction, validation);
+        _generationPhase.Generate(context, analysis.EffectiveOptions, extraction, validation);
     }
 }
