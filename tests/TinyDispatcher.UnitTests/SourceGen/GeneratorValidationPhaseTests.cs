@@ -25,22 +25,26 @@ public sealed class GeneratorValidationPhaseTests
             new PipelineConfig(
                 ImmutableArray<MiddlewareRef>.Empty,
                 ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
-                ImmutableDictionary<string, PolicySpec>.Empty),
-            ImmutableArray.Create(new UseTinyDispatcherCall(
-                "global::MyApp.AppContext",
-                Location.None)));
+                ImmutableDictionary<string, PolicySpec>.Empty));
 
         var analysis = new GeneratorAnalysis(
-            Compilation: compilation,
-            UseTinyCallsSyntax: ImmutableArray.Create(invocation),
-            EffectiveOptions: Options(commandContextType: "MyApp.AppContext"));
+            EffectiveOptions: Options(commandContextType: "MyApp.AppContext"),
+            HostBootstrap: new HostBootstrapInfo(
+                IsHostProject: true,
+                ExpectedContextFqn: "global::MyApp.AppContext",
+                UseTinyDispatcherCalls: ImmutableArray.Create(new UseTinyDispatcherCall(
+                    "global::MyApp.AppContext",
+                    Location.None))));
 
-        var result = new GeneratorValidationPhase().Validate(analysis, extraction, new DiagnosticsCatalog());
+        var result = new GeneratorValidationPhase().Validate(
+            compilation,
+            analysis.HostBootstrap,
+            extraction,
+            new DiagnosticsCatalog());
 
         Assert.Same(discovery, result.Context.DiscoveryResult);
         Assert.True(result.Context.IsHostProject);
         Assert.Equal("global::MyApp.AppContext", result.Context.ExpectedContextFqn);
-        Assert.Single(result.Context.UseTinyCallsSyntax);
         Assert.Single(result.Context.UseTinyDispatcherCalls);
         Assert.Empty(result.Diagnostics.ToImmutable());
     }
@@ -48,24 +52,29 @@ public sealed class GeneratorValidationPhaseTests
     [Fact]
     public void Validate_marks_project_as_non_host_when_no_UseTinyDispatcher_calls_exist()
     {
+        var compilation = CreateCompilation();
         var extraction = new GeneratorExtraction(
             EmptyDiscovery(),
             new PipelineConfig(
                 ImmutableArray<MiddlewareRef>.Empty,
                 ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
-                ImmutableDictionary<string, PolicySpec>.Empty),
-            ImmutableArray<UseTinyDispatcherCall>.Empty);
+                ImmutableDictionary<string, PolicySpec>.Empty));
 
         var analysis = new GeneratorAnalysis(
-            Compilation: CreateCompilation(),
-            UseTinyCallsSyntax: ImmutableArray<InvocationExpressionSyntax>.Empty,
-            EffectiveOptions: Options(commandContextType: null));
+            EffectiveOptions: Options(commandContextType: null),
+            HostBootstrap: new HostBootstrapInfo(
+                IsHostProject: false,
+                ExpectedContextFqn: string.Empty,
+                UseTinyDispatcherCalls: ImmutableArray<UseTinyDispatcherCall>.Empty));
 
-        var result = new GeneratorValidationPhase().Validate(analysis, extraction, new DiagnosticsCatalog());
+        var result = new GeneratorValidationPhase().Validate(
+            compilation,
+            analysis.HostBootstrap,
+            extraction,
+            new DiagnosticsCatalog());
 
         Assert.False(result.Context.IsHostProject);
         Assert.Equal(string.Empty, result.Context.ExpectedContextFqn);
-        Assert.Empty(result.Context.UseTinyCallsSyntax);
         Assert.Empty(result.Context.UseTinyDispatcherCalls);
         Assert.Empty(result.Diagnostics.ToImmutable());
     }

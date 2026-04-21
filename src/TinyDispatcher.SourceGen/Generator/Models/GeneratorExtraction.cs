@@ -4,5 +4,4 @@ namespace TinyDispatcher.SourceGen.Generator.Models;
 
 internal sealed record GeneratorExtraction(
     DiscoveryResult Discovery,
-    PipelineConfig Pipeline,
-    ImmutableArray<UseTinyDispatcherCall> UseTinyDispatcherCalls);
+    PipelineConfig Pipeline);

@@ -12,7 +12,7 @@ namespace TinyDispatcher.SourceGen.Generator.Analysis;
 
 internal static class GeneratorAnalysisPhase
 {
-    public static GeneratorAnalysis Analyze(
+    public static GeneratorAnalysisResult Analyze(
         Compilation compilation,
         ImmutableArray<InvocationExpressionSyntax> useTinyCallsSyntax,
         AnalyzerConfigOptionsProvider optionsProvider)
@@ -20,21 +20,32 @@ internal static class GeneratorAnalysisPhase
         GuardInputs(compilation);
 
         var contextInference = new ContextInference();
+        var bootstrapLambdaExtractor = new BootstrapLambdaExtractor();
         var semanticFilter = new UseTinyDispatcherSemanticFilter();
         var optionsFactory = new GeneratorOptionsFactory(new OptionsProvider());
         var confirmedUseTinyCallsSyntax = semanticFilter.Filter(compilation, useTinyCallsSyntax);
+        var confirmedBootstrapLambdas =
+            bootstrapLambdaExtractor.Extract(compilation, confirmedUseTinyCallsSyntax);
+        var useTinyDispatcherCalls =
+            contextInference.ResolveAllUseTinyDispatcherContexts(confirmedUseTinyCallsSyntax, compilation);
 
         var effectiveOptions = ResolveEffectiveOptions(
             compilation,
             optionsProvider,
-            confirmedUseTinyCallsSyntax,
+            useTinyDispatcherCalls,
             contextInference,
             optionsFactory);
 
-        return new GeneratorAnalysis(
-            Compilation: compilation,
-            UseTinyCallsSyntax: confirmedUseTinyCallsSyntax,
-            EffectiveOptions: effectiveOptions);
+        var hostBootstrap = BuildHostBootstrapInfo(
+            confirmedUseTinyCallsSyntax,
+            effectiveOptions,
+            useTinyDispatcherCalls);
+
+        return new GeneratorAnalysisResult(
+            Analysis: new GeneratorAnalysis(
+                EffectiveOptions: effectiveOptions,
+                HostBootstrap: hostBootstrap),
+            ConfirmedBootstrapLambdas: confirmedBootstrapLambdas);
     }
 
     private static void GuardInputs(Compilation compilation)
@@ -48,15 +59,35 @@ internal static class GeneratorAnalysisPhase
     private static GeneratorOptions ResolveEffectiveOptions(
         Compilation compilation,
         AnalyzerConfigOptionsProvider optionsProvider,
-        ImmutableArray<InvocationExpressionSyntax> useTinyCallsSyntax,
+        ImmutableArray<UseTinyDispatcherCall> useTinyDispatcherCalls,
         ContextInference contextInference,
         GeneratorOptionsFactory optionsFactory)
     {
         var baseOptions = optionsFactory.Create(compilation, optionsProvider);
 
-        var inferredContextFqn =
-            contextInference.TryInferContextTypeFromUseTinyCalls(useTinyCallsSyntax, compilation);
+        var inferredContextFqn = contextInference.TryInferContextTypeFromResolvedCalls(useTinyDispatcherCalls);
 
         return optionsFactory.ApplyInferredContextIfMissing(baseOptions, inferredContextFqn);
+    }
+
+    private static HostBootstrapInfo BuildHostBootstrapInfo(
+        ImmutableArray<InvocationExpressionSyntax> useTinyCallsSyntax,
+        GeneratorOptions effectiveOptions,
+        ImmutableArray<UseTinyDispatcherCall> useTinyDispatcherCalls)
+    {
+        return new HostBootstrapInfo(
+            IsHostProject: useTinyCallsSyntax.Length > 0,
+            ExpectedContextFqn: GetExpectedContextFqn(effectiveOptions),
+            UseTinyDispatcherCalls: useTinyDispatcherCalls);
+    }
+
+    private static string GetExpectedContextFqn(GeneratorOptions options)
+    {
+        if (string.IsNullOrWhiteSpace(options.CommandContextType))
+        {
+            return string.Empty;
+        }
+
+        return Fqn.EnsureGlobal(options.CommandContextType!);
     }
 }

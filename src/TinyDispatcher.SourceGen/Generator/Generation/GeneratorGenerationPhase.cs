@@ -14,12 +14,12 @@ internal sealed class GeneratorGenerationPhase
 {
     public void Generate(
         IGeneratorContext context,
-        GeneratorAnalysis analysis,
+        GeneratorOptions options,
         GeneratorExtraction extraction,
         GeneratorValidationResult validation)
     {
         var validationContext = validation.Context;
-        var emitOptions = BuildEmitOptions(analysis, validationContext);
+        var emitOptions = BuildEmitOptions(options, validationContext);
         var shouldEmitPipelines = ShouldEmitPipelines(validationContext);
         var pipelineContributions = PipelineContributions.Create(validationContext.Pipeline);
 
@@ -63,15 +63,13 @@ internal sealed class GeneratorGenerationPhase
     }
 
     private static GeneratorOptions BuildEmitOptions(
-        GeneratorAnalysis analysis,
+        GeneratorOptions options,
         GeneratorValidationContext validationContext)
     {
         if (string.IsNullOrWhiteSpace(validationContext.ExpectedContextFqn))
         {
-            return analysis.EffectiveOptions;
+            return options;
         }
-
-        var options = analysis.EffectiveOptions;
 
         return new GeneratorOptions(
             GeneratedNamespace: options.GeneratedNamespace,

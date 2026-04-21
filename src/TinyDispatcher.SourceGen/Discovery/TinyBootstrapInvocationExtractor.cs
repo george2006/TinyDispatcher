@@ -2,8 +2,10 @@
 
 using System;
 using System.Collections.Generic;
-using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System.Collections.Immutable;
+using Microsoft.CodeAnalysis;
+using TinyDispatcher.SourceGen.Generator.Extraction;
 using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen.Discovery;
@@ -15,27 +17,13 @@ internal sealed class TinyBootstrapInvocationExtractor
     private const string UsePolicyMethodName = "UsePolicy";
     private const string UseTinyPolicyMethodName = "UseTinyPolicy";
 
-    public void Extract(
-        InvocationExpressionSyntax useTinyCall,
-        Compilation compilation,
-        List<OrderedEntry> globals,
-        List<OrderedPerCommandEntry> perCmd,
-        List<INamedTypeSymbol> policies)
+    public BootstrapPipelineContributions Extract(ConfirmedBootstrapLambda confirmedBootstrapLambda)
     {
-        if (useTinyCall.ArgumentList is null)
-        {
-            return;
-        }
-
-        var model = compilation.GetSemanticModel(useTinyCall.SyntaxTree);
-
-        var lambda = SelectBootstrapLambda(useTinyCall, model);
-        if (lambda is null)
-        {
-            return;
-        }
-
-        var invocations = GetBootstrapInvocations(lambda);
+        var globals = new List<OrderedEntry>();
+        var perCommand = new List<OrderedPerCommandEntry>();
+        var policies = new List<INamedTypeSymbol>();
+        var model = confirmedBootstrapLambda.SemanticModel;
+        var invocations = GetBootstrapInvocations(confirmedBootstrapLambda.Lambda);
 
         for (var i = 0; i < invocations.Count; i++)
         {
@@ -43,9 +31,22 @@ internal sealed class TinyBootstrapInvocationExtractor
                 invocations[i],
                 model,
                 globals,
-                perCmd,
+                perCommand,
                 policies);
         }
+
+        return BuildResult(globals, perCommand, policies);
+    }
+
+    private static BootstrapPipelineContributions BuildResult(
+        List<OrderedEntry> globals,
+        List<OrderedPerCommandEntry> perCommand,
+        List<INamedTypeSymbol> policies)
+    {
+        return new BootstrapPipelineContributions(
+            Globals: globals.ToImmutableArray(),
+            PerCommand: perCommand.ToImmutableArray(),
+            Policies: policies.ToImmutableArray());
     }
 
     private static List<InvocationExpressionSyntax> GetBootstrapInvocations(LambdaExpressionSyntax lambda)
@@ -275,74 +276,6 @@ internal sealed class TinyBootstrapInvocationExtractor
         {
             policies.Add(policyType);
         }
-    }
-
-    private static LambdaExpressionSyntax? SelectBootstrapLambda(
-        InvocationExpressionSyntax useTinyCall,
-        SemanticModel model)
-    {
-        if (useTinyCall.ArgumentList is null)
-        {
-            return null;
-        }
-
-        foreach (var arg in useTinyCall.ArgumentList.Arguments)
-        {
-            if (arg.Expression is not LambdaExpressionSyntax lambda)
-            {
-                continue;
-            }
-
-            if (IsTinyBootstrapDelegate(lambda, model))
-            {
-                return lambda;
-            }
-        }
-
-        return SelectFirstLambda(useTinyCall);
-    }
-
-    private static LambdaExpressionSyntax? SelectFirstLambda(InvocationExpressionSyntax useTinyCall)
-    {
-        if (useTinyCall.ArgumentList is null)
-        {
-            return null;
-        }
-
-        foreach (var argument in useTinyCall.ArgumentList.Arguments)
-        {
-            if (argument.Expression is LambdaExpressionSyntax lambda)
-            {
-                return lambda;
-            }
-        }
-
-        return null;
-    }
-
-    private static bool IsTinyBootstrapDelegate(LambdaExpressionSyntax lambda, SemanticModel model)
-    {
-        var converted = model.GetTypeInfo(lambda).ConvertedType as INamedTypeSymbol;
-        var invoke = converted?.DelegateInvokeMethod;
-        if (invoke is null)
-        {
-            return false;
-        }
-
-        if (invoke.Parameters.Length != 1)
-        {
-            return false;
-        }
-
-        var parameterType = invoke.Parameters[0].Type;
-
-        if (parameterType.Name == "TinyBootstrap")
-        {
-            return true;
-        }
-
-        var fqn = Fqn.FromType(parameterType);
-        return string.Equals(fqn, "global::TinyDispatcher.TinyBootstrap", StringComparison.Ordinal);
     }
 
     private static INamedTypeSymbol? TryExtractOpenGenericType(

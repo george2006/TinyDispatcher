@@ -19,19 +19,28 @@ internal sealed class GeneratorPipeline
 
     public void Execute(IGeneratorContext context, GeneratorInput input)
     {
-        var analysis = GeneratorAnalysisPhase.Analyze(
+        var analysisResult = GeneratorAnalysisPhase.Analyze(
             input.Compilation,
             input.UseTinyCallsSyntax,
             input.Options);
+        var analysis = analysisResult.Analysis;
 
-        var extraction = _extractionPhase.Extract(analysis, input.HandlerSymbols);
-        var validation = _validationPhase.Validate(analysis, extraction, _diagnosticsCatalog);
+        var extraction = _extractionPhase.Extract(
+            input.Compilation,
+            input.HandlerSymbols,
+            analysisResult.ConfirmedBootstrapLambdas,
+            analysis.EffectiveOptions);
+        var validation = _validationPhase.Validate(
+            input.Compilation,
+            analysis.HostBootstrap,
+            extraction,
+            _diagnosticsCatalog);
 
         if (GeneratorDiagnosticReporter.ReportAndHasErrors(context, validation.Diagnostics))
         {
             return;
         }
 
-        _generationPhase.Generate(context, analysis, extraction, validation);
+        _generationPhase.Generate(context, analysis.EffectiveOptions, extraction, validation);
     }
 }

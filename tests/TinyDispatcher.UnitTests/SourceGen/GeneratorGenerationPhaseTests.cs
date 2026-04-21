@@ -19,6 +19,7 @@ public sealed class GeneratorGenerationPhaseTests
     public void Generate_does_not_emit_pipeline_source_for_non_host_project()
     {
         var context = new CapturingGeneratorContext();
+        var compilation = CreateCompilation();
         var discovery = EmptyDiscovery();
         var extraction = new GeneratorExtraction(
             discovery,
@@ -30,28 +31,31 @@ public sealed class GeneratorGenerationPhaseTests
                     new PolicySpec(
                         "global::MyApp.Policy",
                         ImmutableArray<MiddlewareRef>.Empty,
-                        ImmutableArray<string>.Empty))),
-            ImmutableArray<UseTinyDispatcherCall>.Empty);
+                        ImmutableArray<string>.Empty))));
 
         var analysis = new GeneratorAnalysis(
-            Compilation: CreateCompilation(),
-            UseTinyCallsSyntax: ImmutableArray<InvocationExpressionSyntax>.Empty,
-            EffectiveOptions: Options(commandContextType: "MyApp.AppContext"));
+            EffectiveOptions: Options(commandContextType: "MyApp.AppContext"),
+            HostBootstrap: new HostBootstrapInfo(
+                IsHostProject: false,
+                ExpectedContextFqn: "global::MyApp.AppContext",
+                UseTinyDispatcherCalls: ImmutableArray<UseTinyDispatcherCall>.Empty));
 
         var validation = new GeneratorValidationResult(
             Context: new GeneratorValidationContext.Builder(
-                    analysis.Compilation,
+                    compilation,
                     discovery,
                     new DiagnosticsCatalog())
-                .WithHostGate(
-                    ImmutableArray<InvocationExpressionSyntax>.Empty,
-                    isHost: false)
+                .WithHostGate(isHost: false)
                 .WithExpectedContext("global::MyApp.AppContext")
                 .WithPipelineConfig(extraction.Pipeline)
                 .Build(),
             Diagnostics: new DiagnosticBag());
 
-        new GeneratorGenerationPhase().Generate(context, analysis, extraction, validation);
+        new GeneratorGenerationPhase().Generate(
+            context,
+            analysis.EffectiveOptions,
+            extraction,
+            validation);
 
         Assert.DoesNotContain(
             context.Sources,
