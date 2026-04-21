@@ -17,17 +17,6 @@ internal sealed class GeneratorExtractionPhase
     private readonly MiddlewareOrdering _ordering = new();
 
     public GeneratorExtraction Extract(
-        GeneratorAnalysis analysis,
-        ImmutableArray<INamedTypeSymbol> handlerSymbols)
-    {
-        return Extract(
-            analysis.Compilation,
-            handlerSymbols,
-            analysis.UseTinyCallsSyntax,
-            analysis.EffectiveOptions);
-    }
-
-    public GeneratorExtraction Extract(
         Compilation compilation,
         ImmutableArray<INamedTypeSymbol> handlerSymbols,
         ImmutableArray<InvocationExpressionSyntax> useTinyCallsSyntax,

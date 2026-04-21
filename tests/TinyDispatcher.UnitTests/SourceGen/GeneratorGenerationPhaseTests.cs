@@ -19,6 +19,7 @@ public sealed class GeneratorGenerationPhaseTests
     public void Generate_does_not_emit_pipeline_source_for_non_host_project()
     {
         var context = new CapturingGeneratorContext();
+        var compilation = CreateCompilation();
         var discovery = EmptyDiscovery();
         var extraction = new GeneratorExtraction(
             discovery,
@@ -33,8 +34,6 @@ public sealed class GeneratorGenerationPhaseTests
                         ImmutableArray<string>.Empty))));
 
         var analysis = new GeneratorAnalysis(
-            Compilation: CreateCompilation(),
-            UseTinyCallsSyntax: ImmutableArray<InvocationExpressionSyntax>.Empty,
             EffectiveOptions: Options(commandContextType: "MyApp.AppContext"),
             HostBootstrap: new HostBootstrapInfo(
                 IsHostProject: false,
@@ -43,7 +42,7 @@ public sealed class GeneratorGenerationPhaseTests
 
         var validation = new GeneratorValidationResult(
             Context: new GeneratorValidationContext.Builder(
-                    analysis.Compilation,
+                    compilation,
                     discovery,
                     new DiagnosticsCatalog())
                 .WithHostGate(isHost: false)

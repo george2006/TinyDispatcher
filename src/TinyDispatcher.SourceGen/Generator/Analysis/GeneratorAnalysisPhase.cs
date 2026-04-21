@@ -12,7 +12,7 @@ namespace TinyDispatcher.SourceGen.Generator.Analysis;
 
 internal static class GeneratorAnalysisPhase
 {
-    public static GeneratorAnalysis Analyze(
+    public static GeneratorAnalysisResult Analyze(
         Compilation compilation,
         ImmutableArray<InvocationExpressionSyntax> useTinyCallsSyntax,
         AnalyzerConfigOptionsProvider optionsProvider)
@@ -38,11 +38,11 @@ internal static class GeneratorAnalysisPhase
             effectiveOptions,
             useTinyDispatcherCalls);
 
-        return new GeneratorAnalysis(
-            Compilation: compilation,
-            UseTinyCallsSyntax: confirmedUseTinyCallsSyntax,
-            EffectiveOptions: effectiveOptions,
-            HostBootstrap: hostBootstrap);
+        return new GeneratorAnalysisResult(
+            Analysis: new GeneratorAnalysis(
+                EffectiveOptions: effectiveOptions,
+                HostBootstrap: hostBootstrap),
+            ConfirmedUseTinyCallsSyntax: confirmedUseTinyCallsSyntax);
     }
 
     private static void GuardInputs(Compilation compilation)

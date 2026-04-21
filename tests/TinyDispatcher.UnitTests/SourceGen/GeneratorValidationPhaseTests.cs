@@ -28,8 +28,6 @@ public sealed class GeneratorValidationPhaseTests
                 ImmutableDictionary<string, PolicySpec>.Empty));
 
         var analysis = new GeneratorAnalysis(
-            Compilation: compilation,
-            UseTinyCallsSyntax: ImmutableArray.Create(invocation),
             EffectiveOptions: Options(commandContextType: "MyApp.AppContext"),
             HostBootstrap: new HostBootstrapInfo(
                 IsHostProject: true,
@@ -39,7 +37,7 @@ public sealed class GeneratorValidationPhaseTests
                     Location.None))));
 
         var result = new GeneratorValidationPhase().Validate(
-            analysis.Compilation,
+            compilation,
             analysis.HostBootstrap,
             extraction,
             new DiagnosticsCatalog());
@@ -54,6 +52,7 @@ public sealed class GeneratorValidationPhaseTests
     [Fact]
     public void Validate_marks_project_as_non_host_when_no_UseTinyDispatcher_calls_exist()
     {
+        var compilation = CreateCompilation();
         var extraction = new GeneratorExtraction(
             EmptyDiscovery(),
             new PipelineConfig(
@@ -62,8 +61,6 @@ public sealed class GeneratorValidationPhaseTests
                 ImmutableDictionary<string, PolicySpec>.Empty));
 
         var analysis = new GeneratorAnalysis(
-            Compilation: CreateCompilation(),
-            UseTinyCallsSyntax: ImmutableArray<InvocationExpressionSyntax>.Empty,
             EffectiveOptions: Options(commandContextType: null),
             HostBootstrap: new HostBootstrapInfo(
                 IsHostProject: false,
@@ -71,7 +68,7 @@ public sealed class GeneratorValidationPhaseTests
                 UseTinyDispatcherCalls: ImmutableArray<UseTinyDispatcherCall>.Empty));
 
         var result = new GeneratorValidationPhase().Validate(
-            analysis.Compilation,
+            compilation,
             analysis.HostBootstrap,
             extraction,
             new DiagnosticsCatalog());
