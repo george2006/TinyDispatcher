@@ -2,7 +2,7 @@
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Moq;
-using TinyDispatcher.SourceGen.Discovery;
+using TinyDispatcher.SourceGen.Generator.Extraction;
 using TinyDispatcher.SourceGen.Generator.Models;
 using Xunit;
 
