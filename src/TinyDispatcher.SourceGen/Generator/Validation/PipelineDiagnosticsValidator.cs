@@ -4,10 +4,10 @@ using System.Collections.Generic;
 using System.Linq;
 using TinyDispatcher.SourceGen.Abstractions;
 using TinyDispatcher.SourceGen.Emitters.Pipelines;
-using TinyDispatcher.SourceGen.Generator;
 using TinyDispatcher.SourceGen.Generator.Models;
+using TinyDispatcher.SourceGen.Validation;
 
-namespace TinyDispatcher.SourceGen.Validation;
+namespace TinyDispatcher.SourceGen.Generator.Validation;
 
 internal sealed class PipelineDiagnosticsValidator : IGeneratorValidator
 {
