@@ -3,7 +3,8 @@
 using System;
 using System.Text;
 using Microsoft.CodeAnalysis.Text;
-using TinyDispatcher.SourceGen.Abstractions;
+
+using TinyDispatcher.SourceGen.Generator;
 
 namespace TinyDispatcher.SourceGen.Emitters.PipelineMaps;
 

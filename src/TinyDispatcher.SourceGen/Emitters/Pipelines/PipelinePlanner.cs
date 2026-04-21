@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using TinyDispatcher.SourceGen.Abstractions;
 using TinyDispatcher.SourceGen.Generator.Models;
+
+using TinyDispatcher.SourceGen.Generator.Options;
 
 namespace TinyDispatcher.SourceGen.Emitters.Pipelines;
 

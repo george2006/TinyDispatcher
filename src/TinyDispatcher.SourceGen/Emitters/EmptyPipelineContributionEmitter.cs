@@ -1,7 +1,9 @@
 using System.Text;
 using Microsoft.CodeAnalysis.Text;
-using TinyDispatcher.SourceGen.Abstractions;
 using TinyDispatcher.SourceGen.Generator.Models;
+
+using TinyDispatcher.SourceGen.Generator;
+using TinyDispatcher.SourceGen.Generator.Options;
 
 namespace TinyDispatcher.SourceGen;
 

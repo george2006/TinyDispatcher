@@ -1,8 +1,9 @@
 ﻿#nullable enable
 
 using System;
-using TinyDispatcher.SourceGen.Abstractions;
 using TinyDispatcher.SourceGen.Generator.Models;
+
+using TinyDispatcher.SourceGen.Generator.Options;
 
 namespace TinyDispatcher.SourceGen.Emitters.ModuleInitializer;
 
