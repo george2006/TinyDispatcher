@@ -1,7 +1,5 @@
 ﻿#nullable enable
 
-using TinyDispatcher.SourceGen.Validation;
-
 namespace TinyDispatcher.SourceGen.Generator.Validation;
 
 internal static class GeneratorValidator

@@ -6,7 +6,7 @@ using TinyDispatcher.SourceGen.Emitters.PipelineMaps;
 using TinyDispatcher.SourceGen.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Generator.Options;
-using TinyDispatcher.SourceGen.Validation;
+using TinyDispatcher.SourceGen.Generator.Validation;
 
 namespace TinyDispatcher.SourceGen.Generator.Generation;
 
