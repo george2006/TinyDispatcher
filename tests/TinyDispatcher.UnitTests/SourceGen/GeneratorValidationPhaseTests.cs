@@ -40,7 +40,6 @@ public sealed class GeneratorValidationPhaseTests
         Assert.Same(discovery, result.Context.DiscoveryResult);
         Assert.True(result.Context.IsHostProject);
         Assert.Equal("global::MyApp.AppContext", result.Context.ExpectedContextFqn);
-        Assert.Single(result.Context.UseTinyCallsSyntax);
         Assert.Single(result.Context.UseTinyDispatcherCalls);
         Assert.Empty(result.Diagnostics.ToImmutable());
     }
@@ -65,7 +64,6 @@ public sealed class GeneratorValidationPhaseTests
 
         Assert.False(result.Context.IsHostProject);
         Assert.Equal(string.Empty, result.Context.ExpectedContextFqn);
-        Assert.Empty(result.Context.UseTinyCallsSyntax);
         Assert.Empty(result.Context.UseTinyDispatcherCalls);
         Assert.Empty(result.Diagnostics.ToImmutable());
     }

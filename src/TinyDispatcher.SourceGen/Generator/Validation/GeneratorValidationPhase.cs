@@ -28,9 +28,7 @@ internal sealed class GeneratorValidationPhase
                 analysis.Compilation,
                 extraction.Discovery,
                 diagnosticsCatalog)
-            .WithHostGate(
-                analysis.UseTinyCallsSyntax,
-                isHost: analysis.UseTinyCallsSyntax.Length > 0)
+            .WithHostGate(isHost: analysis.UseTinyCallsSyntax.Length > 0)
             .WithUseTinyDispatcherCalls(extraction.UseTinyDispatcherCalls)
             .WithExpectedContext(GetExpectedContextFqn(analysis.EffectiveOptions))
             .WithPipelineConfig(extraction.Pipeline)

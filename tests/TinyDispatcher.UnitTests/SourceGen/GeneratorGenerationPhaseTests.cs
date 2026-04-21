@@ -43,9 +43,7 @@ public sealed class GeneratorGenerationPhaseTests
                     analysis.Compilation,
                     discovery,
                     new DiagnosticsCatalog())
-                .WithHostGate(
-                    ImmutableArray<InvocationExpressionSyntax>.Empty,
-                    isHost: false)
+                .WithHostGate(isHost: false)
                 .WithExpectedContext("global::MyApp.AppContext")
                 .WithPipelineConfig(extraction.Pipeline)
                 .Build(),

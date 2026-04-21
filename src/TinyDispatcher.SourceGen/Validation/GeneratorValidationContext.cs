@@ -1,7 +1,6 @@
 ﻿#nullable enable
 
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -19,7 +18,6 @@ internal sealed class GeneratorValidationContext
         Diagnostics = b.Diagnostics ?? throw new ArgumentNullException(nameof(b.Diagnostics));
 
         // Optional / phase-dependent
-        UseTinyCallsSyntax = b.UseTinyCallsSyntax;
         UseTinyDispatcherCalls = b.UseTinyDispatcherCalls;
         IsHostProject = b.IsHostProject;
 
@@ -39,7 +37,6 @@ internal sealed class GeneratorValidationContext
     public DiagnosticsCatalog Diagnostics { get; }
 
     // Host gate / discovery
-    public ImmutableArray<InvocationExpressionSyntax> UseTinyCallsSyntax { get; }
     public ImmutableArray<UseTinyDispatcherCall> UseTinyDispatcherCalls { get; }
     public bool IsHostProject { get; }
 
@@ -107,9 +104,6 @@ internal sealed class GeneratorValidationContext
         public DiscoveryResult DiscoveryResult { get; }
         public DiagnosticsCatalog Diagnostics { get; }
 
-        public ImmutableArray<InvocationExpressionSyntax> UseTinyCallsSyntax { get; private set; } =
-            ImmutableArray<InvocationExpressionSyntax>.Empty;
-
         public ImmutableArray<UseTinyDispatcherCall> UseTinyDispatcherCalls { get; private set; } =
             ImmutableArray<UseTinyDispatcherCall>.Empty;
 
@@ -121,9 +115,8 @@ internal sealed class GeneratorValidationContext
 
         public ImmutableDictionary<string, INamedTypeSymbol>? MiddlewareSymbolCache { get; private set; }
 
-        public Builder WithHostGate(ImmutableArray<InvocationExpressionSyntax> useTinyCallsSyntax, bool isHost)
+        public Builder WithHostGate(bool isHost)
         {
-            UseTinyCallsSyntax = useTinyCallsSyntax;
             IsHostProject = isHost;
             return this;
         }
