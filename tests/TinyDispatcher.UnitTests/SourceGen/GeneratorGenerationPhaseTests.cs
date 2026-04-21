@@ -9,7 +9,7 @@ using TinyDispatcher.SourceGen.Diagnostics;
 using TinyDispatcher.SourceGen.Generator.Generation;
 using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Generator.Options;
-using TinyDispatcher.SourceGen.Validation;
+using TinyDispatcher.SourceGen.Generator.Validation;
 using Xunit;
 
 namespace TinyDispatcher.UnitTests.SourceGen;

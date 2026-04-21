@@ -1,7 +1,6 @@
 #nullable enable
 
 using Microsoft.CodeAnalysis;
-using TinyDispatcher.SourceGen.Validation;
 using TinyDispatcher.SourceGen.Generator.Validation;
 using Xunit;
 

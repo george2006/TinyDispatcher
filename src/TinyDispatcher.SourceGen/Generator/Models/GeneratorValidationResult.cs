@@ -1,4 +1,4 @@
-using TinyDispatcher.SourceGen.Validation;
+using TinyDispatcher.SourceGen.Generator.Validation;
 
 namespace TinyDispatcher.SourceGen.Generator.Models;
 

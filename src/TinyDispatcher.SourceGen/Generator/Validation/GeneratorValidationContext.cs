@@ -7,7 +7,7 @@ using System.Collections.Immutable;
 using TinyDispatcher.SourceGen.Diagnostics;
 using TinyDispatcher.SourceGen.Generator.Models;
 
-namespace TinyDispatcher.SourceGen.Validation;
+namespace TinyDispatcher.SourceGen.Generator.Validation;
 
 internal sealed class GeneratorValidationContext
 {

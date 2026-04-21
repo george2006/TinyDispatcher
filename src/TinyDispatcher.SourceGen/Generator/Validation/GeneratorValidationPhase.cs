@@ -3,7 +3,6 @@
 using Microsoft.CodeAnalysis;
 using TinyDispatcher.SourceGen.Diagnostics;
 using TinyDispatcher.SourceGen.Generator.Models;
-using TinyDispatcher.SourceGen.Validation;
 
 namespace TinyDispatcher.SourceGen.Generator.Validation;
 

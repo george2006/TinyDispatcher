@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 
-namespace TinyDispatcher.SourceGen.Validation;
+namespace TinyDispatcher.SourceGen.Generator.Validation;
 
 internal sealed class DiagnosticBag
 {
