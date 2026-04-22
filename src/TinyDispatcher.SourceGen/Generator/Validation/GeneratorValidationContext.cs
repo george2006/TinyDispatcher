@@ -25,7 +25,6 @@ internal sealed class GeneratorValidationContext
             ImmutableArray<MiddlewareRef>.Empty,
             ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
             ImmutableDictionary<string, PolicySpec>.Empty);
-
     }
 
     public DiscoveryResult DiscoveryResult { get; }
@@ -63,10 +62,6 @@ internal sealed class GeneratorValidationContext
                 yield return arr[i];
         }
     }
-
-    // =====================================================================
-    // Builder
-    // =====================================================================
 
     internal sealed class Builder
     {

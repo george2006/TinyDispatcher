@@ -14,7 +14,7 @@ internal static class PipelinePolicyCommandMap
     {
         for (var commandIndex = 0; commandIndex < commands.Length; commandIndex++)
         {
-            var command = PipelineTypeNames.NormalizeFqn(commands[commandIndex]);
+            var command = commands[commandIndex];
             var commandIsMissing = string.IsNullOrWhiteSpace(command);
 
             if (commandIsMissing)
