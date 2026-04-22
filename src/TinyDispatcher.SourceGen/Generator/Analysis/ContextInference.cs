@@ -14,50 +14,19 @@ internal sealed class ContextInference
         Compilation compilation)
     {
         if (useTinyDispatcherInvocations.IsDefaultOrEmpty)
+        {
             return ImmutableArray<UseTinyDispatcherCall>.Empty;
+        }
 
         var builder = ImmutableArray.CreateBuilder<UseTinyDispatcherCall>();
 
         for (var i = 0; i < useTinyDispatcherInvocations.Length; i++)
         {
-            var inv = useTinyDispatcherInvocations[i];
-
-            if (IsUseTinyNoOpContextCall(inv))
+            var invocation = useTinyDispatcherInvocations[i];
+            if (TryResolveUseTinyDispatcherCall(invocation, compilation, out var useTinyDispatcherCall))
             {
-                builder.Add(new UseTinyDispatcherCall("global::TinyDispatcher.Context.NoOpContext", inv.GetLocation()));
-                continue;
+                builder.Add(useTinyDispatcherCall);
             }
-
-            GenericNameSyntax? g = null;
-
-            if (inv.Expression is MemberAccessExpressionSyntax ma)
-                g = ma.Name as GenericNameSyntax;
-            else
-                g = inv.Expression as GenericNameSyntax;
-
-            if (g is null)
-                continue;
-
-            if (g.TypeArgumentList.Arguments.Count != 1)
-                continue;
-
-            var ctxSyntax = g.TypeArgumentList.Arguments[0];
-
-            var model = compilation.GetSemanticModel(inv.SyntaxTree);
-            var ctxType = model.GetTypeInfo(ctxSyntax).Type;
-
-            if (ctxType is null)
-                continue;
-
-            if (ctxType is ITypeParameterSymbol)
-                continue;
-
-            if (ctxType is IErrorTypeSymbol)
-                continue;
-
-            var ctxFqn = Fqn.FromType(ctxType);
-
-            builder.Add(new UseTinyDispatcherCall(ctxFqn, inv.GetLocation()));
         }
 
         return builder.ToImmutable();
@@ -79,23 +48,119 @@ internal sealed class ContextInference
     public string? TryInferContextTypeFromResolvedCalls(
         ImmutableArray<UseTinyDispatcherCall> useTinyDispatcherCalls)
     {
-        var all = useTinyDispatcherCalls;
-        if (all.IsDefaultOrEmpty)
+        if (useTinyDispatcherCalls.IsDefaultOrEmpty)
+        {
             return null;
+        }
 
-        return all[0].ContextTypeFqn;
+        return useTinyDispatcherCalls[0].ContextTypeFqn;
     }
 
-    private static bool IsUseTinyNoOpContextCall(InvocationExpressionSyntax inv)
+    private static bool TryResolveUseTinyDispatcherCall(
+        InvocationExpressionSyntax invocation,
+        Compilation compilation,
+        out UseTinyDispatcherCall useTinyDispatcherCall)
     {
-        if (inv.Expression is MemberAccessExpressionSyntax ma &&
-            ma.Name is IdentifierNameSyntax id &&
-            id.Identifier.ValueText == "UseTinyNoOpContext")
+        if (TryCreateNoOpContextCall(invocation, out useTinyDispatcherCall))
+        {
             return true;
+        }
 
-        if (inv.Expression is IdentifierNameSyntax id2 &&
-            id2.Identifier.ValueText == "UseTinyNoOpContext")
+        return TryResolveGenericContextCall(invocation, compilation, out useTinyDispatcherCall);
+    }
+
+    private static bool TryCreateNoOpContextCall(
+        InvocationExpressionSyntax invocation,
+        out UseTinyDispatcherCall useTinyDispatcherCall)
+    {
+        useTinyDispatcherCall = default;
+
+        var isNoOpContextCall = IsUseTinyNoOpContextCall(invocation);
+        if (!isNoOpContextCall)
+        {
+            return false;
+        }
+
+        useTinyDispatcherCall = new UseTinyDispatcherCall(
+            "global::TinyDispatcher.Context.NoOpContext",
+            invocation.GetLocation());
+        return true;
+    }
+
+    private static bool TryResolveGenericContextCall(
+        InvocationExpressionSyntax invocation,
+        Compilation compilation,
+        out UseTinyDispatcherCall useTinyDispatcherCall)
+    {
+        useTinyDispatcherCall = default;
+
+        var genericName = TryGetUseTinyDispatcherGenericName(invocation);
+        if (genericName is null)
+        {
+            return false;
+        }
+
+        var hasSingleTypeArgument = genericName.TypeArgumentList.Arguments.Count == 1;
+        if (!hasSingleTypeArgument)
+        {
+            return false;
+        }
+
+        var contextTypeSyntax = genericName.TypeArgumentList.Arguments[0];
+        var semanticModel = compilation.GetSemanticModel(invocation.SyntaxTree);
+        var contextType = semanticModel.GetTypeInfo(contextTypeSyntax).Type;
+        var hasSupportedContextType = IsSupportedContextType(contextType);
+
+        if (!hasSupportedContextType)
+        {
+            return false;
+        }
+
+        useTinyDispatcherCall = new UseTinyDispatcherCall(
+            Fqn.FromType(contextType!),
+            invocation.GetLocation());
+        return true;
+    }
+
+    private static GenericNameSyntax? TryGetUseTinyDispatcherGenericName(InvocationExpressionSyntax invocation)
+    {
+        if (invocation.Expression is MemberAccessExpressionSyntax memberAccess)
+        {
+            return memberAccess.Name as GenericNameSyntax;
+        }
+
+        return invocation.Expression as GenericNameSyntax;
+    }
+
+    private static bool IsSupportedContextType(ITypeSymbol? contextType)
+    {
+        if (contextType is null)
+        {
+            return false;
+        }
+
+        if (contextType is ITypeParameterSymbol)
+        {
+            return false;
+        }
+
+        return contextType is not IErrorTypeSymbol;
+    }
+
+    private static bool IsUseTinyNoOpContextCall(InvocationExpressionSyntax invocation)
+    {
+        if (invocation.Expression is MemberAccessExpressionSyntax memberAccess &&
+            memberAccess.Name is IdentifierNameSyntax memberName &&
+            memberName.Identifier.ValueText == "UseTinyNoOpContext")
+        {
             return true;
+        }
+
+        if (invocation.Expression is IdentifierNameSyntax identifierName &&
+            identifierName.Identifier.ValueText == "UseTinyNoOpContext")
+        {
+            return true;
+        }
 
         return false;
     }
