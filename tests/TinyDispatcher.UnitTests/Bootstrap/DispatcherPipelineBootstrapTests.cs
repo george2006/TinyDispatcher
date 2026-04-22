@@ -98,6 +98,60 @@ public sealed class DispatcherPipelineBootstrapTests
         Assert.Equal(1, CountBootstrapMarkers(services));
     }
 
+    [Fact]
+    public void Stores_contributed_command_handler_metadata_snapshot()
+    {
+        ResetStore();
+        DispatcherPipelineBootstrap.AddContribution(new TestContribution());
+
+        var services = CreateServices();
+
+        DispatcherPipelineBootstrap.Apply(services);
+
+        var snapshot = GetCommandHandlersSnapshot(services);
+
+        Assert.Single(snapshot);
+        Assert.Equal("global::MyApp.CreateOrder", snapshot[0].CommandTypeFqn);
+        Assert.Equal("global::MyApp.CreateOrderHandler", snapshot[0].HandlerTypeFqn);
+        Assert.Equal("global::MyApp.AppContext", snapshot[0].ContextTypeFqn);
+    }
+
+    [Fact]
+    public void Stores_empty_command_handler_snapshot_for_delegate_contribution()
+    {
+        ResetStore();
+        DispatcherPipelineBootstrap.AddContribution(AddTestService);
+
+        var services = CreateServices();
+
+        DispatcherPipelineBootstrap.Apply(services);
+
+        var snapshot = GetCommandHandlersSnapshot(services);
+
+        Assert.Empty(snapshot);
+    }
+
+    [Fact]
+    public void Deduplicates_identical_contributed_command_handler_metadata()
+    {
+        ResetStore();
+        var descriptor = CreateDescriptor(
+            commandTypeFqn: "global::MyApp.CreateOrder",
+            handlerTypeFqn: "global::MyApp.CreateOrderHandler",
+            contextTypeFqn: "global::MyApp.AppContext");
+
+        DispatcherPipelineBootstrap.AddContribution(new TestContribution(descriptor));
+        DispatcherPipelineBootstrap.AddContribution(new TestContribution(descriptor));
+
+        var services = CreateServices();
+
+        DispatcherPipelineBootstrap.Apply(services);
+
+        var snapshot = GetCommandHandlersSnapshot(services);
+
+        Assert.Single(snapshot);
+    }
+
     private static ServiceCollection CreateServices()
         => new();
 
@@ -136,20 +190,49 @@ public sealed class DispatcherPipelineBootstrapTests
         return count;
     }
 
+    private static IReadOnlyList<CommandHandlerDescriptor> GetCommandHandlersSnapshot(IServiceCollection services)
+    {
+        for (int i = 0; i < services.Count; i++)
+        {
+            var descriptor = services[i];
+            if (descriptor.ServiceType != typeof(IReadOnlyList<CommandHandlerDescriptor>))
+                continue;
+
+            return Assert.IsAssignableFrom<IReadOnlyList<CommandHandlerDescriptor>>(descriptor.ImplementationInstance);
+        }
+
+        throw new InvalidOperationException("Expected contributed command handler snapshot registration.");
+    }
+
     private static void ResetStore()
         => PipelineContributionStore.ResetForTests();
+
+    private static CommandHandlerDescriptor CreateDescriptor(
+        string commandTypeFqn,
+        string handlerTypeFqn,
+        string contextTypeFqn)
+        => new(
+            CommandTypeFqn: commandTypeFqn,
+            HandlerTypeFqn: handlerTypeFqn,
+            ContextTypeFqn: contextTypeFqn);
 
     private sealed class TestService;
     private sealed class TestContribution : IDispatcherAssemblyContribution
     {
-        public IReadOnlyList<CommandHandlerDescriptor> CommandHandlers { get; } =
-            new[]
-            {
-                new CommandHandlerDescriptor(
-                    CommandTypeFqn: "global::MyApp.CreateOrder",
-                    HandlerTypeFqn: "global::MyApp.CreateOrderHandler",
-                    ContextTypeFqn: "global::MyApp.AppContext"),
-            };
+        public TestContribution()
+            : this(CreateDescriptor(
+                commandTypeFqn: "global::MyApp.CreateOrder",
+                handlerTypeFqn: "global::MyApp.CreateOrderHandler",
+                contextTypeFqn: "global::MyApp.AppContext"))
+        {
+        }
+
+        public TestContribution(params CommandHandlerDescriptor[] commandHandlers)
+        {
+            CommandHandlers = commandHandlers;
+        }
+
+        public IReadOnlyList<CommandHandlerDescriptor> CommandHandlers { get; }
 
         public void Apply(IServiceCollection services)
         {
