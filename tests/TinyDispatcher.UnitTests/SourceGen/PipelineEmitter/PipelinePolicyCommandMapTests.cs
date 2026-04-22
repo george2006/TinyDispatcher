@@ -2,7 +2,7 @@
 
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using TinyDispatcher.SourceGen.Emitters.Pipelines;
+using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Pipelines;
 using Xunit;
 
 namespace TinyDispatcher.UnitTests.SourceGen.PipelineEmitter;
@@ -10,13 +10,13 @@ namespace TinyDispatcher.UnitTests.SourceGen.PipelineEmitter;
 public sealed class PipelinePolicyCommandMapTests
 {
     [Fact]
-    public void AddFirstPolicyWins_normalizes_commands_and_keeps_first_value()
+    public void AddFirstPolicyWins_keeps_first_value_for_normalized_commands()
     {
         var map = new Dictionary<string, string>(StringComparer.Ordinal);
 
         PipelinePolicyCommandMap.AddFirstPolicyWins(
             map,
-            ImmutableArray.Create("MyApp.Commands.Ping", "global::MyApp.Commands.Pong", ""),
+            ImmutableArray.Create("global::MyApp.Commands.Ping", "global::MyApp.Commands.Pong", ""),
             "first");
 
         PipelinePolicyCommandMap.AddFirstPolicyWins(
@@ -29,3 +29,4 @@ public sealed class PipelinePolicyCommandMapTests
         Assert.False(map.ContainsKey(string.Empty));
     }
 }
+

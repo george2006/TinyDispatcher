@@ -1,6 +1,6 @@
-﻿using TinyDispatcher.SourceGen.Emitters;
+using TinyDispatcher.SourceGen.Generator.Generation.Emitters;
 using System;
-using TinyDispatcher.SourceGen.Emitters.Pipelines;
+using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Pipelines;
 using Xunit;
 
 namespace TinyDispatcher.UnitTests.SourceGen.PipelineEmitter;
@@ -64,4 +64,5 @@ public sealed class CodeWriterTests
         return count;
     }
 }
+
 

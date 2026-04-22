@@ -1,0 +1,27 @@
+#nullable enable
+
+using System;
+using TinyDispatcher.SourceGen.Generator.Models;
+
+using TinyDispatcher.SourceGen.Generator.Options;
+
+namespace TinyDispatcher.SourceGen.Generator.Generation.Emitters.ModuleInitializer;
+
+internal static class ModuleInitializerPlanner
+{
+    public static ModuleInitializerPlan Build(
+        DiscoveryResult discovery,
+        GeneratorOptions options,
+        bool hasPipelineContributions = false)
+    {
+        if (discovery is null) throw new ArgumentNullException(nameof(discovery));
+
+        var hasHandlers = discovery.Commands.Length > 0 || discovery.Queries.Length > 0;
+
+        return new ModuleInitializerPlan(
+            GeneratedNamespace: options.GeneratedNamespace,
+            CoreNamespace: Known.CoreNamespace,
+            ShouldEmit: hasHandlers || hasPipelineContributions);
+    }
+}
+

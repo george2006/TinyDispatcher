@@ -43,7 +43,6 @@ public sealed class GeneratorGenerationPhaseTests
 
         var validation = new GeneratorValidationResult(
             Context: new GeneratorValidationContext.Builder(
-                    compilation,
                     discovery,
                     new DiagnosticsCatalog())
                 .WithHostGate(isHost: false)
@@ -61,6 +60,48 @@ public sealed class GeneratorGenerationPhaseTests
         Assert.DoesNotContain(
             context.Sources,
             source => source.HintName == "TinyDispatcherPipeline.g.cs");
+    }
+
+    [Fact]
+    public void Generate_uses_validated_expected_context_for_handler_registrations()
+    {
+        var context = new CapturingGeneratorContext();
+        var compilation = CreateCompilation();
+        var command = new HandlerContract(
+            MessageTypeFqn: "global::MyApp.CreateUser",
+            HandlerTypeFqn: "global::MyApp.CreateUserHandler");
+        var discovery = new DiscoveryResult(
+            ImmutableArray.Create(command),
+            ImmutableArray<QueryHandlerContract>.Empty);
+        var extraction = new GeneratorExtraction(
+            discovery,
+            new PipelineConfig(
+                ImmutableArray<MiddlewareRef>.Empty,
+                ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
+                ImmutableDictionary<string, PolicySpec>.Empty));
+        var validation = new GeneratorValidationResult(
+            Context: new GeneratorValidationContext.Builder(
+                    discovery,
+                    new DiagnosticsCatalog())
+                .WithHostGate(isHost: true)
+                .WithExpectedContext("global::MyApp.AppContext")
+                .WithPipelineConfig(extraction.Pipeline)
+                .Build(),
+            Diagnostics: new DiagnosticBag());
+
+        new GeneratorGenerationPhase().Generate(
+            context,
+            Options(commandContextType: null),
+            extraction,
+            validation);
+
+        var registrations = Assert.Single(
+            context.Sources,
+            source => source.HintName == "ThisAssemblyHandlerRegistrations.g.cs");
+
+        Assert.Contains(
+            "global::TinyDispatcher.ICommandHandler<global::MyApp.CreateUser, global::MyApp.AppContext>",
+            registrations.Content);
     }
 
     private static CSharpCompilation CreateCompilation()

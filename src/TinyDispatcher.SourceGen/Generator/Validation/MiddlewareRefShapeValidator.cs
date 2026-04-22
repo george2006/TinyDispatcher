@@ -8,9 +8,14 @@ namespace TinyDispatcher.SourceGen.Generator.Validation;
 
 internal sealed class MiddlewareRefShapeValidator : IGeneratorValidator
 {
-    public void Validate(GeneratorValidationContext context, DiagnosticBag diags)
+    public void Validate(
+        GeneratorValidationContext context,
+        INamedTypeSymbol? commandMiddlewareInterface,
+        MiddlewareTypeResolver middlewareTypeResolver,
+        DiagnosticBag diags)
     {
         if (context is null) throw new ArgumentNullException(nameof(context));
+        if (middlewareTypeResolver is null) throw new ArgumentNullException(nameof(middlewareTypeResolver));
         if (diags is null) throw new ArgumentNullException(nameof(diags));
 
         // If pipelines are not emitted, skip middleware validation.
@@ -21,10 +26,7 @@ internal sealed class MiddlewareRefShapeValidator : IGeneratorValidator
         if (string.IsNullOrWhiteSpace(expectedContextFqn))
             return; // ContextConsistencyValidator will report the real issue.
 
-        var compilation = context.Compilation;
-
-        var iCmdMw2 = compilation.GetTypeByMetadataName("TinyDispatcher.ICommandMiddleware`2");
-        if (iCmdMw2 is null)
+        if (commandMiddlewareInterface is null)
         {
             diags.Add(context.Diagnostics.Create(
                 context.Diagnostics.CannotResolveICommandMiddleware,
@@ -34,7 +36,15 @@ internal sealed class MiddlewareRefShapeValidator : IGeneratorValidator
 
         foreach (var mw in context.EnumerateAllMiddlewares())
         {
-            var openType = mw.OpenTypeSymbol;
+            var openType = middlewareTypeResolver.Resolve(mw.OpenTypeFqn, mw.Arity);
+            if (openType is null)
+            {
+                diags.Add(context.Diagnostics.Create(
+                    context.Diagnostics.InvalidMiddlewareType,
+                    Location.None,
+                    mw.OpenTypeFqn));
+                continue;
+            }
 
             // DISP301: must be open generic definition
             if (!openType.IsGenericType || openType.TypeParameters.Length != mw.Arity)
@@ -69,7 +79,7 @@ internal sealed class MiddlewareRefShapeValidator : IGeneratorValidator
                 {
                     if (!SymbolEqualityComparer.Default.Equals(
                             iface.OriginalDefinition,
-                            iCmdMw2))
+                            commandMiddlewareInterface))
                         continue;
 
                     if (iface.TypeArguments.Length != 2)
@@ -109,7 +119,7 @@ internal sealed class MiddlewareRefShapeValidator : IGeneratorValidator
             {
                 if (!SymbolEqualityComparer.Default.Equals(
                         iface.OriginalDefinition,
-                        iCmdMw2))
+                        commandMiddlewareInterface))
                     continue;
 
                 if (iface.TypeArguments.Length != 2)

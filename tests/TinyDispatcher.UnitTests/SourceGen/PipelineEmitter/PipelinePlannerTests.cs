@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.Collections.Generic;
@@ -7,7 +7,7 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using TinyDispatcher.SourceGen;
 using TinyDispatcher.SourceGen.Generator;
-using TinyDispatcher.SourceGen.Emitters.Pipelines;
+using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Generator.Options;
 using Xunit;
@@ -17,7 +17,7 @@ namespace TinyDispatcher.UnitTests.SourceGen.PipelineEmitter;
 public sealed class PipelinePlannerTests
 {
     private static MiddlewareRef Mw(string openTypeFqn, int arity)
-        => new MiddlewareRef(OpenTypeSymbol: default!, OpenTypeFqn: openTypeFqn, Arity: arity);
+        => new MiddlewareRef(OpenTypeFqn: openTypeFqn, Arity: arity);
 
     [Fact]
     public void Build_global_only_creates_global_pipeline_and_registers_global_for_all_commands()
@@ -211,3 +211,4 @@ public sealed class PipelinePlannerTests
         }
     }
 }
+

@@ -1,7 +1,7 @@
 #nullable enable
 
 using System.Collections.Immutable;
-using TinyDispatcher.SourceGen.Emitters.Pipelines;
+using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 using Xunit;
 
@@ -76,8 +76,8 @@ public sealed class PipelineContributionsTests
     private static MiddlewareRef Middleware(string openTypeFqn)
     {
         return new MiddlewareRef(
-            OpenTypeSymbol: default!,
             OpenTypeFqn: openTypeFqn,
             Arity: 2);
     }
 }
+

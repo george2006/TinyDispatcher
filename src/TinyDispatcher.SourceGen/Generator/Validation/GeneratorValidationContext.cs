@@ -1,6 +1,5 @@
 ﻿#nullable enable
 
-using Microsoft.CodeAnalysis;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -13,7 +12,6 @@ internal sealed class GeneratorValidationContext
 {
     internal GeneratorValidationContext(Builder b)
     {
-        Compilation = b.Compilation ?? throw new ArgumentNullException(nameof(b.Compilation));
         DiscoveryResult = b.DiscoveryResult ?? throw new ArgumentNullException(nameof(b.DiscoveryResult));
         Diagnostics = b.Diagnostics ?? throw new ArgumentNullException(nameof(b.Diagnostics));
 
@@ -27,12 +25,8 @@ internal sealed class GeneratorValidationContext
             ImmutableArray<MiddlewareRef>.Empty,
             ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
             ImmutableDictionary<string, PolicySpec>.Empty);
-
-        // Resolver cache (optional)
-        _middlewareSymbolCache = b.MiddlewareSymbolCache;
     }
 
-    public Compilation Compilation { get; }
     public DiscoveryResult DiscoveryResult { get; }
     public DiagnosticsCatalog Diagnostics { get; }
 
@@ -48,8 +42,6 @@ internal sealed class GeneratorValidationContext
     public ImmutableArray<MiddlewareRef> Globals => Pipeline.Globals;
     public ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> PerCommand => Pipeline.PerCommand;
     public ImmutableDictionary<string, PolicySpec> Policies => Pipeline.Policies;
-
-    private readonly ImmutableDictionary<string, INamedTypeSymbol>? _middlewareSymbolCache;
 
     public IEnumerable<MiddlewareRef> EnumerateAllMiddlewares()
     {
@@ -71,36 +63,14 @@ internal sealed class GeneratorValidationContext
         }
     }
 
-    public INamedTypeSymbol? TryResolveMiddlewareOpenTypeSymbol(string openTypeFqn)
-    {
-        if (string.IsNullOrWhiteSpace(openTypeFqn))
-            return null;
-
-        if (_middlewareSymbolCache != null && _middlewareSymbolCache.TryGetValue(openTypeFqn, out var cached))
-            return cached;
-
-        // Fallback: resolve by metadata name (strip global::)
-        var md = openTypeFqn.StartsWith("global::", StringComparison.Ordinal)
-            ? openTypeFqn.Substring("global::".Length)
-            : openTypeFqn;
-
-        return Compilation.GetTypeByMetadataName(md);
-    }
-
-    // =====================================================================
-    // Builder
-    // =====================================================================
-
     internal sealed class Builder
     {
-        public Builder(Compilation compilation, DiscoveryResult discoveryResult, DiagnosticsCatalog diagnostics)
+        public Builder(DiscoveryResult discoveryResult, DiagnosticsCatalog diagnostics)
         {
-            Compilation = compilation;
             DiscoveryResult = discoveryResult;
             Diagnostics = diagnostics;
         }
 
-        public Compilation Compilation { get; }
         public DiscoveryResult DiscoveryResult { get; }
         public DiagnosticsCatalog Diagnostics { get; }
 
@@ -112,8 +82,6 @@ internal sealed class GeneratorValidationContext
         public string? ExpectedContextFqn { get; private set; }
 
         public PipelineConfig? Pipeline { get; private set; }
-
-        public ImmutableDictionary<string, INamedTypeSymbol>? MiddlewareSymbolCache { get; private set; }
 
         public Builder WithHostGate(bool isHost)
         {
@@ -136,12 +104,6 @@ internal sealed class GeneratorValidationContext
         public Builder WithPipelineConfig(PipelineConfig pipeline)
         {
             Pipeline = pipeline;
-            return this;
-        }
-
-        public Builder WithMiddlewareSymbolCache(ImmutableDictionary<string, INamedTypeSymbol> cache)
-        {
-            MiddlewareSymbolCache = cache;
             return this;
         }
 

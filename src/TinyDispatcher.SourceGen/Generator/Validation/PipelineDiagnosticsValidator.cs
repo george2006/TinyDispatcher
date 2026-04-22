@@ -1,8 +1,7 @@
-﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using TinyDispatcher.SourceGen.Emitters.Pipelines;
+using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen.Generator.Validation;
@@ -23,16 +22,14 @@ internal sealed class PipelineDiagnosticsValidator : IGeneratorValidator
 
     private static HashSet<string> BuildDiscoveredCommandSet(DiscoveryResult discovery)
     {
-        var set = new HashSet<string>(StringComparer.Ordinal);
+        var discoveredCommands = new HashSet<string>(StringComparer.Ordinal);
 
-        for (int i = 0; i < discovery.Commands.Length; i++)
+        for (var i = 0; i < discovery.Commands.Length; i++)
         {
-            var fqn = PipelineTypeNames.NormalizeFqn(discovery.Commands[i].MessageTypeFqn);
-            if (!string.IsNullOrWhiteSpace(fqn))
-                set.Add(fqn);
+            AddNormalizedCommand(discoveredCommands, discovery.Commands[i].MessageTypeFqn);
         }
 
-        return set;
+        return discoveredCommands;
     }
 
     private static void ValidatePerCommandMiddlewareTargets(
@@ -44,15 +41,19 @@ internal sealed class PipelineDiagnosticsValidator : IGeneratorValidator
 
         foreach (var kv in context.PerCommand)
         {
-            var cmd = PipelineTypeNames.NormalizeFqn(kv.Key);
-            if (string.IsNullOrWhiteSpace(cmd)) continue;
+            var hasNormalizedCommand = TryNormalizeCommand(kv.Key, out var command);
+            if (!hasNormalizedCommand)
+            {
+                continue;
+            }
 
-            if (!discoveredCommands.Contains(cmd))
+            var commandWasDiscovered = discoveredCommands.Contains(command);
+            if (!commandWasDiscovered)
             {
                 diags.Add(context.Diagnostics.Create(
                     context.Diagnostics.MiddlewareConfiguredForUnknownCommand,
                     Location.None,
-                    cmd));
+                    command));
             }
         }
     }
@@ -64,22 +65,26 @@ internal sealed class PipelineDiagnosticsValidator : IGeneratorValidator
     {
         if (context.Policies.Count == 0) return;
 
-        foreach (var p in context.Policies.Values)
+        foreach (var policy in context.Policies.Values)
         {
-            var policyType = PipelineTypeNames.NormalizeFqn(p.PolicyTypeFqn);
+            var policyType = PipelineTypeNames.NormalizeFqn(policy.PolicyTypeFqn);
 
-            for (int i = 0; i < p.Commands.Length; i++)
+            for (var i = 0; i < policy.Commands.Length; i++)
             {
-                var cmd = PipelineTypeNames.NormalizeFqn(p.Commands[i]);
-                if (string.IsNullOrWhiteSpace(cmd)) continue;
+                var hasNormalizedCommand = TryNormalizeCommand(policy.Commands[i], out var command);
+                if (!hasNormalizedCommand)
+                {
+                    continue;
+                }
 
-                if (!discoveredCommands.Contains(cmd))
+                var commandWasDiscovered = discoveredCommands.Contains(command);
+                if (!commandWasDiscovered)
                 {
                     diags.Add(context.Diagnostics.Create(
                         context.Diagnostics.PolicyTargetsUnknownCommand,
                         Location.None,
                         policyType,
-                        cmd));
+                        command));
                 }
             }
         }
@@ -91,33 +96,13 @@ internal sealed class PipelineDiagnosticsValidator : IGeneratorValidator
     {
         if (context.Policies.Count == 0) return;
 
-        var map = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        var policiesByCommand = BuildPoliciesByCommand(context.Policies.Values);
 
-        foreach (var p in context.Policies.Values)
-        {
-            var policyType = PipelineTypeNames.NormalizeFqn(p.PolicyTypeFqn);
-            if (string.IsNullOrWhiteSpace(policyType)) continue;
-
-            for (int i = 0; i < p.Commands.Length; i++)
-            {
-                var cmd = PipelineTypeNames.NormalizeFqn(p.Commands[i]);
-                if (string.IsNullOrWhiteSpace(cmd)) continue;
-
-                if (!map.TryGetValue(cmd, out var list))
-                {
-                    list = new List<string>(4);
-                    map[cmd] = list;
-                }
-
-                list.Add(policyType);
-            }
-        }
-
-        foreach (var kv in map)
+        foreach (var kv in policiesByCommand)
         {
             if (kv.Value.Count <= 1) continue;
 
-            var policies = string.Join(", ", kv.Value.Distinct(StringComparer.Ordinal));
+            var policies = JoinDistinct(kv.Value);
 
             diags.Add(context.Diagnostics.Create(
                 context.Diagnostics.MultiplePoliciesForSameCommand,
@@ -126,4 +111,76 @@ internal sealed class PipelineDiagnosticsValidator : IGeneratorValidator
                 policies));
         }
     }
+
+    private static Dictionary<string, List<string>> BuildPoliciesByCommand(IEnumerable<PolicySpec> policies)
+    {
+        var policiesByCommand = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+
+        foreach (var policy in policies)
+        {
+            var policyType = PipelineTypeNames.NormalizeFqn(policy.PolicyTypeFqn);
+            if (string.IsNullOrWhiteSpace(policyType))
+            {
+                continue;
+            }
+
+            AddPolicyCommands(policiesByCommand, policy.Commands, policyType);
+        }
+
+        return policiesByCommand;
+    }
+
+    private static void AddPolicyCommands(
+        Dictionary<string, List<string>> policiesByCommand,
+        IReadOnlyList<string> commands,
+        string policyType)
+    {
+        for (var i = 0; i < commands.Count; i++)
+        {
+            if (!TryNormalizeCommand(commands[i], out var command))
+            {
+                continue;
+            }
+
+            if (!policiesByCommand.TryGetValue(command, out var policies))
+            {
+                policies = new List<string>(4);
+                policiesByCommand[command] = policies;
+            }
+
+            policies.Add(policyType);
+        }
+    }
+
+    private static void AddNormalizedCommand(HashSet<string> commands, string commandType)
+    {
+        if (TryNormalizeCommand(commandType, out var command))
+        {
+            commands.Add(command);
+        }
+    }
+
+    private static bool TryNormalizeCommand(string commandType, out string command)
+    {
+        command = PipelineTypeNames.NormalizeFqn(commandType);
+        return !string.IsNullOrWhiteSpace(command);
+    }
+
+    private static string JoinDistinct(List<string> values)
+    {
+        var distinct = new List<string>(values.Count);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+
+        for (var i = 0; i < values.Count; i++)
+        {
+            var value = values[i];
+            if (seen.Add(value))
+            {
+                distinct.Add(value);
+            }
+        }
+
+        return string.Join(", ", distinct);
+    }
 }
+

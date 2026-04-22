@@ -1,7 +1,7 @@
 #nullable enable
 
 using System.Collections.Immutable;
-using TinyDispatcher.SourceGen.Emitters.Pipelines;
+using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 using Xunit;
 
@@ -13,7 +13,6 @@ public sealed class PipelinePerCommandMiddlewareMapTests
     public void Build_normalizes_commands_and_skips_empty_entries()
     {
         var middleware = new MiddlewareRef(
-            OpenTypeSymbol: default!,
             OpenTypeFqn: "MyApp.Middleware.LoggingMiddleware",
             Arity: 2);
 
@@ -28,3 +27,4 @@ public sealed class PipelinePerCommandMiddlewareMapTests
         Assert.Equal("global::MyApp.Middleware.LoggingMiddleware", map["global::MyApp.Commands.Ping"][0].OpenTypeFqn);
     }
 }
+

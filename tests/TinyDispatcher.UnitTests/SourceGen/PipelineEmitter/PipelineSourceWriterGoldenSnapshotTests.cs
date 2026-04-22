@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.Collections.Generic;
@@ -6,7 +6,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using TinyDispatcher.SourceGen.Generator;
-using TinyDispatcher.SourceGen.Emitters.Pipelines;
+using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 using Xunit;
 
@@ -15,7 +15,7 @@ namespace TinyDispatcher.UnitTests.SourceGen.PipelineEmitter;
 public sealed class PipelineSourceWriterGoldenSnapshotTests
 {
     private static MiddlewareRef Mw(string openTypeFqn, int arity)
-        => new MiddlewareRef(OpenTypeSymbol: default!, OpenTypeFqn: openTypeFqn, Arity: arity);
+        => new MiddlewareRef(OpenTypeFqn: openTypeFqn, Arity: arity);
 
     [Fact]
     public void Write_golden_snapshot_global_policy_per_command_matches_expected()
@@ -158,3 +158,4 @@ public sealed class PipelineSourceWriterGoldenSnapshotTests
         return string.Join("\n", keep);
     }
 }
+
