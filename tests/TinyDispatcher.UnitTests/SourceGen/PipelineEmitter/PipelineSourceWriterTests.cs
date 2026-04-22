@@ -13,7 +13,7 @@ namespace TinyDispatcher.UnitTests.SourceGen.PipelineEmitter;
 public sealed class PipelineSourceWriterTests
 {
     private static MiddlewareRef Mw(string openTypeFqn, int arity)
-        => new MiddlewareRef(OpenTypeSymbol: default!, OpenTypeFqn: openTypeFqn, Arity: arity);
+        => new MiddlewareRef(OpenTypeFqn: openTypeFqn, Arity: arity);
 
     [Fact]
     public void Open_generic_pipeline_has_where_clause_before_class_body()

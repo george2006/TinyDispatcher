@@ -13,7 +13,6 @@ public sealed class PipelinePerCommandMiddlewareMapTests
     public void Build_normalizes_commands_and_skips_empty_entries()
     {
         var middleware = new MiddlewareRef(
-            OpenTypeSymbol: default!,
             OpenTypeFqn: "MyApp.Middleware.LoggingMiddleware",
             Arity: 2);
 

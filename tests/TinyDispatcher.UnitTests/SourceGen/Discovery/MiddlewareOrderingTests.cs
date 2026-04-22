@@ -112,7 +112,6 @@ public sealed class MiddlewareOrderingTests
 
     private static MiddlewareRef CreateMiddlewareRef(string openTypeFqn, int arity = 2)
     {
-        var symbol = new Mock<INamedTypeSymbol>().Object;
-        return new MiddlewareRef(symbol, openTypeFqn, arity);
+        return new MiddlewareRef(openTypeFqn, arity);
     }
 }

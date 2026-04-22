@@ -11,9 +11,11 @@ internal sealed class MiddlewareRefShapeValidator : IGeneratorValidator
     public void Validate(
         GeneratorValidationContext context,
         INamedTypeSymbol? commandMiddlewareInterface,
+        MiddlewareTypeResolver middlewareTypeResolver,
         DiagnosticBag diags)
     {
         if (context is null) throw new ArgumentNullException(nameof(context));
+        if (middlewareTypeResolver is null) throw new ArgumentNullException(nameof(middlewareTypeResolver));
         if (diags is null) throw new ArgumentNullException(nameof(diags));
 
         // If pipelines are not emitted, skip middleware validation.
@@ -34,7 +36,15 @@ internal sealed class MiddlewareRefShapeValidator : IGeneratorValidator
 
         foreach (var mw in context.EnumerateAllMiddlewares())
         {
-            var openType = mw.OpenTypeSymbol;
+            var openType = middlewareTypeResolver.Resolve(mw.OpenTypeFqn, mw.Arity);
+            if (openType is null)
+            {
+                diags.Add(context.Diagnostics.Create(
+                    context.Diagnostics.InvalidMiddlewareType,
+                    Location.None,
+                    mw.OpenTypeFqn));
+                continue;
+            }
 
             // DISP301: must be open generic definition
             if (!openType.IsGenericType || openType.TypeParameters.Length != mw.Arity)

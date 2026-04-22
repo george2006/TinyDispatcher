@@ -65,7 +65,6 @@ public sealed class PipelineMapInspectorTests
     private static MiddlewareRef Middleware(string openTypeFqn)
     {
         return new MiddlewareRef(
-            OpenTypeSymbol: default!,
             OpenTypeFqn: openTypeFqn,
             Arity: 2);
     }

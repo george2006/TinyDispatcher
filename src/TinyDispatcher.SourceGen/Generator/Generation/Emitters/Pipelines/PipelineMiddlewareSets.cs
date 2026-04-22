@@ -28,7 +28,6 @@ internal static class PipelineMiddlewareSets
             var normalizedFqn = PipelineTypeNames.NormalizeFqn(fqn);
 
             list.Add(new MiddlewareRef(
-                OpenTypeSymbol: x.OpenTypeSymbol,
                 OpenTypeFqn: normalizedFqn,
                 Arity: x.Arity));
         }

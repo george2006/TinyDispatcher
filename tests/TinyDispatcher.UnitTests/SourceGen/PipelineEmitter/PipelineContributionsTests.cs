@@ -76,7 +76,6 @@ public sealed class PipelineContributionsTests
     private static MiddlewareRef Middleware(string openTypeFqn)
     {
         return new MiddlewareRef(
-            OpenTypeSymbol: default!,
             OpenTypeFqn: openTypeFqn,
             Arity: 2);
     }

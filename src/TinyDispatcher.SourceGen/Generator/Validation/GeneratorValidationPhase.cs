@@ -16,12 +16,16 @@ internal sealed class GeneratorValidationPhase
     {
         var commandMiddlewareInterface =
             compilation.GetTypeByMetadataName("TinyDispatcher.ICommandMiddleware`2");
+        var middlewareTypeResolver = new MiddlewareTypeResolver(compilation);
 
         var validationContext = BuildValidationContext(
             hostBootstrap,
             extraction,
             diagnosticsCatalog);
-        var diagnostics = GeneratorValidator.Validate(validationContext, commandMiddlewareInterface);
+        var diagnostics = GeneratorValidator.Validate(
+            validationContext,
+            commandMiddlewareInterface,
+            middlewareTypeResolver);
 
         return new GeneratorValidationResult(validationContext, diagnostics);
     }

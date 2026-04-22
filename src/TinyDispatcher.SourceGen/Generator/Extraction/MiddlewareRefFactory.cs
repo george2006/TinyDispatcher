@@ -18,6 +18,6 @@ internal static class MiddlewareRefFactory
             ? fqnWithArgs.Substring(0, genericSuffixIndex)
             : fqnWithArgs;
 
-        return new MiddlewareRef(open, baseFqn, open.Arity);
+        return new MiddlewareRef(baseFqn, open.Arity);
     }
 }

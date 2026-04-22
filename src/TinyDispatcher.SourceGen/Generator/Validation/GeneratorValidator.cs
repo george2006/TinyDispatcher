@@ -13,13 +13,14 @@ internal static class GeneratorValidator
 
     public static DiagnosticBag Validate(
         GeneratorValidationContext vctx,
-        INamedTypeSymbol? commandMiddlewareInterface)
+        INamedTypeSymbol? commandMiddlewareInterface,
+        MiddlewareTypeResolver middlewareTypeResolver)
     {
         var bag = new DiagnosticBag();
 
         _contextConsistency.Validate(vctx, bag);
         _duplicateHandler.Validate(vctx, bag);
-        _middlewareRefShape.Validate(vctx, commandMiddlewareInterface, bag);
+        _middlewareRefShape.Validate(vctx, commandMiddlewareInterface, middlewareTypeResolver, bag);
         _pipelineDiagnostics.Validate(vctx, bag);
 
         return bag;

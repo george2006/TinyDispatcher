@@ -13,7 +13,7 @@ namespace TinyDispatcher.UnitTests.SourceGen.PipelineEmitter;
 public sealed class PipelineNamingTests
 {
     private static MiddlewareRef Mw(string openTypeFqn, int arity)
-        => new MiddlewareRef(OpenTypeSymbol: default!, OpenTypeFqn: openTypeFqn, Arity: arity);
+        => new MiddlewareRef(OpenTypeFqn: openTypeFqn, Arity: arity);
 
     [Fact]
     public void Normalize_fqn_adds_global_prefix_when_missing()

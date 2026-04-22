@@ -17,7 +17,7 @@ namespace TinyDispatcher.UnitTests.SourceGen.PipelineEmitter;
 public sealed class PipelinePlannerTests
 {
     private static MiddlewareRef Mw(string openTypeFqn, int arity)
-        => new MiddlewareRef(OpenTypeSymbol: default!, OpenTypeFqn: openTypeFqn, Arity: arity);
+        => new MiddlewareRef(OpenTypeFqn: openTypeFqn, Arity: arity);
 
     [Fact]
     public void Build_global_only_creates_global_pipeline_and_registers_global_for_all_commands()
