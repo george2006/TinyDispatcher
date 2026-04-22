@@ -14,6 +14,9 @@ namespace TinyDispatcher.Bootstrap;
 /// </summary>
 public static class DispatcherPipelineBootstrap
 {
+    public static void AddContribution(IDispatcherAssemblyContribution contribution)
+        => PipelineContributionStore.Add(contribution);
+
     public static void AddContribution(Action<IServiceCollection> contribution)
         => PipelineContributionStore.Add(contribution);
 
@@ -28,7 +31,7 @@ public static class DispatcherPipelineBootstrap
         services.AddSingleton<DispatcherPipelineBootstrapAppliedMarker>();
 
         foreach (var c in PipelineContributionStore.Drain())
-            c(services);
+            c.Apply(services);
     }
 
     private sealed class DispatcherPipelineBootstrapAppliedMarker { }

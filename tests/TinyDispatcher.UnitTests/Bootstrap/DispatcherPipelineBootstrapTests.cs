@@ -21,7 +21,7 @@ public sealed class DispatcherPipelineBootstrapTests
     {
         var services = CreateServices();
 
-        DispatcherPipelineBootstrap.AddContribution(null!);
+        DispatcherPipelineBootstrap.AddContribution((Action<IServiceCollection>)null!);
 
         var exception = Record.Exception(() => DispatcherPipelineBootstrap.Apply(services));
 
@@ -33,6 +33,19 @@ public sealed class DispatcherPipelineBootstrapTests
     {
         ResetStore();
         DispatcherPipelineBootstrap.AddContribution(AddTestService);
+
+        var services = CreateServices();
+
+        DispatcherPipelineBootstrap.Apply(services);
+
+        AssertSingleRegistration<TestService>(services);
+    }
+
+    [Fact]
+    public void Applies_registered_object_contribution()
+    {
+        ResetStore();
+        DispatcherPipelineBootstrap.AddContribution(new TestContribution());
 
         var services = CreateServices();
 
@@ -123,7 +136,14 @@ public sealed class DispatcherPipelineBootstrapTests
     }
 
     private static void ResetStore()
-    => PipelineContributionStore.ResetForTests();
+        => PipelineContributionStore.ResetForTests();
 
     private sealed class TestService;
+    private sealed class TestContribution : IDispatcherAssemblyContribution
+    {
+        public void Apply(IServiceCollection services)
+        {
+            services.AddSingleton<TestService>();
+        }
+    }
 }

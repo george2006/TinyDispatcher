@@ -24,8 +24,9 @@ internal static class ModuleInitializerSourceWriter
         w.BeginBlock("[ModuleInitializer] internal static void Init()");
 
         w.Line("// Contribute this assembly's pipeline + handler DI registrations");
-        w.Line($"global::{plan.CoreNamespace}.Bootstrap.DispatcherPipelineBootstrap.AddContribution(");
-        w.Line($"  services => global::{plan.GeneratedNamespace}.ThisAssemblyPipelineContribution.Add(services));");
+        w.Line(
+            $"global::{plan.CoreNamespace}.Bootstrap.DispatcherPipelineBootstrap.AddContribution(" +
+            $"new global::{plan.GeneratedNamespace}.ThisAssemblyDispatcherContribution());");
 
         w.EndBlock(); // Init
         w.EndBlock(); // class

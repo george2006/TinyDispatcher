@@ -33,6 +33,14 @@ internal sealed class EmptyPipelineContributionEmitter
             static partial void AddGeneratedPipelines(IServiceCollection services);
             static partial void AddGeneratedHandlers(IServiceCollection services);
           }
+
+          internal sealed class ThisAssemblyDispatcherContribution : global::TinyDispatcher.Bootstrap.IDispatcherAssemblyContribution
+          {
+            public void Apply(IServiceCollection services)
+            {
+              ThisAssemblyPipelineContribution.Add(services);
+            }
+          }
         }
         """;
 

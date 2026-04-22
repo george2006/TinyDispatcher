@@ -14,7 +14,7 @@ public sealed class PipelineContributionStoreTests
     {
         ResetStore();
 
-        PipelineContributionStore.Add(null!);
+        PipelineContributionStore.Add((Action<IServiceCollection>)null!);
 
         var contributions = PipelineContributionStore.Drain();
 
@@ -32,7 +32,11 @@ public sealed class PipelineContributionStoreTests
         var contributions = PipelineContributionStore.Drain();
 
         Assert.Single(contributions);
-        Assert.Same(contribution, contributions[0]);
+        var services = new ServiceCollection();
+
+        contributions[0].Apply(services);
+
+        AssertSingleRegistration<TestService>(services);
     }
 
     [Fact]
@@ -48,8 +52,13 @@ public sealed class PipelineContributionStoreTests
         var contributions = PipelineContributionStore.Drain();
 
         Assert.Equal(2, contributions.Length);
-        Assert.Same(first, contributions[0]);
-        Assert.Same(second, contributions[1]);
+        var services = new ServiceCollection();
+
+        contributions[0].Apply(services);
+        contributions[1].Apply(services);
+
+        AssertSingleRegistration<FirstService>(services);
+        AssertSingleRegistration<SecondService>(services);
     }
 
     [Fact]
@@ -65,7 +74,11 @@ public sealed class PipelineContributionStoreTests
         PipelineContributionStore.Add(second);
 
         Assert.Single(snapshot);
-        Assert.Same(first, snapshot[0]);
+        var services = new ServiceCollection();
+
+        snapshot[0].Apply(services);
+
+        AssertSingleRegistration<FirstService>(services);
     }
 
     [Fact]
@@ -81,8 +94,15 @@ public sealed class PipelineContributionStoreTests
 
         Assert.Single(firstDrain);
         Assert.Single(secondDrain);
-        Assert.Same(contribution, firstDrain[0]);
-        Assert.Same(contribution, secondDrain[0]);
+
+        var firstServices = new ServiceCollection();
+        var secondServices = new ServiceCollection();
+
+        firstDrain[0].Apply(firstServices);
+        secondDrain[0].Apply(secondServices);
+
+        AssertSingleRegistration<TestService>(firstServices);
+        AssertSingleRegistration<TestService>(secondServices);
     }
 
     private static void ResetStore()
@@ -96,6 +116,19 @@ public sealed class PipelineContributionStoreTests
 
     private static void AddSecondService(IServiceCollection services)
         => services.AddSingleton<SecondService>();
+
+    private static void AssertSingleRegistration<TService>(IServiceCollection services)
+    {
+        var count = 0;
+
+        foreach (var descriptor in services)
+        {
+            if (descriptor.ServiceType == typeof(TService))
+                count++;
+        }
+
+        Assert.Equal(1, count);
+    }
 
     private sealed class TestService;
 

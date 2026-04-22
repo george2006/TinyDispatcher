@@ -94,7 +94,7 @@ public sealed class ModuleInitializerEmitterTests
         Assert.Contains("internal static class DispatcherModuleInitializer", source);
         Assert.Contains("[ModuleInitializer]", source);
         Assert.Contains("global::TinyDispatcher.Bootstrap.DispatcherPipelineBootstrap.AddContribution", source);
-        Assert.Contains("global::MyApp.Generated.ThisAssemblyPipelineContribution.Add", source);
+        Assert.Contains("new global::MyApp.Generated.ThisAssemblyDispatcherContribution()", source);
     }
 }
 

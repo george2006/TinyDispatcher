@@ -4,9 +4,9 @@ namespace TinyDispatcher.Bootstrap;
 internal static class PipelineContributionStore
 {
     private static readonly object _gate = new();
-    private static readonly List<Action<IServiceCollection>> _items = new();
+    private static readonly List<IDispatcherAssemblyContribution> _items = new();
 
-    public static void Add(Action<IServiceCollection> contribution)
+    public static void Add(IDispatcherAssemblyContribution contribution)
     {
         if (contribution is null) return;
         lock (_gate)
@@ -15,7 +15,13 @@ internal static class PipelineContributionStore
         }
     }
 
-    public static Action<IServiceCollection>[] Drain()
+    public static void Add(Action<IServiceCollection> contribution)
+    {
+        if (contribution is null) return;
+        Add(new DelegateDispatcherAssemblyContribution(contribution));
+    }
+
+    public static IDispatcherAssemblyContribution[] Drain()
     {
         lock (_gate)
         {
@@ -28,6 +34,21 @@ internal static class PipelineContributionStore
         lock (_gate)
         {
             _items.Clear();
+        }
+    }
+
+    private sealed class DelegateDispatcherAssemblyContribution : IDispatcherAssemblyContribution
+    {
+        private readonly Action<IServiceCollection> _apply;
+
+        public DelegateDispatcherAssemblyContribution(Action<IServiceCollection> apply)
+        {
+            _apply = apply;
+        }
+
+        public void Apply(IServiceCollection services)
+        {
+            _apply(services);
         }
     }
 }
