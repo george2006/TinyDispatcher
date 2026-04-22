@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.CodeAnalysis.Text;
 
 using TinyDispatcher.SourceGen.Generator;
+using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Pipelines;
 
 namespace TinyDispatcher.SourceGen.Generator.Generation.Emitters.PipelineMaps;
 
@@ -51,14 +52,9 @@ internal static class PipelineMapJsonEmitter
 
         w.EnsureAllBlocksClosed();
 
-        var hint = $"PipelineMap.{Sanitize(d.CommandFullName)}.g.cs";
+        var hint = $"PipelineMap.{PipelineNameFactory.SanitizeTypeName(d.CommandFullName)}.g.cs";
         context.AddSource(hint, SourceText.From(w.ToString(), Encoding.UTF8));
     }
-
-    private static string Sanitize(string s)
-        => s.Replace("global::", "")
-            .Replace('.', '_')
-            .Replace('+', '_');
 
     private static string Escape(string s)
         => s.Replace("\\", "\\\\").Replace("\"", "\\\"");

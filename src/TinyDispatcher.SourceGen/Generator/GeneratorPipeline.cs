@@ -24,7 +24,7 @@ internal sealed class GeneratorPipeline
             input.UseTinyCallsSyntax,
             input.Options);
         var analysis = analysisResult.Analysis;
-        var validationRoslynDependencies = ValidationRoslynDependencies.Create(input.Compilation);
+        var validationDependencies = ValidationRoslynDependencies.Create(input.Compilation);
 
         var extraction = _extractionPhase.Extract(
             input.Compilation,
@@ -35,7 +35,7 @@ internal sealed class GeneratorPipeline
             analysis.HostBootstrap,
             extraction,
             _diagnosticsCatalog,
-            validationRoslynDependencies);
+            validationDependencies);
 
         if (GeneratorDiagnosticReporter.ReportAndHasErrors(context, validation.Diagnostics))
         {

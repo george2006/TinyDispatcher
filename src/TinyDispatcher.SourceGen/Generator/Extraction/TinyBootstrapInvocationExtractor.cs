@@ -54,36 +54,23 @@ internal sealed class TinyBootstrapInvocationExtractor
 
         if (lambda.Body is BlockSyntax block)
         {
-            AddDescendantInvocations(invocations, block);
+            AddInvocations(invocations, block.DescendantNodes());
             return invocations;
         }
 
         if (lambda.Body is ExpressionSyntax expression)
         {
-            AddSelfAndDescendantInvocations(invocations, expression);
+            AddInvocations(invocations, expression.DescendantNodesAndSelf());
         }
 
         return invocations;
     }
 
-    private static void AddDescendantInvocations(
+    private static void AddInvocations(
         List<InvocationExpressionSyntax> invocations,
-        BlockSyntax block)
+        IEnumerable<SyntaxNode> nodes)
     {
-        foreach (var node in block.DescendantNodes())
-        {
-            if (node is InvocationExpressionSyntax invocation)
-            {
-                invocations.Add(invocation);
-            }
-        }
-    }
-
-    private static void AddSelfAndDescendantInvocations(
-        List<InvocationExpressionSyntax> invocations,
-        ExpressionSyntax expression)
-    {
-        foreach (var node in expression.DescendantNodesAndSelf())
+        foreach (var node in nodes)
         {
             if (node is InvocationExpressionSyntax invocation)
             {

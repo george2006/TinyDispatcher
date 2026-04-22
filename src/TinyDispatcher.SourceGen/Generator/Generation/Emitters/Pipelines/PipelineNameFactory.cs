@@ -44,11 +44,16 @@ internal static class PipelineNameFactory
 
     public static string SanitizePolicyName(string policyTypeFqn)
     {
-        var s = policyTypeFqn.StartsWith("global::", StringComparison.Ordinal)
-            ? policyTypeFqn.Substring("global::".Length)
-            : policyTypeFqn;
+        return SanitizeTypeName(policyTypeFqn);
+    }
 
-        return SanitizeName(s);
+    public static string SanitizeTypeName(string typeFqn)
+    {
+        var typeName = typeFqn.StartsWith("global::", StringComparison.Ordinal)
+            ? typeFqn.Substring("global::".Length)
+            : typeFqn;
+
+        return SanitizeName(typeName);
     }
 
     private static string SanitizeName(string value)

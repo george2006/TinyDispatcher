@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.CodeAnalysis.Text;
 
 using TinyDispatcher.SourceGen.Generator;
+using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Pipelines;
 
 namespace TinyDispatcher.SourceGen.Generator.Generation.Emitters.PipelineMaps;
 
@@ -31,7 +32,7 @@ internal static class PipelineMapMermaidEmitter
 
         w.EnsureAllBlocksClosed();
 
-        var hint = $"PipelineMap.{Sanitize(d.CommandFullName)}.g.mmd";
+        var hint = $"PipelineMap.{PipelineNameFactory.SanitizeTypeName(d.CommandFullName)}.g.mmd";
         context.AddSource(hint, SourceText.From(w.ToString(), Encoding.UTF8));
     }
 
@@ -47,9 +48,5 @@ internal static class PipelineMapMermaidEmitter
             : cleaned;
     }
 
-    private static string Sanitize(string s)
-        => s.Replace("global::", "")
-            .Replace('.', '_')
-            .Replace('+', '_');
 }
 
