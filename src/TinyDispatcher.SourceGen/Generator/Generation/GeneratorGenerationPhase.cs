@@ -1,5 +1,6 @@
 #nullable enable
 
+using TinyDispatcher.SourceGen.Generator.Generation.Emitters;
 using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Handlers;
 using TinyDispatcher.SourceGen.Generator.Generation.Emitters.ModuleInitializer;
 using TinyDispatcher.SourceGen.Generator.Generation.Emitters.PipelineMaps;

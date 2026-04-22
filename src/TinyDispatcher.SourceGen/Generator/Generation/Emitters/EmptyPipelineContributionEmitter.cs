@@ -1,11 +1,10 @@
 using System.Text;
 using Microsoft.CodeAnalysis.Text;
-using TinyDispatcher.SourceGen.Generator.Models;
 
 using TinyDispatcher.SourceGen.Generator;
 using TinyDispatcher.SourceGen.Generator.Options;
 
-namespace TinyDispatcher.SourceGen;
+namespace TinyDispatcher.SourceGen.Generator.Generation.Emitters;
 
 internal sealed class EmptyPipelineContributionEmitter
 {
