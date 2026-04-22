@@ -37,6 +37,7 @@ public sealed class PipelineContributionStoreTests
         contributions[0].Apply(services);
 
         AssertSingleRegistration<TestService>(services);
+        Assert.Empty(contributions[0].CommandHandlers);
     }
 
     [Fact]

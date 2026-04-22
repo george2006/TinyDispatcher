@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using System;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace TinyDispatcher.Bootstrap;
 internal static class PipelineContributionStore
@@ -29,6 +30,7 @@ internal static class PipelineContributionStore
             return _items.ToArray();
         }
     }
+
     internal static void ResetForTests()
     {
         lock (_gate)
@@ -45,6 +47,9 @@ internal static class PipelineContributionStore
         {
             _apply = apply;
         }
+
+        public IReadOnlyList<CommandHandlerDescriptor> CommandHandlers { get; } =
+            Array.Empty<CommandHandlerDescriptor>();
 
         public void Apply(IServiceCollection services)
         {

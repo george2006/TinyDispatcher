@@ -22,6 +22,9 @@ internal sealed class EmptyPipelineContributionEmitter
         {
           internal static partial class ThisAssemblyPipelineContribution
           {
+            internal static System.Collections.Generic.IReadOnlyList<global::TinyDispatcher.Bootstrap.CommandHandlerDescriptor> CommandHandlers
+              => GetGeneratedCommandHandlers();
+
             internal static void Add(IServiceCollection services)
             {
               if (services is null) throw new ArgumentNullException(nameof(services));
@@ -32,10 +35,14 @@ internal sealed class EmptyPipelineContributionEmitter
 
             static partial void AddGeneratedPipelines(IServiceCollection services);
             static partial void AddGeneratedHandlers(IServiceCollection services);
+            internal static partial System.Collections.Generic.IReadOnlyList<global::TinyDispatcher.Bootstrap.CommandHandlerDescriptor> GetGeneratedCommandHandlers();
           }
 
           internal sealed class ThisAssemblyDispatcherContribution : global::TinyDispatcher.Bootstrap.IDispatcherAssemblyContribution
           {
+            public System.Collections.Generic.IReadOnlyList<global::TinyDispatcher.Bootstrap.CommandHandlerDescriptor> CommandHandlers
+              => ThisAssemblyPipelineContribution.CommandHandlers;
+
             public void Apply(IServiceCollection services)
             {
               ThisAssemblyPipelineContribution.Add(services);

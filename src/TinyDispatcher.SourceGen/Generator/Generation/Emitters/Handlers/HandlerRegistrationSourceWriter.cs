@@ -23,6 +23,20 @@ internal sealed class HandlerRegistrationsSourceWriter
 
         w.BeginBlock($"namespace {plan.Namespace}");
         w.BeginBlock("internal static partial class ThisAssemblyPipelineContribution");
+        w.Line("internal static partial System.Collections.Generic.IReadOnlyList<global::TinyDispatcher.Bootstrap.CommandHandlerDescriptor> GetGeneratedCommandHandlers()");
+        w.Line("    => new global::TinyDispatcher.Bootstrap.CommandHandlerDescriptor[]");
+        w.BeginAnonymousBlock("GeneratedCommandHandlers");
+
+        for (int i = 0; i < plan.Commands.Length; i++)
+        {
+            var c = plan.Commands[i];
+            w.Line(
+                $"new({ToStringLiteral(c.MessageTypeFqn)}, {ToStringLiteral(c.HandlerTypeFqn)}, {ToStringLiteral(c.ContextTypeFqn)}),");
+        }
+
+        w.EndBlock();
+        w.Line(";");
+        w.Line();
         w.BeginBlock("static partial void AddGeneratedHandlers(IServiceCollection services)");
 
         w.Line("if (services is null) throw new ArgumentNullException(nameof(services));");
@@ -64,8 +78,13 @@ internal sealed class HandlerRegistrationsSourceWriter
 
         w.BeginBlock($"namespace {ns}");
         w.BeginBlock("internal static partial class ThisAssemblyPipelineContribution");
+        w.Line("internal static partial System.Collections.Generic.IReadOnlyList<global::TinyDispatcher.Bootstrap.CommandHandlerDescriptor> GetGeneratedCommandHandlers()");
+        w.Line("    => System.Array.Empty<global::TinyDispatcher.Bootstrap.CommandHandlerDescriptor>();");
         w.Line("static partial void AddGeneratedHandlers(IServiceCollection services) { }");
         w.EndBlock();
         w.EndBlock();
     }
+
+    private static string ToStringLiteral(string value)
+        => "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
 }

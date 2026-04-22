@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using System;
+using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using TinyDispatcher.Bootstrap;
 using Xunit;
@@ -141,6 +142,15 @@ public sealed class DispatcherPipelineBootstrapTests
     private sealed class TestService;
     private sealed class TestContribution : IDispatcherAssemblyContribution
     {
+        public IReadOnlyList<CommandHandlerDescriptor> CommandHandlers { get; } =
+            new[]
+            {
+                new CommandHandlerDescriptor(
+                    CommandTypeFqn: "global::MyApp.CreateOrder",
+                    HandlerTypeFqn: "global::MyApp.CreateOrderHandler",
+                    ContextTypeFqn: "global::MyApp.AppContext"),
+            };
+
         public void Apply(IServiceCollection services)
         {
             services.AddSingleton<TestService>();

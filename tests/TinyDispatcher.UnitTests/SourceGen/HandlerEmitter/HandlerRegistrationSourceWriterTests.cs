@@ -18,6 +18,8 @@ public sealed class HandlerRegistrationsSourceWriterTests
 
         Assert.Contains("namespace Acme.Gen", src);
         Assert.Contains("internal static partial class ThisAssemblyPipelineContribution", src);
+        Assert.Contains("GetGeneratedCommandHandlers()", src);
+        Assert.Contains("Array.Empty<global::TinyDispatcher.Bootstrap.CommandHandlerDescriptor>()", src);
         Assert.Contains("static partial void AddGeneratedHandlers(IServiceCollection services) { }", src);
         Assert.DoesNotContain("ArgumentNullException", src);
         Assert.DoesNotContain("AddTransient", src);
@@ -46,6 +48,8 @@ public sealed class HandlerRegistrationsSourceWriterTests
         Assert.Contains("using System;", src);
         Assert.Contains("using Microsoft.Extensions.DependencyInjection;", src);
 
+        Assert.Contains("internal static partial System.Collections.Generic.IReadOnlyList<global::TinyDispatcher.Bootstrap.CommandHandlerDescriptor> GetGeneratedCommandHandlers()", src);
+        Assert.Contains("new(\"global::A.Cmd\", \"global::A.CmdHandler\", \"global::Acme.Ctx\"),", src);
         Assert.Contains("static partial void AddGeneratedHandlers(IServiceCollection services)", src);
         Assert.Contains("if (services is null) throw new ArgumentNullException(nameof(services));", src);
 
