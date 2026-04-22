@@ -1,7 +1,7 @@
 #nullable enable
 
 using System.Collections.Immutable;
-using TinyDispatcher.SourceGen.Emitters.Pipelines;
+using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 using Xunit;
 
@@ -28,3 +28,4 @@ public sealed class PipelinePerCommandMiddlewareMapTests
         Assert.Equal("global::MyApp.Middleware.LoggingMiddleware", map["global::MyApp.Commands.Ping"][0].OpenTypeFqn);
     }
 }
+

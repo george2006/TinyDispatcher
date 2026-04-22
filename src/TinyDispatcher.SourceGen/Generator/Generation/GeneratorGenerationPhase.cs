@@ -1,9 +1,9 @@
 #nullable enable
 
-using TinyDispatcher.SourceGen.Emitters.Handlers;
-using TinyDispatcher.SourceGen.Emitters.ModuleInitializer;
-using TinyDispatcher.SourceGen.Emitters.PipelineMaps;
-using TinyDispatcher.SourceGen.Emitters.Pipelines;
+using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Handlers;
+using TinyDispatcher.SourceGen.Generator.Generation.Emitters.ModuleInitializer;
+using TinyDispatcher.SourceGen.Generator.Generation.Emitters.PipelineMaps;
+using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Generator.Options;
 using TinyDispatcher.SourceGen.Generator.Validation;
@@ -134,3 +134,4 @@ internal sealed class GeneratorGenerationPhase
         bool ShouldEmitPipelines,
         PipelineContributions PipelineContributions);
 }
+

@@ -2,7 +2,7 @@
 
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using TinyDispatcher.SourceGen.Emitters.Pipelines;
+using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Pipelines;
 using Xunit;
 
 namespace TinyDispatcher.UnitTests.SourceGen.PipelineEmitter;
@@ -29,3 +29,4 @@ public sealed class PipelinePolicyCommandMapTests
         Assert.False(map.ContainsKey(string.Empty));
     }
 }
+

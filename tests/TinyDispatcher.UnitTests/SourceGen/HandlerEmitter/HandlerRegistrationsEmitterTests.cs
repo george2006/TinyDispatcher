@@ -1,11 +1,11 @@
-﻿#nullable enable
+#nullable enable
 
 using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
 using TinyDispatcher.SourceGen;
 using TinyDispatcher.SourceGen.Generator;
-using TinyDispatcher.SourceGen.Emitters.Handlers;
+using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Handlers;
 using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Generator.Options;
 using Xunit;
@@ -64,3 +64,4 @@ public sealed class HandlerRegistrationsEmitterTests
             => Diagnostics.Add(diagnostic);
     }
 }
+

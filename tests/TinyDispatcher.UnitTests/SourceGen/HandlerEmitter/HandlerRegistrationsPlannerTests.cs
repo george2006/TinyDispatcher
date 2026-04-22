@@ -1,8 +1,8 @@
-﻿#nullable enable
+#nullable enable
 
 using System.Collections.Immutable;
 using TinyDispatcher.SourceGen;
-using TinyDispatcher.SourceGen.Emitters.Handlers;
+using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Handlers;
 using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Generator.Options;
 using Xunit;
@@ -106,3 +106,4 @@ public sealed class HandlerRegistrationsPlannerTests
         Assert.Equal("global::Z.Q", plan.Queries[2].QueryTypeFqn);
     }
 }
+

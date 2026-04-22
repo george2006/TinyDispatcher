@@ -1,6 +1,6 @@
-﻿#nullable enable
+#nullable enable
 
-using TinyDispatcher.SourceGen.Emitters.Handlers;
+using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Handlers;
 using TinyDispatcher.SourceGen.Generator.Models;
 using Xunit;
 

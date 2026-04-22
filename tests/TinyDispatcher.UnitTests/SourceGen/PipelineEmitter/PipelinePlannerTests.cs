@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.Collections.Generic;
@@ -7,7 +7,7 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using TinyDispatcher.SourceGen;
 using TinyDispatcher.SourceGen.Generator;
-using TinyDispatcher.SourceGen.Emitters.Pipelines;
+using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Generator.Options;
 using Xunit;
@@ -211,3 +211,4 @@ public sealed class PipelinePlannerTests
         }
     }
 }
+
