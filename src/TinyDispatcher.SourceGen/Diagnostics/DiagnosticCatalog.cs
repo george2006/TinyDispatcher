@@ -62,20 +62,6 @@ namespace TinyDispatcher.SourceGen.Diagnostics
 
         #region TinyBootstrap diagnostics (pipeline config)
 
-        public DiagnosticDescriptor UnsupportedTinyBootstrapCall { get; } =
-            BuildDescriptor(
-                id: "DISP401",
-                title: "Unsupported TinyDispatcher bootstrap call",
-                message: "Unsupported TinyDispatcher bootstrap call '{0}'.",
-                severity: DiagnosticSeverity.Error);
-
-        public DiagnosticDescriptor InvalidTinyBootstrapArguments { get; } =
-            BuildDescriptor(
-                id: "DISP402",
-                title: "Invalid TinyDispatcher bootstrap arguments",
-                message: "Invalid arguments for '{0}'. Expected: {1}.",
-                severity: DiagnosticSeverity.Error);
-
         public DiagnosticDescriptor MiddlewareConfiguredForUnknownCommand { get; } =
             BuildDescriptor(
                 id: "DISP410",
@@ -95,13 +81,6 @@ namespace TinyDispatcher.SourceGen.Diagnostics
                 id: "DISP412",
                 title: "Multiple policies target the same command",
                 message: "Command '{0}' is targeted by multiple policies ({1}). The first policy wins for pipeline composition.",
-                severity: DiagnosticSeverity.Warning);
-
-        public DiagnosticDescriptor TinyPolicyMissingCommandsOrMiddlewares { get; } =
-            BuildDescriptor(
-                id: "DISP420",
-                title: "Tiny policy has no commands or middlewares",
-                message: "Policy '{0}' is marked with [TinyPolicy] but does not declare both [ForCommand] and [UseMiddleware].",
                 severity: DiagnosticSeverity.Warning);
 
         #endregion
