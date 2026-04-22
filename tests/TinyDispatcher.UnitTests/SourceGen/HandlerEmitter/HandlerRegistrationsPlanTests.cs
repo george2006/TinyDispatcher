@@ -15,7 +15,6 @@ public sealed class HandlerRegistrationsPlanTests
 
         Assert.Equal("Acme.Gen", plan.Namespace);
         Assert.False(plan.IsEnabled);
-        Assert.Equal(string.Empty, plan.CommandContextFqn);
         Assert.Empty(plan.Commands);
         Assert.Empty(plan.Queries);
         Assert.False(plan.ShouldInsertBlankLineBetweenCommandAndQueryBlocks);
@@ -33,7 +32,7 @@ public sealed class HandlerRegistrationsPlanTests
     {
         var commands = commandCount == 0
             ? System.Array.Empty<HandlerContract>()
-            : new[] { new HandlerContract("global::A.Cmd", "global::A.CmdHandler") };
+            : new[] { new HandlerContract("global::A.Cmd", "global::A.CmdHandler", "global::A.Ctx") };
 
         var queries = queryCount == 0
             ? System.Array.Empty<QueryHandlerContract>()
@@ -42,7 +41,6 @@ public sealed class HandlerRegistrationsPlanTests
         var plan = new HandlerRegistrationsPlan(
             @namespace: "Acme.Gen",
             isEnabled: true,
-            commandContextFqn: "global::Acme.Ctx",
             commands: commands,
             queries: queries);
 

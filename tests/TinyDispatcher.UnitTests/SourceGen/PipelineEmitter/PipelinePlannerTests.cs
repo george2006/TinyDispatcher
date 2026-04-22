@@ -189,7 +189,10 @@ public sealed class PipelinePlannerTests
     private static DiscoveryResult FakeDiscovery(params string[] commandMessageTypeFqns)
         => new(
             Commands: commandMessageTypeFqns
-                .Select(fqn => new HandlerContract(MessageTypeFqn: fqn, HandlerTypeFqn: "global::MyApp.DummyHandler"))
+                .Select(fqn => new HandlerContract(
+                    MessageTypeFqn: fqn,
+                    HandlerTypeFqn: "global::MyApp.DummyHandler",
+                    ContextTypeFqn: "global::MyApp.AppContext"))
                 .ToImmutableArray(),
             Queries: ImmutableArray<QueryHandlerContract>.Empty);
 

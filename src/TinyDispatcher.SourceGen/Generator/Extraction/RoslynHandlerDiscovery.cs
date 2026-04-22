@@ -130,8 +130,9 @@ internal sealed class RoslynHandlerDiscovery
 
         var messageTypeFqn = EnsureGlobalPrefix(commandArg.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
         var handlerTypeFqn = EnsureGlobalPrefix(handlerType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+        var contextTypeFqn = EnsureGlobalPrefix(ctxArg.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
 
-        commandHandlers.Add(new HandlerContract(messageTypeFqn, handlerTypeFqn));
+        commandHandlers.Add(new HandlerContract(messageTypeFqn, handlerTypeFqn, contextTypeFqn));
     }
 
     private static void AddQueryHandlerContract(

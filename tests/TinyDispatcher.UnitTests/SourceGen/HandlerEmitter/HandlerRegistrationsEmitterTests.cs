@@ -21,7 +21,7 @@ public sealed class HandlerRegistrationsEmitterTests
 
         var result = new DiscoveryResult(
             Commands: System.Collections.Immutable.ImmutableArray.Create(
-                new HandlerContract("global::A.Cmd", "global::A.CmdHandler")),
+                new HandlerContract("global::A.Cmd", "global::A.CmdHandler", "global::Acme.Ctx")),
             Queries: System.Collections.Immutable.ImmutableArray.Create(
                 new QueryHandlerContract("global::A.Q", "global::A.R", "global::A.QHandler")));
 

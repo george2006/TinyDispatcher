@@ -17,14 +17,6 @@ internal static class HandlerRegistrationsPlanner
         if (!options.EmitHandlerRegistrations)
             return HandlerRegistrationsPlan.Disabled(ns);
 
-        // We need a context type to register ICommandHandler<TCommand,TContext>.
-        // (Queries do not require it, but we keep a single consistent codepath.)
-        var ctx = options.CommandContextType!;
-        if (string.IsNullOrWhiteSpace(ctx))
-            return HandlerRegistrationsPlan.Disabled(ns);
-
-        var ctxFqn = Fqn.EnsureGlobal(ctx);
-
         var commands = CopyCommands(result.Commands);
         var queries = CopyQueries(result.Queries);
 
@@ -34,7 +26,6 @@ internal static class HandlerRegistrationsPlanner
         return new HandlerRegistrationsPlan(
             @namespace: ns,
             isEnabled: true,
-            commandContextFqn: ctxFqn,
             commands: commands,
             queries: queries);
     }

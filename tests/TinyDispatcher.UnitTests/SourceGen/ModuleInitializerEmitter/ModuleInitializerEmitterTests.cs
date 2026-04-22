@@ -62,7 +62,8 @@ public sealed class ModuleInitializerEmitterTests
         var discovery = new DiscoveryResult(
             Commands: ImmutableArray.Create(new HandlerContract(
                 MessageTypeFqn: "global::MyApp.Cmd",
-                HandlerTypeFqn: "global::MyApp.CmdHandler")),
+                HandlerTypeFqn: "global::MyApp.CmdHandler",
+                ContextTypeFqn: "global::MyApp.AppContext")),
             Queries: ImmutableArray<QueryHandlerContract>.Empty);
 
         var options = new GeneratorOptions(
