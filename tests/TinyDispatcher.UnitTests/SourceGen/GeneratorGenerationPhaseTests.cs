@@ -69,7 +69,8 @@ public sealed class GeneratorGenerationPhaseTests
         var compilation = CreateCompilation();
         var command = new HandlerContract(
             MessageTypeFqn: "global::MyApp.CreateUser",
-            HandlerTypeFqn: "global::MyApp.CreateUserHandler");
+            HandlerTypeFqn: "global::MyApp.CreateUserHandler",
+            ContextTypeFqn: "global::MyApp.AppContext");
         var discovery = new DiscoveryResult(
             ImmutableArray.Create(command),
             ImmutableArray<QueryHandlerContract>.Empty);

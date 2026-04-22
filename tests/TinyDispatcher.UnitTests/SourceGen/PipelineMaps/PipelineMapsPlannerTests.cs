@@ -41,7 +41,7 @@ public sealed class PipelineMapsPlannerTests
     private static DiscoveryResult Discovery(string commandFqn, string handlerFqn)
     {
         return new DiscoveryResult(
-            Commands: ImmutableArray.Create(new HandlerContract(commandFqn, handlerFqn)),
+            Commands: ImmutableArray.Create(new HandlerContract(commandFqn, handlerFqn, "global::MyApp.AppContext")),
             Queries: ImmutableArray<QueryHandlerContract>.Empty);
     }
 

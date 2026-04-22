@@ -25,7 +25,8 @@ public sealed class PipelineMapInspectorTests
 
         var descriptor = sut.InspectCommand(new HandlerContract(
             MessageTypeFqn: "global::MyApp.Commands.Checkout",
-            HandlerTypeFqn: "global::MyApp.Handlers.CheckoutHandler"));
+            HandlerTypeFqn: "global::MyApp.Handlers.CheckoutHandler",
+            ContextTypeFqn: "global::MyApp.AppContext"));
 
         Assert.Single(descriptor.PoliciesApplied);
         Assert.Equal("global::MyApp.Policies.AlphaPolicy", descriptor.PoliciesApplied[0]);

@@ -33,7 +33,7 @@ internal sealed class HandlerRegistrationsSourceWriter
         {
             var c = plan.Commands[i];
             w.Line(
-                $"services.AddTransient(typeof(global::TinyDispatcher.ICommandHandler<{c.MessageTypeFqn}, {plan.CommandContextFqn}>), typeof({c.HandlerTypeFqn}));");
+                $"services.AddTransient(typeof(global::TinyDispatcher.ICommandHandler<{c.MessageTypeFqn}, {c.ContextTypeFqn}>), typeof({c.HandlerTypeFqn}));");
         }
 
         if (plan.ShouldInsertBlankLineBetweenCommandAndQueryBlocks)

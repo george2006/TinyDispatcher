@@ -29,10 +29,9 @@ public sealed class HandlerRegistrationsSourceWriterTests
         var plan = new HandlerRegistrationsPlan(
             @namespace: "Acme.Gen",
             isEnabled: true,
-            commandContextFqn: "global::Acme.Ctx",
             commands: new[]
             {
-                new HandlerContract("global::A.Cmd", "global::A.CmdHandler"),
+                new HandlerContract("global::A.Cmd", "global::A.CmdHandler", "global::Acme.Ctx"),
             },
             queries: new[]
             {
@@ -80,8 +79,7 @@ public sealed class HandlerRegistrationsSourceWriterTests
         var commandsOnly = new HandlerRegistrationsPlan(
             @namespace: "Acme.Gen",
             isEnabled: true,
-            commandContextFqn: "global::Acme.Ctx",
-            commands: new[] { new HandlerContract("global::A.Cmd", "global::A.CmdHandler") },
+            commands: new[] { new HandlerContract("global::A.Cmd", "global::A.CmdHandler", "global::Acme.Ctx") },
             queries: System.Array.Empty<QueryHandlerContract>());
 
         var sut = new HandlerRegistrationsSourceWriter();
