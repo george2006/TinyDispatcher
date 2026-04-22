@@ -1,4 +1,6 @@
-﻿#nullable enable
+#nullable enable
+
+using Microsoft.CodeAnalysis;
 
 namespace TinyDispatcher.SourceGen.Generator.Validation;
 
@@ -9,13 +11,15 @@ internal static class GeneratorValidator
     private static readonly MiddlewareRefShapeValidator _middlewareRefShape = new();
     private static readonly PipelineDiagnosticsValidator _pipelineDiagnostics = new();
 
-    public static DiagnosticBag Validate(GeneratorValidationContext vctx)
+    public static DiagnosticBag Validate(
+        GeneratorValidationContext vctx,
+        INamedTypeSymbol? commandMiddlewareInterface)
     {
         var bag = new DiagnosticBag();
 
         _contextConsistency.Validate(vctx, bag);
         _duplicateHandler.Validate(vctx, bag);
-        _middlewareRefShape.Validate(vctx, bag);
+        _middlewareRefShape.Validate(vctx, commandMiddlewareInterface, bag);
         _pipelineDiagnostics.Validate(vctx, bag);
 
         return bag;

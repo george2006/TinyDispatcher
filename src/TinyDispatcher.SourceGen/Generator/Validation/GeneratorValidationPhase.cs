@@ -14,24 +14,24 @@ internal sealed class GeneratorValidationPhase
         GeneratorExtraction extraction,
         DiagnosticsCatalog diagnosticsCatalog)
     {
+        var commandMiddlewareInterface =
+            compilation.GetTypeByMetadataName("TinyDispatcher.ICommandMiddleware`2");
+
         var validationContext = BuildValidationContext(
-            compilation,
             hostBootstrap,
             extraction,
             diagnosticsCatalog);
-        var diagnostics = GeneratorValidator.Validate(validationContext);
+        var diagnostics = GeneratorValidator.Validate(validationContext, commandMiddlewareInterface);
 
         return new GeneratorValidationResult(validationContext, diagnostics);
     }
 
     private static GeneratorValidationContext BuildValidationContext(
-        Compilation compilation,
         HostBootstrapInfo hostBootstrap,
         GeneratorExtraction extraction,
         DiagnosticsCatalog diagnosticsCatalog)
     {
         return new GeneratorValidationContext.Builder(
-                compilation,
                 extraction.Discovery,
                 diagnosticsCatalog)
             .WithHostGate(isHost: hostBootstrap.IsHostProject)

@@ -43,7 +43,6 @@ public sealed class GeneratorGenerationPhaseTests
 
         var validation = new GeneratorValidationResult(
             Context: new GeneratorValidationContext.Builder(
-                    compilation,
                     discovery,
                     new DiagnosticsCatalog())
                 .WithHostGate(isHost: false)
@@ -82,7 +81,6 @@ public sealed class GeneratorGenerationPhaseTests
                 ImmutableDictionary<string, PolicySpec>.Empty));
         var validation = new GeneratorValidationResult(
             Context: new GeneratorValidationContext.Builder(
-                    compilation,
                     discovery,
                     new DiagnosticsCatalog())
                 .WithHostGate(isHost: true)

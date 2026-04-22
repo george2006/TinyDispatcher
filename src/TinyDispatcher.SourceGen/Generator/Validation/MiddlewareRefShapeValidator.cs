@@ -8,7 +8,10 @@ namespace TinyDispatcher.SourceGen.Generator.Validation;
 
 internal sealed class MiddlewareRefShapeValidator : IGeneratorValidator
 {
-    public void Validate(GeneratorValidationContext context, DiagnosticBag diags)
+    public void Validate(
+        GeneratorValidationContext context,
+        INamedTypeSymbol? commandMiddlewareInterface,
+        DiagnosticBag diags)
     {
         if (context is null) throw new ArgumentNullException(nameof(context));
         if (diags is null) throw new ArgumentNullException(nameof(diags));
@@ -21,10 +24,7 @@ internal sealed class MiddlewareRefShapeValidator : IGeneratorValidator
         if (string.IsNullOrWhiteSpace(expectedContextFqn))
             return; // ContextConsistencyValidator will report the real issue.
 
-        var compilation = context.Compilation;
-
-        var iCmdMw2 = compilation.GetTypeByMetadataName("TinyDispatcher.ICommandMiddleware`2");
-        if (iCmdMw2 is null)
+        if (commandMiddlewareInterface is null)
         {
             diags.Add(context.Diagnostics.Create(
                 context.Diagnostics.CannotResolveICommandMiddleware,
@@ -69,7 +69,7 @@ internal sealed class MiddlewareRefShapeValidator : IGeneratorValidator
                 {
                     if (!SymbolEqualityComparer.Default.Equals(
                             iface.OriginalDefinition,
-                            iCmdMw2))
+                            commandMiddlewareInterface))
                         continue;
 
                     if (iface.TypeArguments.Length != 2)
@@ -109,7 +109,7 @@ internal sealed class MiddlewareRefShapeValidator : IGeneratorValidator
             {
                 if (!SymbolEqualityComparer.Default.Equals(
                         iface.OriginalDefinition,
-                        iCmdMw2))
+                        commandMiddlewareInterface))
                     continue;
 
                 if (iface.TypeArguments.Length != 2)
