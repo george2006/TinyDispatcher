@@ -38,10 +38,10 @@ public sealed class GeneratorValidationPhaseTests
                     Location.None))));
 
         var result = new GeneratorValidationPhase().Validate(
-            compilation,
             analysis.HostBootstrap,
             extraction,
-            new DiagnosticsCatalog());
+            new DiagnosticsCatalog(),
+            ValidationRoslynDependencies.Create(compilation));
 
         Assert.Same(discovery, result.Context.DiscoveryResult);
         Assert.True(result.Context.IsHostProject);
@@ -69,10 +69,10 @@ public sealed class GeneratorValidationPhaseTests
                 UseTinyDispatcherCalls: ImmutableArray<UseTinyDispatcherCall>.Empty));
 
         var result = new GeneratorValidationPhase().Validate(
-            compilation,
             analysis.HostBootstrap,
             extraction,
-            new DiagnosticsCatalog());
+            new DiagnosticsCatalog(),
+            ValidationRoslynDependencies.Create(compilation));
 
         Assert.False(result.Context.IsHostProject);
         Assert.Equal(string.Empty, result.Context.ExpectedContextFqn);
