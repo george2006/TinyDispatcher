@@ -6,12 +6,14 @@ Key capabilities (high level):
 
 - compile-time discovery and validation (source generator)
 - generated, deterministic middleware pipelines
+- host-owned multi-assembly composition
 - explicit `TContext` with **pluggable context factories**
 - optional **no-op context** mode (`UseTinyNoOpContext`) when you don't need context
 - optional feature composition via `AppContext` + `IFeatureInitializer`
 
 - [Getting Started](getting-started.md)
 - [Architecture](architecture.md)
+- [Multi-Assembly Composition](multi-assembly-composition.md)
 - [Source Generator](source-generator.md)
 - [Middleware](middleware.md)
 - [Pipelines & Layering](pipelines.md)
@@ -21,4 +23,3 @@ Key capabilities (high level):
 - [Migration Guide](migration.md)
 - [Design Decisions](design-decisions.md)
 - [Benchmarks](benchmarks.md)
-

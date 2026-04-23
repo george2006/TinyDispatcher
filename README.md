@@ -7,14 +7,15 @@ It provides a predictable, explicit, and performant command/query dispatch core 
 - handler discovery to **build time**
 - middleware pipeline composition to **generated code** (also build time)
 
-…while keeping runtime execution simple and scope-friendly.
+...while keeping runtime execution simple and scope-friendly.
 
 ## What you get
 
 - **Compile-time handler discovery** (no runtime scanning/reflection)
-- **Generated pipelines** (global middleware → policy middleware → per-command middleware → handler)
+- **Generated pipelines** (global middleware -> policy middleware -> per-command middleware -> handler)
 - **Deterministic ordering** and precedence rules (predictable output)
 - **Explicit context (`TContext`)** for command handlers
+- **Multi-assembly composition** with host-owned final pipeline generation
 - **Pluggable context factory** (pass a delegate or register `IContextFactory<TContext>`)
 - **Feature-friendly `AppContext`** (optional `IFeatureInitializer`-based composition)
 - **Source-generator diagnostics** for invalid shapes/config (fail fast, no guessing)
@@ -58,10 +59,22 @@ Dispatch:
 await dispatcher.DispatchAsync(new CreateOrder("123"), ct);
 ```
 
+## Multi-assembly composition
+
+TinyDispatcher supports a modular setup where:
+
+- handlers can live in referenced class libraries
+- middleware and policies can also live outside the host assembly
+- contributing assemblies publish structured compile-time metadata
+- the host remains the sole final composer of pipelines
+
+This keeps the runtime simple while letting the generator build final pipelines for the full command universe visible to the host.
+
 ## Documentation
 
 - [Getting Started](docs/getting-started.md)
 - [Architecture](docs/architecture.md)
+- [Multi-Assembly Composition](docs/multi-assembly-composition.md)
 - [Middleware](docs/middleware.md)
 - [Pipelines & Layering](docs/pipelines.md)
 - [Context & Features](docs/context.md)
@@ -129,4 +142,8 @@ The goal is to keep TinyDispatcher:
 
 ## Samples
 
-The repository contains small runnable samples under `samples/` (ASP.NET, custom contexts, context factories, closed-context middleware, etc.).
+The repository contains runnable samples under `samples/`, including:
+
+- ASP.NET and custom context setups
+- context factory and closed-context middleware examples
+- a multi-project sample showing cross-assembly handler and pipeline composition
