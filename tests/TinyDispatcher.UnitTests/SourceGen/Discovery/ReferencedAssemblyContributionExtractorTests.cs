@@ -172,6 +172,50 @@ namespace Billing
             });
     }
 
+    [Fact]
+    public void Extract_ignores_duplicate_handler_contributions_from_the_same_referenced_assembly()
+    {
+        var referencedAssembly = CreateMetadataReference(@"
+using TinyDispatcher;
+
+[assembly: TinyDispatcherHandlerContributionAttribute(
+    typeof(ExternalApp.CreateOrder),
+    typeof(ExternalApp.CreateOrderHandler),
+    typeof(ExternalApp.AppContext))]
+[assembly: TinyDispatcherHandlerContributionAttribute(
+    typeof(ExternalApp.CreateOrder),
+    typeof(ExternalApp.CreateOrderHandler),
+    typeof(ExternalApp.AppContext))]
+
+namespace ExternalApp
+{
+    public sealed class AppContext { }
+    public sealed class CreateOrder : ICommand { }
+    public sealed class CreateOrderHandler : ICommandHandler<CreateOrder, AppContext>
+    {
+        public System.Threading.Tasks.Task HandleAsync(CreateOrder command, AppContext context, System.Threading.CancellationToken cancellationToken = default)
+            => System.Threading.Tasks.Task.CompletedTask;
+    }
+}
+");
+
+        var compilation = CSharpCompilation.Create(
+            assemblyName: "Host",
+            syntaxTrees: new[] { CSharpSyntaxTree.ParseText("namespace Host { public sealed class Marker { } }") },
+            references: CreateBaseReferences().Concat(new[] { referencedAssembly }),
+            options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        var contributions = new ReferencedAssemblyContributionExtractor().Extract(compilation);
+        var assembly = Assert.Single(
+            contributions.Assemblies,
+            candidate => candidate.AssemblyName == "ExternalContrib");
+
+        var handler = Assert.Single(assembly.Commands);
+        Assert.Equal("global::ExternalApp.CreateOrder", handler.MessageTypeFqn);
+        Assert.Equal("global::ExternalApp.CreateOrderHandler", handler.HandlerTypeFqn);
+        Assert.Equal("global::ExternalApp.AppContext", handler.ContextTypeFqn);
+    }
+
     private static MetadataReference CreateMetadataReference(string source, string assemblyName = "ExternalContrib")
     {
         var compilation = CSharpCompilation.Create(
