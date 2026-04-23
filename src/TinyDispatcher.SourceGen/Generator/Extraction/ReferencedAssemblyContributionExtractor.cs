@@ -120,17 +120,6 @@ internal sealed class ReferencedAssemblyContributionExtractor
         }
     }
 
-    private static void AddContext(AttributeData attribute, ContributionState state)
-    {
-        var contextTypeFqn = state.ContextTypeFqn;
-        if (!TryReadContext(attribute, ref contextTypeFqn))
-        {
-            return;
-        }
-
-        state.ContextTypeFqn = contextTypeFqn;
-    }
-
     private static bool IsContextAttribute(AttributeData attribute, AttributeSet attributeSet)
     {
         return MatchesAttribute(attribute, attributeSet.ContextAttribute);
@@ -156,51 +145,15 @@ internal sealed class ReferencedAssemblyContributionExtractor
         return SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, expectedAttribute);
     }
 
-    private static void AddHandler(AttributeData attribute, ContributionState state)
+    private static void AddContext(AttributeData attribute, ContributionState state)
     {
-        if (!TryReadHandler(attribute, out var handler))
+        var contextTypeFqn = state.ContextTypeFqn;
+        if (!TryReadContext(attribute, ref contextTypeFqn))
         {
             return;
         }
 
-        var handlerKey = CreateHandlerKey(handler);
-        if (state.SeenHandlers.Add(handlerKey))
-        {
-            state.Handlers.Add(handler);
-        }
-    }
-
-    private static void AddPipeline(AttributeData attribute, ContributionState state)
-    {
-        if (!TryReadPipeline(attribute, out var commandTypeFqn, out var middlewares))
-        {
-            return;
-        }
-
-        if (!HasPipelineContribution(commandTypeFqn, middlewares))
-        {
-            return;
-        }
-
-        state.Pipelines[commandTypeFqn!] = middlewares;
-    }
-
-    private static void AddPolicy(AttributeData attribute, ContributionState state)
-    {
-        if (TryReadPolicy(attribute, out var policy))
-        {
-            state.Policies[policy.PolicyTypeFqn] = policy;
-        }
-    }
-
-    private static string CreateHandlerKey(HandlerContract handler)
-    {
-        return handler.MessageTypeFqn + "|" + handler.HandlerTypeFqn + "|" + handler.ContextTypeFqn;
-    }
-
-    private static bool HasPipelineContribution(string? commandTypeFqn, ImmutableArray<MiddlewareRef> middlewares)
-    {
-        return commandTypeFqn is not null && middlewares.Length > 0;
+        state.ContextTypeFqn = contextTypeFqn;
     }
 
     private static bool TryReadContext(AttributeData attribute, ref string? contextTypeFqn)
@@ -217,6 +170,25 @@ internal sealed class ReferencedAssemblyContributionExtractor
 
         contextTypeFqn ??= contextType;
         return true;
+    }
+
+    private static void AddHandler(AttributeData attribute, ContributionState state)
+    {
+        if (!TryReadHandler(attribute, out var handler))
+        {
+            return;
+        }
+
+        var handlerKey = CreateHandlerKey(handler);
+        if (state.SeenHandlers.Add(handlerKey))
+        {
+            state.Handlers.Add(handler);
+        }
+    }
+
+    private static string CreateHandlerKey(HandlerContract handler)
+    {
+        return handler.MessageTypeFqn + "|" + handler.HandlerTypeFqn + "|" + handler.ContextTypeFqn;
     }
 
     private static bool TryReadHandler(AttributeData attribute, out HandlerContract handler)
@@ -243,6 +215,26 @@ internal sealed class ReferencedAssemblyContributionExtractor
         return true;
     }
 
+    private static void AddPipeline(AttributeData attribute, ContributionState state)
+    {
+        if (!TryReadPipeline(attribute, out var commandTypeFqn, out var middlewares))
+        {
+            return;
+        }
+
+        if (!HasPipelineContribution(commandTypeFqn, middlewares))
+        {
+            return;
+        }
+
+        state.Pipelines[commandTypeFqn!] = middlewares;
+    }
+
+    private static bool HasPipelineContribution(string? commandTypeFqn, ImmutableArray<MiddlewareRef> middlewares)
+    {
+        return commandTypeFqn is not null && middlewares.Length > 0;
+    }
+
     private static bool TryReadPipeline(
         AttributeData attribute,
         out string? commandTypeFqn,
@@ -262,24 +254,34 @@ internal sealed class ReferencedAssemblyContributionExtractor
         return true;
     }
 
-    private static bool TryReadPolicy(AttributeData attribute, out PolicySpec policy)
+    private static string? ReadPipelineCommandType(AttributeData attribute)
     {
-        policy = default!;
+        foreach (var namedArgument in attribute.NamedArguments)
+        {
+            if (TryReadPipelineCommandType(namedArgument, out var commandTypeFqn))
+            {
+                return commandTypeFqn;
+            }
+        }
 
-        if (attribute.ConstructorArguments.Length != 3)
+        return null;
+    }
+
+    private static bool TryReadPipelineCommandType(
+        KeyValuePair<string, TypedConstant> namedArgument,
+        out string commandTypeFqn)
+    {
+        commandTypeFqn = string.Empty;
+
+        if (namedArgument.Key != "CommandType")
         {
             return false;
         }
 
-        if (!TryReadType(attribute.ConstructorArguments[0], out var policyTypeFqn))
+        if (!TryReadType(namedArgument.Value, out commandTypeFqn))
         {
             return false;
         }
-
-        policy = new PolicySpec(
-            PolicyTypeFqn: policyTypeFqn,
-            Middlewares: ReadMiddlewareArray(attribute.ConstructorArguments[1]),
-            Commands: ReadTypeArray(attribute.ConstructorArguments[2]));
 
         return true;
     }
@@ -304,6 +306,36 @@ internal sealed class ReferencedAssemblyContributionExtractor
         }
 
         return builder.ToImmutable();
+    }
+
+    private static void AddPolicy(AttributeData attribute, ContributionState state)
+    {
+        if (TryReadPolicy(attribute, out var policy))
+        {
+            state.Policies[policy.PolicyTypeFqn] = policy;
+        }
+    }
+
+    private static bool TryReadPolicy(AttributeData attribute, out PolicySpec policy)
+    {
+        policy = default!;
+
+        if (attribute.ConstructorArguments.Length != 3)
+        {
+            return false;
+        }
+
+        if (!TryReadType(attribute.ConstructorArguments[0], out var policyTypeFqn))
+        {
+            return false;
+        }
+
+        policy = new PolicySpec(
+            PolicyTypeFqn: policyTypeFqn,
+            Middlewares: ReadMiddlewareArray(attribute.ConstructorArguments[1]),
+            Commands: ReadTypeArray(attribute.ConstructorArguments[2]));
+
+        return true;
     }
 
     private static ImmutableArray<string> ReadTypeArray(TypedConstant constant)
@@ -338,38 +370,6 @@ internal sealed class ReferencedAssemblyContributionExtractor
         }
 
         typeFqn = EnsureGlobal(typeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
-        return true;
-    }
-
-    private static string? ReadPipelineCommandType(AttributeData attribute)
-    {
-        foreach (var namedArgument in attribute.NamedArguments)
-        {
-            if (TryReadPipelineCommandType(namedArgument, out var commandTypeFqn))
-            {
-                return commandTypeFqn;
-            }
-        }
-
-        return null;
-    }
-
-    private static bool TryReadPipelineCommandType(
-        KeyValuePair<string, TypedConstant> namedArgument,
-        out string commandTypeFqn)
-    {
-        commandTypeFqn = string.Empty;
-
-        if (namedArgument.Key != "CommandType")
-        {
-            return false;
-        }
-
-        if (!TryReadType(namedArgument.Value, out commandTypeFqn))
-        {
-            return false;
-        }
-
         return true;
     }
 
