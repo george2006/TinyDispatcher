@@ -1,4 +1,4 @@
-## Unreleased
+## 1.1.0-rc1 - 2026-04-23
 
 ### Added
 - Multi-assembly composition support for TinyDispatcher.

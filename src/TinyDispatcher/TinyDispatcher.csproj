@@ -10,9 +10,12 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
   </ItemGroup>
+  <PropertyGroup>
+    <PackagedSourceGeneratorPath>$(MSBuildThisFileDirectory)..\TinyDispatcher.SourceGen\bin\$(Configuration)\netstandard2.0\TinyDispatcher.SourceGen.dll</PackagedSourceGeneratorPath>
+  </PropertyGroup>
   <ItemGroup>
     <!-- Pack generator output into the NuGet under analyzers/ -->
-    <None Include="..\TinyDispatcher.SourceGen\bin\$(Configuration)\netstandard2.0\TinyDispatcher.SourceGen.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="$(PackagedSourceGeneratorPath)" Pack="true" PackagePath="analyzers/dotnet/cs/" Visible="false" Condition="Exists('$(PackagedSourceGeneratorPath)')" />
   </ItemGroup>
 
   <ItemGroup>
@@ -41,7 +44,7 @@
    </PropertyGroup>
 
   <PropertyGroup>
-    <Version>1.0.4</Version>
+    <Version>1.1.0-rc1</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -50,9 +53,16 @@
   </ItemGroup>
   <PropertyGroup>
     <PackageReleaseNotes>
-      Fixed
-      - Generated pipelines are now re-entrant and safe for concurrent dispatch within the same DI scope
-        by moving mutable execution state to a per-dispatch runtime instance.
+      Release candidate for 1.1.0
+
+      Added
+      - Multi-assembly composition support with structured assembly contributions.
+      - Host-side pipeline generation for commands contributed by referenced assemblies.
+      - Assembly-level contribution attributes for compile-time cross-assembly composition.
+
+      Changed
+      - Generated ModuleInitializers now publish ThisAssemblyContribution.Create().
+      - DispatcherPipelineBootstrap stores structured contribution snapshots while preserving DI application behavior.
     </PackageReleaseNotes>
 
 
