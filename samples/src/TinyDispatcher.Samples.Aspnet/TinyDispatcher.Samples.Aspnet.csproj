@@ -7,13 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="TinyDispatcher" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\src\TinyDispatcher\TinyDispatcher.csproj" />
-    <ProjectReference Include="..\..\..\src\TinyDispatcher.SourceGen\TinyDispatcher.SourceGen.csproj"
-                      OutputItemType="Analyzer"
-                      ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>
