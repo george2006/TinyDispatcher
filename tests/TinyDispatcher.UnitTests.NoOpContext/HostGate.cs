@@ -16,6 +16,6 @@ public static class NoOpTestBootstrap
             options.UseMiddlewareFor<NoOpTestCommand>(typeof(NoOpPerCommandMiddleware<,>));
         });
 
-        TinyDispatcher.Generated.ThisAssemblyPipelineContribution.Add(services);
+        TinyDispatcher.Generated.ThisAssemblyContribution.AddServices(services);
     }
 }

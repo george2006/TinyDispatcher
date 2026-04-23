@@ -38,11 +38,11 @@ public sealed class Dispatcher<TContext> : IDispatcher<TContext>
 
         if (pipeline is null)
         {
-            await handler.HandleAsync(command, ctx, ct);
+            await handler.HandleAsync(command, ctx, ct).ConfigureAwait(false);
             return;
         }
 
-        await pipeline.ExecuteAsync(command, ctx, handler, ct);
+        await pipeline.ExecuteAsync(command, ctx, handler, ct).ConfigureAwait(false);
 
     }
 
