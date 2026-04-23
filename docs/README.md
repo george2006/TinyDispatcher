@@ -11,6 +11,8 @@ Key capabilities (high level):
 - optional **no-op context** mode (`UseTinyNoOpContext`) when you don't need context
 - optional feature composition via `AppContext` + `IFeatureInitializer`
 
+Core docs:
+
 - [Getting Started](getting-started.md)
 - [Architecture](architecture.md)
 - [Multi-Assembly Composition](multi-assembly-composition.md)
