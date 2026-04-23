@@ -12,6 +12,7 @@ internal sealed class GeneratorExtractionPhase
 {
     private readonly HandlerDiscoveryExtractor _handlerDiscoveryExtractor = new();
     private readonly PipelineConfigExtractor _pipelineConfigExtractor = new();
+    private readonly ReferencedAssemblyContributionExtractor _referencedAssemblyContributionExtractor = new();
 
     public GeneratorExtraction Extract(
         Compilation compilation,
@@ -21,9 +22,11 @@ internal sealed class GeneratorExtractionPhase
     {
         var discovery = _handlerDiscoveryExtractor.Extract(compilation, handlerSymbols, options);
         var pipeline = _pipelineConfigExtractor.Extract(confirmedBootstrapLambdas);
+        var referencedContributions = _referencedAssemblyContributionExtractor.Extract(compilation);
 
         return new GeneratorExtraction(
             discovery,
-            pipeline);
+            pipeline,
+            referencedContributions);
     }
 }
