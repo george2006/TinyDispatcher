@@ -113,7 +113,48 @@ namespace ConsoleApp
             n => string.Equals(n, "TinyDispatcherPipeline.g.cs", StringComparison.Ordinal));
         Assert.DoesNotContain(
             generatedNames,
-            n => string.Equals(n, "DispatcherModuleInitializer.g.cs", StringComparison.Ordinal));
+            n => string.Equals(n, "TinyDispatcherPipelineMap.g.cs", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Contributing_assembly_emits_structured_contribution_without_emitting_final_pipeline()
+    {
+        var source = @"
+using System.Threading;
+using System.Threading.Tasks;
+using TinyDispatcher;
+
+namespace MyApp
+{
+    public sealed class AppContext { }
+    public sealed record CreateOrder() : ICommand;
+
+    public sealed class CreateOrderHandler : ICommandHandler<CreateOrder, AppContext>
+    {
+        public Task HandleAsync(CreateOrder command, AppContext context, CancellationToken ct)
+            => Task.CompletedTask;
+    }
+}
+";
+
+        var compilation = CreateCompilation(source);
+
+        var generator = new Generator();
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(generator);
+
+        driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out _, out var diagnostics);
+
+        Assert.DoesNotContain(diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+
+        var run = driver.GetRunResult();
+        var generatedNames = run.Results
+            .SelectMany(r => r.GeneratedSources)
+            .Select(s => s.HintName)
+            .ToArray();
+
+        Assert.Contains("ThisAssemblyContribution.g.cs", generatedNames);
+        Assert.Contains("DispatcherModuleInitializer.g.cs", generatedNames);
+        Assert.DoesNotContain("TinyDispatcherPipeline.g.cs", generatedNames);
     }
 
     private static CSharpCompilation CreateCompilation(string source)

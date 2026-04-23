@@ -22,7 +22,8 @@ internal sealed class HandlerRegistrationsSourceWriter
         w.Line();
 
         w.BeginBlock($"namespace {plan.Namespace}");
-        w.BeginBlock("internal static partial class ThisAssemblyPipelineContribution");
+        w.BeginBlock("internal static partial class ThisAssemblyContribution");
+        w.Line();
         w.BeginBlock("static partial void AddGeneratedHandlers(IServiceCollection services)");
 
         w.Line("if (services is null) throw new ArgumentNullException(nameof(services));");
@@ -48,7 +49,7 @@ internal sealed class HandlerRegistrationsSourceWriter
         }
 
         w.EndBlock(); // AddGeneratedHandlers
-        w.EndBlock(); // ThisAssemblyPipelineContribution
+        w.EndBlock(); // ThisAssemblyContribution
         w.EndBlock(); // namespace
 
         w.EnsureAllBlocksClosed();
@@ -63,7 +64,7 @@ internal sealed class HandlerRegistrationsSourceWriter
         w.Line();
 
         w.BeginBlock($"namespace {ns}");
-        w.BeginBlock("internal static partial class ThisAssemblyPipelineContribution");
+        w.BeginBlock("internal static partial class ThisAssemblyContribution");
         w.Line("static partial void AddGeneratedHandlers(IServiceCollection services) { }");
         w.EndBlock();
         w.EndBlock();

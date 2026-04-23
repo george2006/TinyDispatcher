@@ -19,33 +19,36 @@ internal sealed class GeneratorGenerationPhase
         GeneratorExtraction extraction,
         GeneratorValidationResult validation)
     {
-        var generationPlan = BuildGenerationPlan(options, validation.Context);
+        var generationPlan = BuildGenerationPlan(options, validation.Context, extraction);
 
-        EmitSharedSources(context, extraction, generationPlan);
-        EmitPipelineSourceIfNeeded(context, extraction, generationPlan);
+        EmitSharedSources(context, generationPlan);
+        EmitPipelineSourceIfNeeded(context, generationPlan);
     }
 
     private static void EmitSharedSources(
         IGeneratorContext context,
-        GeneratorExtraction extraction,
         GenerationPlan generationPlan)
     {
         var moduleInitializerPlan = ModuleInitializerPlanner.Build(
-            extraction.Discovery,
+            generationPlan.Discovery,
             generationPlan.EmitOptions,
             hasPipelineContributions: generationPlan.ShouldEmitPipelines);
 
         new ModuleInitializerEmitter().Emit(context, moduleInitializerPlan);
-        new EmptyPipelineContributionEmitter().Emit(context, generationPlan.EmitOptions);
+        new EmptyPipelineContributionEmitter().Emit(
+            context,
+            generationPlan.LocalDiscovery,
+            generationPlan.PipelineContributions,
+            generationPlan.EmitOptions);
 
         var handlerRegistrationsPlan = HandlerRegistrationsPlanner.Build(
-            extraction.Discovery,
+            generationPlan.LocalDiscovery,
             generationPlan.EmitOptions);
 
         new HandlerRegistrationsEmitter().Emit(context, handlerRegistrationsPlan);
 
         var pipelineMapsPlan = PipelineMapsPlanner.Build(
-            extraction.Discovery,
+            generationPlan.Discovery,
             generationPlan.PipelineContributions,
             generationPlan.EmitOptions);
 
@@ -54,7 +57,6 @@ internal sealed class GeneratorGenerationPhase
 
     private static void EmitPipelineSourceIfNeeded(
         IGeneratorContext context,
-        GeneratorExtraction extraction,
         GenerationPlan generationPlan)
     {
         if (!generationPlan.ShouldEmitPipelines)
@@ -64,7 +66,7 @@ internal sealed class GeneratorGenerationPhase
 
         var pipelinePlan = PipelinePlanner.Build(
             generationPlan.PipelineContributions,
-            extraction.Discovery,
+            generationPlan.Discovery,
             generationPlan.EmitOptions);
 
         if (!pipelinePlan.ShouldEmit)
@@ -77,13 +79,24 @@ internal sealed class GeneratorGenerationPhase
 
     private static GenerationPlan BuildGenerationPlan(
         GeneratorOptions options,
-        GeneratorValidationContext validationContext)
+        GeneratorValidationContext validationContext,
+        GeneratorExtraction extraction)
     {
         var emitOptions = BuildEmitOptions(options, validationContext);
-        var shouldEmitPipelines = ShouldEmitPipelines(validationContext);
-        var pipelineContributions = PipelineContributions.Create(validationContext.Pipeline);
+        var discovery = ReferencedAssemblyContributionComposer.MergeDiscovery(
+            extraction.Discovery,
+            extraction.ReferencedContributions,
+            validationContext.ExpectedContextFqn);
+        var pipelineConfig = ReferencedAssemblyContributionComposer.MergePipelineConfig(
+            validationContext.Pipeline,
+            extraction.ReferencedContributions,
+            validationContext.ExpectedContextFqn);
+        var shouldEmitPipelines = ShouldEmitPipelines(validationContext, pipelineConfig);
+        var pipelineContributions = PipelineContributions.Create(pipelineConfig);
 
         return new GenerationPlan(
+            LocalDiscovery: extraction.Discovery,
+            Discovery: discovery,
             EmitOptions: emitOptions,
             ShouldEmitPipelines: shouldEmitPipelines,
             PipelineContributions: pipelineContributions);
@@ -108,7 +121,7 @@ internal sealed class GeneratorGenerationPhase
             PipelineMapFormat: options.PipelineMapFormat);
     }
 
-    private static bool ShouldEmitPipelines(GeneratorValidationContext validationContext)
+    private static bool ShouldEmitPipelines(GeneratorValidationContext validationContext, PipelineConfig pipeline)
     {
         if (!validationContext.IsHostProject)
         {
@@ -120,7 +133,7 @@ internal sealed class GeneratorGenerationPhase
             return false;
         }
 
-        return HasAnyPipelineContributions(validationContext.Pipeline);
+        return HasAnyPipelineContributions(pipeline);
     }
 
     private static bool HasAnyPipelineContributions(PipelineConfig pipeline)
@@ -131,6 +144,8 @@ internal sealed class GeneratorGenerationPhase
     }
 
     private readonly record struct GenerationPlan(
+        DiscoveryResult LocalDiscovery,
+        DiscoveryResult Discovery,
         GeneratorOptions EmitOptions,
         bool ShouldEmitPipelines,
         PipelineContributions PipelineContributions);

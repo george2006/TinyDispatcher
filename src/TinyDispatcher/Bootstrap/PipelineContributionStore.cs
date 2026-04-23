@@ -1,12 +1,13 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using System;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace TinyDispatcher.Bootstrap;
 internal static class PipelineContributionStore
 {
     private static readonly object _gate = new();
-    private static readonly List<Action<IServiceCollection>> _items = new();
+    private static readonly List<AssemblyContribution> _items = new();
 
-    public static void Add(Action<IServiceCollection> contribution)
+    public static void Add(AssemblyContribution contribution)
     {
         if (contribution is null) return;
         lock (_gate)
@@ -15,7 +16,13 @@ internal static class PipelineContributionStore
         }
     }
 
-    public static Action<IServiceCollection>[] Drain()
+    public static void Add(Action<IServiceCollection> contribution)
+    {
+        if (contribution is null) return;
+        Add(new AssemblyContribution(registerServices: contribution));
+    }
+
+    public static AssemblyContribution[] GetSnapshot()
     {
         lock (_gate)
         {
@@ -23,6 +30,7 @@ internal static class PipelineContributionStore
             return _items.ToArray();
         }
     }
+
     internal static void ResetForTests()
     {
         lock (_gate)

@@ -29,7 +29,7 @@ public sealed class ConcurrentDispatchSameCommandTypeTests
         services.AddSingleton<ProbeState>();
         services.AddScoped<IContextFactory<TestContext>, TestContextFactory>();
         services.AddTransient<ICommandHandler<TestCommand, TestContext>, TestHandler>();
-        TinyDispatcher.Generated.ThisAssemblyPipelineContribution.Add(services);
+        TinyDispatcher.Generated.ThisAssemblyContribution.AddServices(services);
 
         // Dispatcher
         services.AddScoped<IDispatcher<TestContext>>(sp =>

@@ -45,6 +45,7 @@ public sealed class HandlerRegistrationsEmitterTests
         var src = ctx.Sources["ThisAssemblyHandlerRegistrations.g.cs"].ToString();
 
         Assert.Contains("namespace Acme.Gen", src);
+        Assert.Contains("internal static partial class ThisAssemblyContribution", src);
         Assert.Contains("static partial void AddGeneratedHandlers(IServiceCollection services)", src);
         Assert.Contains("ICommandHandler<global::A.Cmd, global::Acme.Ctx>", src);
         Assert.Contains("IQueryHandler<global::A.Q, global::A.R>", src);

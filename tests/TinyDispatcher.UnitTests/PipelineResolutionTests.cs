@@ -37,7 +37,7 @@ public sealed class PipelineResolutionTest
         services.AddSingleton(typeof(CallTracker));
         services.AddScoped<IContextFactory<TestContext>>(_ => new FixedContextFactory(ctx));
 
-        TinyDispatcher.Generated.ThisAssemblyPipelineContribution.Add(services);
+        TinyDispatcher.Generated.ThisAssemblyContribution.AddServices(services);
 
         services.AddScoped<IDispatcher<TestContext>>(sp =>
             new Dispatcher<TestContext>(sp, sp.GetRequiredService<IContextFactory<TestContext>>()));

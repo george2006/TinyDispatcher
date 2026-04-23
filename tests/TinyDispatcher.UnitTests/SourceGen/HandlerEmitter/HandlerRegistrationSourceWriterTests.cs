@@ -17,7 +17,7 @@ public sealed class HandlerRegistrationsSourceWriterTests
         var src = sut.Write(plan);
 
         Assert.Contains("namespace Acme.Gen", src);
-        Assert.Contains("internal static partial class ThisAssemblyPipelineContribution", src);
+        Assert.Contains("internal static partial class ThisAssemblyContribution", src);
         Assert.Contains("static partial void AddGeneratedHandlers(IServiceCollection services) { }", src);
         Assert.DoesNotContain("ArgumentNullException", src);
         Assert.DoesNotContain("AddTransient", src);
@@ -46,6 +46,7 @@ public sealed class HandlerRegistrationsSourceWriterTests
         Assert.Contains("using System;", src);
         Assert.Contains("using Microsoft.Extensions.DependencyInjection;", src);
 
+        Assert.Contains("internal static partial class ThisAssemblyContribution", src);
         Assert.Contains("static partial void AddGeneratedHandlers(IServiceCollection services)", src);
         Assert.Contains("if (services is null) throw new ArgumentNullException(nameof(services));", src);
 
