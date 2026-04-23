@@ -26,7 +26,8 @@ public sealed class GeneratorValidationPhaseTests
             new PipelineConfig(
                 ImmutableArray<MiddlewareRef>.Empty,
                 ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
-                ImmutableDictionary<string, PolicySpec>.Empty));
+                ImmutableDictionary<string, PolicySpec>.Empty),
+            ReferencedAssemblyContributions.Empty);
 
         var analysis = new GeneratorAnalysis(
             EffectiveOptions: Options(commandContextType: "MyApp.AppContext"),
@@ -59,7 +60,8 @@ public sealed class GeneratorValidationPhaseTests
             new PipelineConfig(
                 ImmutableArray<MiddlewareRef>.Empty,
                 ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
-                ImmutableDictionary<string, PolicySpec>.Empty));
+                ImmutableDictionary<string, PolicySpec>.Empty),
+            ReferencedAssemblyContributions.Empty);
 
         var analysis = new GeneratorAnalysis(
             EffectiveOptions: Options(commandContextType: null),

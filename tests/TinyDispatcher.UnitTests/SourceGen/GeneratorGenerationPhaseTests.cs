@@ -32,7 +32,8 @@ public sealed class GeneratorGenerationPhaseTests
                     new PolicySpec(
                         "global::MyApp.Policy",
                         ImmutableArray<MiddlewareRef>.Empty,
-                        ImmutableArray<string>.Empty))));
+                        ImmutableArray<string>.Empty))),
+            ReferencedAssemblyContributions.Empty);
 
         var analysis = new GeneratorAnalysis(
             EffectiveOptions: Options(commandContextType: "MyApp.AppContext"),
@@ -79,7 +80,8 @@ public sealed class GeneratorGenerationPhaseTests
             new PipelineConfig(
                 ImmutableArray<MiddlewareRef>.Empty,
                 ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
-                ImmutableDictionary<string, PolicySpec>.Empty));
+                ImmutableDictionary<string, PolicySpec>.Empty),
+            ReferencedAssemblyContributions.Empty);
         var validation = new GeneratorValidationResult(
             Context: new GeneratorValidationContext.Builder(
                     discovery,
@@ -103,6 +105,182 @@ public sealed class GeneratorGenerationPhaseTests
         Assert.Contains(
             "global::TinyDispatcher.ICommandHandler<global::MyApp.CreateUser, global::MyApp.AppContext>",
             registrations.Content);
+    }
+
+    [Fact]
+    public void Generate_emits_global_pipeline_registrations_for_referenced_contributed_commands()
+    {
+        var context = new CapturingGeneratorContext();
+        var discovery = EmptyDiscovery();
+        var extraction = new GeneratorExtraction(
+            discovery,
+            new PipelineConfig(
+                ImmutableArray.Create(new MiddlewareRef("global::MyApp.GlobalLogMiddleware", 2)),
+                ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
+                ImmutableDictionary<string, PolicySpec>.Empty),
+            Referenced(
+                new ReferencedAssemblyContribution(
+                    "ExternalApp",
+                    "global::MyApp.AppContext",
+                    ImmutableArray.Create(new HandlerContract(
+                        "global::ExternalApp.CreateOrder",
+                        "global::ExternalApp.CreateOrderHandler",
+                        "global::MyApp.AppContext")),
+                    ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
+                    ImmutableDictionary<string, PolicySpec>.Empty)));
+
+        var validation = new GeneratorValidationResult(
+            Context: new GeneratorValidationContext.Builder(
+                    discovery,
+                    new DiagnosticsCatalog())
+                .WithHostGate(isHost: true)
+                .WithExpectedContext("global::MyApp.AppContext")
+                .WithPipelineConfig(extraction.Pipeline)
+                .Build(),
+            Diagnostics: new DiagnosticBag());
+
+        new GeneratorGenerationPhase().Generate(
+            context,
+            Options(commandContextType: "global::MyApp.AppContext"),
+            extraction,
+            validation);
+
+        var pipeline = Assert.Single(
+            context.Sources,
+            source => source.HintName == "TinyDispatcherPipeline.g.cs");
+
+        Assert.Contains(
+            "global::TinyDispatcher.ICommandPipeline<global::ExternalApp.CreateOrder, global::MyApp.AppContext>",
+            pipeline.Content);
+        Assert.Contains(
+            "TinyDispatcherGlobalPipeline<global::ExternalApp.CreateOrder>",
+            pipeline.Content);
+    }
+
+    [Fact]
+    public void Generate_merges_referenced_per_command_and_policy_contributions_into_pipeline_emission()
+    {
+        var context = new CapturingGeneratorContext();
+        var discovery = EmptyDiscovery();
+        var extraction = new GeneratorExtraction(
+            discovery,
+            new PipelineConfig(
+                ImmutableArray.Create(new MiddlewareRef("global::MyApp.GlobalLogMiddleware", 2)),
+                ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
+                ImmutableDictionary<string, PolicySpec>.Empty),
+            Referenced(
+                new ReferencedAssemblyContribution(
+                    "ExternalApp",
+                    "global::MyApp.AppContext",
+                    ImmutableArray.Create(new HandlerContract(
+                        "global::ExternalApp.CreateOrder",
+                        "global::ExternalApp.CreateOrderHandler",
+                        "global::MyApp.AppContext")),
+                    ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty.Add(
+                        "global::ExternalApp.CreateOrder",
+                        ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.OrderMiddleware", 2))),
+                    ImmutableDictionary<string, PolicySpec>.Empty.Add(
+                        "global::ExternalApp.OrderPolicy",
+                        new PolicySpec(
+                            "global::ExternalApp.OrderPolicy",
+                            ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.PolicyMiddleware", 2)),
+                            ImmutableArray.Create("global::ExternalApp.CreateOrder"))))));
+
+        var validation = new GeneratorValidationResult(
+            Context: new GeneratorValidationContext.Builder(
+                    discovery,
+                    new DiagnosticsCatalog())
+                .WithHostGate(isHost: true)
+                .WithExpectedContext("global::MyApp.AppContext")
+                .WithPipelineConfig(extraction.Pipeline)
+                .Build(),
+            Diagnostics: new DiagnosticBag());
+
+        new GeneratorGenerationPhase().Generate(
+            context,
+            Options(commandContextType: "global::MyApp.AppContext"),
+            extraction,
+            validation);
+
+        var pipeline = Assert.Single(
+            context.Sources,
+            source => source.HintName == "TinyDispatcherPipeline.g.cs");
+
+        Assert.Contains(
+            "internal sealed class TinyDispatcherPipeline_CreateOrder",
+            pipeline.Content);
+        Assert.Contains(
+            "global::ExternalApp.PolicyMiddleware",
+            pipeline.Content);
+        Assert.Contains(
+            "global::ExternalApp.OrderMiddleware",
+            pipeline.Content);
+    }
+
+    [Fact]
+    public void Generate_ignores_referenced_contributions_from_mismatched_context_assemblies()
+    {
+        var context = new CapturingGeneratorContext();
+        var discovery = EmptyDiscovery();
+        var extraction = new GeneratorExtraction(
+            discovery,
+            new PipelineConfig(
+                ImmutableArray.Create(new MiddlewareRef("global::MyApp.GlobalLogMiddleware", 2)),
+                ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
+                ImmutableDictionary<string, PolicySpec>.Empty),
+            Referenced(
+                new ReferencedAssemblyContribution(
+                    "Matching",
+                    "global::MyApp.AppContext",
+                    ImmutableArray.Create(new HandlerContract(
+                        "global::ExternalApp.CreateOrder",
+                        "global::ExternalApp.CreateOrderHandler",
+                        "global::MyApp.AppContext")),
+                    ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty.Add(
+                        "global::ExternalApp.CreateOrder",
+                        ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.OrderMiddleware", 2))),
+                    ImmutableDictionary<string, PolicySpec>.Empty),
+                new ReferencedAssemblyContribution(
+                    "Mismatched",
+                    "global::OtherApp.OtherContext",
+                    ImmutableArray.Create(new HandlerContract(
+                        "global::OtherApp.CancelOrder",
+                        "global::OtherApp.CancelOrderHandler",
+                        "global::OtherApp.OtherContext")),
+                    ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty.Add(
+                        "global::OtherApp.CancelOrder",
+                        ImmutableArray.Create(new MiddlewareRef("global::OtherApp.CancelMiddleware", 2))),
+                    ImmutableDictionary<string, PolicySpec>.Empty.Add(
+                        "global::OtherApp.CancelPolicy",
+                        new PolicySpec(
+                            "global::OtherApp.CancelPolicy",
+                            ImmutableArray.Create(new MiddlewareRef("global::OtherApp.CancelPolicyMiddleware", 2)),
+                            ImmutableArray.Create("global::OtherApp.CancelOrder"))))));
+
+        var validation = new GeneratorValidationResult(
+            Context: new GeneratorValidationContext.Builder(
+                    discovery,
+                    new DiagnosticsCatalog())
+                .WithHostGate(isHost: true)
+                .WithExpectedContext("global::MyApp.AppContext")
+                .WithPipelineConfig(extraction.Pipeline)
+                .Build(),
+            Diagnostics: new DiagnosticBag());
+
+        new GeneratorGenerationPhase().Generate(
+            context,
+            Options(commandContextType: "global::MyApp.AppContext"),
+            extraction,
+            validation);
+
+        var pipeline = Assert.Single(
+            context.Sources,
+            source => source.HintName == "TinyDispatcherPipeline.g.cs");
+
+        Assert.Contains("global::ExternalApp.CreateOrder", pipeline.Content);
+        Assert.DoesNotContain("global::OtherApp.CancelOrder", pipeline.Content);
+        Assert.DoesNotContain("global::OtherApp.CancelMiddleware", pipeline.Content);
+        Assert.DoesNotContain("global::OtherApp.CancelPolicyMiddleware", pipeline.Content);
     }
 
     private static CSharpCompilation CreateCompilation()
@@ -136,5 +314,8 @@ public sealed class GeneratorGenerationPhaseTests
             EmitPipelineMap: false,
             PipelineMapFormat: null);
     }
+
+    private static ReferencedAssemblyContributions Referenced(params ReferencedAssemblyContribution[] assemblies)
+        => new(ImmutableArray.Create(assemblies));
 
 }
