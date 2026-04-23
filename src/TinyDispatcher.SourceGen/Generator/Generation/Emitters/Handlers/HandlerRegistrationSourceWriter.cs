@@ -22,20 +22,7 @@ internal sealed class HandlerRegistrationsSourceWriter
         w.Line();
 
         w.BeginBlock($"namespace {plan.Namespace}");
-        w.BeginBlock("internal static partial class ThisAssemblyPipelineContribution");
-        w.Line("internal static partial System.Collections.Generic.IReadOnlyList<global::TinyDispatcher.Bootstrap.CommandHandlerDescriptor> GetGeneratedCommandHandlers()");
-        w.Line("    => new global::TinyDispatcher.Bootstrap.CommandHandlerDescriptor[]");
-        w.BeginAnonymousBlock("GeneratedCommandHandlers");
-
-        for (int i = 0; i < plan.Commands.Length; i++)
-        {
-            var c = plan.Commands[i];
-            w.Line(
-                $"new({ToStringLiteral(c.MessageTypeFqn)}, {ToStringLiteral(c.HandlerTypeFqn)}, {ToStringLiteral(c.ContextTypeFqn)}),");
-        }
-
-        w.EndBlock();
-        w.Line(";");
+        w.BeginBlock("internal static partial class ThisAssemblyContribution");
         w.Line();
         w.BeginBlock("static partial void AddGeneratedHandlers(IServiceCollection services)");
 
@@ -62,7 +49,7 @@ internal sealed class HandlerRegistrationsSourceWriter
         }
 
         w.EndBlock(); // AddGeneratedHandlers
-        w.EndBlock(); // ThisAssemblyPipelineContribution
+        w.EndBlock(); // ThisAssemblyContribution
         w.EndBlock(); // namespace
 
         w.EnsureAllBlocksClosed();
@@ -77,14 +64,9 @@ internal sealed class HandlerRegistrationsSourceWriter
         w.Line();
 
         w.BeginBlock($"namespace {ns}");
-        w.BeginBlock("internal static partial class ThisAssemblyPipelineContribution");
-        w.Line("internal static partial System.Collections.Generic.IReadOnlyList<global::TinyDispatcher.Bootstrap.CommandHandlerDescriptor> GetGeneratedCommandHandlers()");
-        w.Line("    => System.Array.Empty<global::TinyDispatcher.Bootstrap.CommandHandlerDescriptor>();");
+        w.BeginBlock("internal static partial class ThisAssemblyContribution");
         w.Line("static partial void AddGeneratedHandlers(IServiceCollection services) { }");
         w.EndBlock();
         w.EndBlock();
     }
-
-    private static string ToStringLiteral(string value)
-        => "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
 }

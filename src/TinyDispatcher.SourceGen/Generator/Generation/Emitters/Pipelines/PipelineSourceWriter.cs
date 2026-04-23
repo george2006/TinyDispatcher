@@ -208,7 +208,7 @@ internal static class PipelineSourceWriter
 
     private static void WriteContribution(CodeWriter w, PipelinePlan plan)
     {
-        w.BeginBlock("internal static partial class ThisAssemblyPipelineContribution");
+        w.BeginBlock("internal static partial class ThisAssemblyContribution");
         w.BeginBlock("static partial void AddGeneratedPipelines(IServiceCollection services)");
         w.Line("if (services is null) throw new ArgumentNullException(nameof(services));");
         w.Line();
