@@ -13,11 +13,14 @@ namespace TinyDispatcher.Bootstrap;
 /// </summary>
 public static class DispatcherPipelineBootstrap
 {
-    public static void AddContribution(IDispatcherAssemblyContribution contribution)
+    public static void AddContribution(AssemblyContribution contribution)
         => PipelineContributionStore.Add(contribution);
 
     public static void AddContribution(Action<IServiceCollection> contribution)
         => PipelineContributionStore.Add(contribution);
+
+    public static IReadOnlyList<AssemblyContribution> GetContributions()
+        => PipelineContributionStore.GetSnapshot();
 
     public static void Apply(IServiceCollection services)
     {
@@ -27,29 +30,33 @@ public static class DispatcherPipelineBootstrap
         if (services.Any(d => d.ServiceType == typeof(DispatcherPipelineBootstrapAppliedMarker)))
             return;
 
-        var contributions = PipelineContributionStore.Drain();
-        var contributedCommandHandlers = CollectCommandHandlers(contributions);
+        var contributions = PipelineContributionStore.GetSnapshot();
+        var contributedAssemblyContributions = (IReadOnlyList<AssemblyContribution>)contributions;
+        var contributedHandlerBindings = CollectHandlerBindings(contributions);
+        var contributedCommandHandlers = CollectCommandHandlers(contributedHandlerBindings);
 
         services.AddSingleton<DispatcherPipelineBootstrapAppliedMarker>();
+        services.AddSingleton(contributedAssemblyContributions);
+        services.AddSingleton((IReadOnlyList<HandlerBinding>)contributedHandlerBindings);
         services.AddSingleton(contributedCommandHandlers);
 
         foreach (var c in contributions)
             c.Apply(services);
     }
 
-    private static IReadOnlyList<CommandHandlerDescriptor> CollectCommandHandlers(
-        IReadOnlyList<IDispatcherAssemblyContribution> contributions)
+    private static IReadOnlyList<HandlerBinding> CollectHandlerBindings(
+        IReadOnlyList<AssemblyContribution> contributions)
     {
         if (contributions.Count == 0)
-            return Array.Empty<CommandHandlerDescriptor>();
+            return Array.Empty<HandlerBinding>();
 
-        var handlers = new List<CommandHandlerDescriptor>();
+        var handlers = new List<HandlerBinding>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
 
         for (int i = 0; i < contributions.Count; i++)
         {
             var contribution = contributions[i];
-            var commandHandlers = contribution.CommandHandlers;
+            var commandHandlers = contribution.Handlers;
             if (commandHandlers.Count == 0)
                 continue;
 
@@ -57,15 +64,49 @@ public static class DispatcherPipelineBootstrap
             {
                 var commandHandler = commandHandlers[j];
                 var key =
-                    commandHandler.CommandTypeFqn + "|" +
-                    commandHandler.HandlerTypeFqn + "|" +
-                    commandHandler.ContextTypeFqn;
+                    commandHandler.CommandType.AssemblyQualifiedName + "|" +
+                    commandHandler.HandlerType.AssemblyQualifiedName + "|" +
+                    commandHandler.ContextType.AssemblyQualifiedName;
 
                 if (!seen.Add(key))
                     continue;
 
                 handlers.Add(commandHandler);
             }
+        }
+
+        if (handlers.Count == 0)
+            return Array.Empty<HandlerBinding>();
+
+        return handlers;
+    }
+
+    private static IReadOnlyList<CommandHandlerDescriptor> CollectCommandHandlers(
+        IReadOnlyList<HandlerBinding> handlerBindings)
+    {
+        if (handlerBindings.Count == 0)
+            return Array.Empty<CommandHandlerDescriptor>();
+
+        var handlers = new List<CommandHandlerDescriptor>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+
+        for (int i = 0; i < handlerBindings.Count; i++)
+        {
+            var binding = handlerBindings[i];
+            var descriptor = new CommandHandlerDescriptor(
+                CommandTypeFqn: ToDisplayName(binding.CommandType),
+                HandlerTypeFqn: ToDisplayName(binding.HandlerType),
+                ContextTypeFqn: ToDisplayName(binding.ContextType));
+
+            var key =
+                descriptor.CommandTypeFqn + "|" +
+                descriptor.HandlerTypeFqn + "|" +
+                descriptor.ContextTypeFqn;
+
+            if (!seen.Add(key))
+                continue;
+
+            handlers.Add(descriptor);
         }
 
         if (handlers.Count == 0)
@@ -76,4 +117,9 @@ public static class DispatcherPipelineBootstrap
 
     private sealed class DispatcherPipelineBootstrapAppliedMarker { }
 
+    private static string ToDisplayName(Type type)
+    {
+        var name = type.FullName ?? type.Name;
+        return "global::" + name.Replace('+', '.');
+    }
 }

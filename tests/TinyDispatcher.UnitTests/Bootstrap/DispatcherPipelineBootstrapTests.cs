@@ -11,6 +11,11 @@ namespace TinyDispatcher.UnitTests.Bootstrap;
 [Collection("Pipeline contribution store")]
 public sealed class DispatcherPipelineBootstrapTests
 {
+    public DispatcherPipelineBootstrapTests()
+    {
+        ResetStore();
+    }
+
     [Fact]
     public void Throws_when_services_is_null()
     {
@@ -46,7 +51,7 @@ public sealed class DispatcherPipelineBootstrapTests
     public void Applies_registered_object_contribution()
     {
         ResetStore();
-        DispatcherPipelineBootstrap.AddContribution(new TestContribution());
+        DispatcherPipelineBootstrap.AddContribution(new AssemblyContribution(registerServices: AddTestService));
 
         var services = CreateServices();
 
@@ -102,18 +107,29 @@ public sealed class DispatcherPipelineBootstrapTests
     public void Stores_contributed_command_handler_metadata_snapshot()
     {
         ResetStore();
-        DispatcherPipelineBootstrap.AddContribution(new TestContribution());
+        DispatcherPipelineBootstrap.AddContribution(new AssemblyContribution(
+            contextType: typeof(AppContext),
+            handlers: new[]
+            {
+                new HandlerBinding(typeof(CreateOrder), typeof(CreateOrderHandler), typeof(AppContext)),
+            }));
 
         var services = CreateServices();
 
         DispatcherPipelineBootstrap.Apply(services);
 
+        var typedSnapshot = GetHandlerBindingsSnapshot(services);
         var snapshot = GetCommandHandlersSnapshot(services);
 
+        var binding = Assert.Single(typedSnapshot);
+        Assert.Equal(typeof(CreateOrder), binding.CommandType);
+        Assert.Equal(typeof(CreateOrderHandler), binding.HandlerType);
+        Assert.Equal(typeof(AppContext), binding.ContextType);
+
         Assert.Single(snapshot);
-        Assert.Equal("global::MyApp.CreateOrder", snapshot[0].CommandTypeFqn);
-        Assert.Equal("global::MyApp.CreateOrderHandler", snapshot[0].HandlerTypeFqn);
-        Assert.Equal("global::MyApp.AppContext", snapshot[0].ContextTypeFqn);
+        Assert.Equal("global::TinyDispatcher.UnitTests.Bootstrap.DispatcherPipelineBootstrapTests.CreateOrder", snapshot[0].CommandTypeFqn);
+        Assert.Equal("global::TinyDispatcher.UnitTests.Bootstrap.DispatcherPipelineBootstrapTests.CreateOrderHandler", snapshot[0].HandlerTypeFqn);
+        Assert.Equal("global::TinyDispatcher.UnitTests.Bootstrap.DispatcherPipelineBootstrapTests.AppContext", snapshot[0].ContextTypeFqn);
     }
 
     [Fact]
@@ -135,21 +151,68 @@ public sealed class DispatcherPipelineBootstrapTests
     public void Deduplicates_identical_contributed_command_handler_metadata()
     {
         ResetStore();
-        var descriptor = CreateDescriptor(
-            commandTypeFqn: "global::MyApp.CreateOrder",
-            handlerTypeFqn: "global::MyApp.CreateOrderHandler",
-            contextTypeFqn: "global::MyApp.AppContext");
+        var handler = new HandlerBinding(typeof(CreateOrder), typeof(CreateOrderHandler), typeof(AppContext));
 
-        DispatcherPipelineBootstrap.AddContribution(new TestContribution(descriptor));
-        DispatcherPipelineBootstrap.AddContribution(new TestContribution(descriptor));
+        DispatcherPipelineBootstrap.AddContribution(new AssemblyContribution(handlers: new[] { handler }));
+        DispatcherPipelineBootstrap.AddContribution(new AssemblyContribution(handlers: new[] { handler }));
 
         var services = CreateServices();
 
         DispatcherPipelineBootstrap.Apply(services);
 
+        var typedSnapshot = GetHandlerBindingsSnapshot(services);
         var snapshot = GetCommandHandlersSnapshot(services);
 
+        Assert.Single(typedSnapshot);
         Assert.Single(snapshot);
+    }
+
+    [Fact]
+    public void Stores_all_structured_contributions_for_future_composition()
+    {
+        ResetStore();
+
+        var first = new AssemblyContribution(
+            contextType: typeof(AppContext),
+            registerServices: AddTestService,
+            handlers: new[]
+            {
+                new HandlerBinding(typeof(CreateOrder), typeof(CreateOrderHandler), typeof(AppContext)),
+            },
+            pipelines: new[]
+            {
+                new PipelineBinding(commandType: null, middlewares: new[] { new MiddlewareBinding(typeof(GlobalMiddleware<,>)) }),
+                new PipelineBinding(typeof(CreateOrder), new[] { new MiddlewareBinding(typeof(CommandMiddleware<,>)) }),
+            },
+            policies: new[]
+            {
+                new PolicyBinding(
+                    typeof(CreateOrderPolicy),
+                    new[] { new MiddlewareBinding(typeof(PolicyMiddleware<,>)) },
+                    new[] { new PolicyCommandBinding(typeof(CreateOrder)) }),
+            });
+
+        var second = new AssemblyContribution(
+            contextType: typeof(AppContext),
+            handlers: new[]
+            {
+                new HandlerBinding(typeof(CancelOrder), typeof(CancelOrderHandler), typeof(AppContext)),
+            });
+
+        DispatcherPipelineBootstrap.AddContribution(first);
+        DispatcherPipelineBootstrap.AddContribution(second);
+
+        var services = CreateServices();
+        DispatcherPipelineBootstrap.Apply(services);
+
+        var contributions = GetAssemblyContributionSnapshot(services);
+
+        Assert.Equal(2, contributions.Count);
+        Assert.Equal(typeof(AppContext), contributions[0].ContextType);
+        Assert.Equal(typeof(CreateOrder), Assert.Single(contributions[0].Handlers).CommandType);
+        Assert.Equal(typeof(CancelOrder), Assert.Single(contributions[1].Handlers).CommandType);
+        Assert.Equal(typeof(GlobalMiddleware<,>), Assert.Single(contributions[0].Pipelines[0].Middlewares).MiddlewareType);
+        Assert.Equal(typeof(CreateOrderPolicy), Assert.Single(contributions[0].Policies).PolicyType);
     }
 
     private static ServiceCollection CreateServices()
@@ -204,39 +267,84 @@ public sealed class DispatcherPipelineBootstrapTests
         throw new InvalidOperationException("Expected contributed command handler snapshot registration.");
     }
 
+    private static IReadOnlyList<AssemblyContribution> GetAssemblyContributionSnapshot(IServiceCollection services)
+    {
+        for (int i = 0; i < services.Count; i++)
+        {
+            var descriptor = services[i];
+            if (descriptor.ServiceType != typeof(IReadOnlyList<AssemblyContribution>))
+                continue;
+
+            return Assert.IsAssignableFrom<IReadOnlyList<AssemblyContribution>>(descriptor.ImplementationInstance);
+        }
+
+        throw new InvalidOperationException("Expected structured contribution snapshot registration.");
+    }
+
+    private static IReadOnlyList<HandlerBinding> GetHandlerBindingsSnapshot(IServiceCollection services)
+    {
+        for (int i = 0; i < services.Count; i++)
+        {
+            var descriptor = services[i];
+            if (descriptor.ServiceType != typeof(IReadOnlyList<HandlerBinding>))
+                continue;
+
+            return Assert.IsAssignableFrom<IReadOnlyList<HandlerBinding>>(descriptor.ImplementationInstance);
+        }
+
+        throw new InvalidOperationException("Expected structured handler binding snapshot registration.");
+    }
+
     private static void ResetStore()
         => PipelineContributionStore.ResetForTests();
 
-    private static CommandHandlerDescriptor CreateDescriptor(
-        string commandTypeFqn,
-        string handlerTypeFqn,
-        string contextTypeFqn)
-        => new(
-            CommandTypeFqn: commandTypeFqn,
-            HandlerTypeFqn: handlerTypeFqn,
-            ContextTypeFqn: contextTypeFqn);
-
     private sealed class TestService;
-    private sealed class TestContribution : IDispatcherAssemblyContribution
+    private sealed class AppContext;
+    private sealed class CreateOrder : ICommand;
+    private sealed class CancelOrder : ICommand;
+    private sealed class CreateOrderPolicy;
+    private sealed class GlobalMiddleware<TCommand, TContext> : ICommandMiddleware<TCommand, TContext>
+        where TCommand : ICommand
     {
-        public TestContribution()
-            : this(CreateDescriptor(
-                commandTypeFqn: "global::MyApp.CreateOrder",
-                handlerTypeFqn: "global::MyApp.CreateOrderHandler",
-                contextTypeFqn: "global::MyApp.AppContext"))
-        {
-        }
+        public ValueTask InvokeAsync(
+            TCommand command,
+            TContext context,
+            TinyDispatcher.Pipeline.ICommandPipelineRuntime<TCommand, TContext> runtime,
+            CancellationToken ct)
+            => runtime.NextAsync(command, context, ct);
+    }
 
-        public TestContribution(params CommandHandlerDescriptor[] commandHandlers)
-        {
-            CommandHandlers = commandHandlers;
-        }
+    private sealed class CommandMiddleware<TCommand, TContext> : ICommandMiddleware<TCommand, TContext>
+        where TCommand : ICommand
+    {
+        public ValueTask InvokeAsync(
+            TCommand command,
+            TContext context,
+            TinyDispatcher.Pipeline.ICommandPipelineRuntime<TCommand, TContext> runtime,
+            CancellationToken ct)
+            => runtime.NextAsync(command, context, ct);
+    }
 
-        public IReadOnlyList<CommandHandlerDescriptor> CommandHandlers { get; }
+    private sealed class PolicyMiddleware<TCommand, TContext> : ICommandMiddleware<TCommand, TContext>
+        where TCommand : ICommand
+    {
+        public ValueTask InvokeAsync(
+            TCommand command,
+            TContext context,
+            TinyDispatcher.Pipeline.ICommandPipelineRuntime<TCommand, TContext> runtime,
+            CancellationToken ct)
+            => runtime.NextAsync(command, context, ct);
+    }
 
-        public void Apply(IServiceCollection services)
-        {
-            services.AddSingleton<TestService>();
-        }
+    private sealed class CreateOrderHandler : ICommandHandler<CreateOrder, AppContext>
+    {
+        public Task HandleAsync(CreateOrder command, AppContext context, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+    }
+
+    private sealed class CancelOrderHandler : ICommandHandler<CancelOrder, AppContext>
+    {
+        public Task HandleAsync(CancelOrder command, AppContext context, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
     }
 }

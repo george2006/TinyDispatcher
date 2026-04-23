@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,7 +16,7 @@ public sealed class PipelineContributionStoreTests
 
         PipelineContributionStore.Add((Action<IServiceCollection>)null!);
 
-        var contributions = PipelineContributionStore.Drain();
+        var contributions = PipelineContributionStore.GetSnapshot();
 
         Assert.Empty(contributions);
     }
@@ -29,7 +29,7 @@ public sealed class PipelineContributionStoreTests
 
         PipelineContributionStore.Add(contribution);
 
-        var contributions = PipelineContributionStore.Drain();
+        var contributions = PipelineContributionStore.GetSnapshot();
 
         Assert.Single(contributions);
         var services = new ServiceCollection();
@@ -37,7 +37,31 @@ public sealed class PipelineContributionStoreTests
         contributions[0].Apply(services);
 
         AssertSingleRegistration<TestService>(services);
-        Assert.Empty(contributions[0].CommandHandlers);
+        Assert.Empty(contributions[0].Handlers);
+    }
+
+    [Fact]
+    public void Stores_structured_assembly_contribution()
+    {
+        ResetStore();
+
+        var contribution = new AssemblyContribution(
+            contextType: typeof(TestContext),
+            registerServices: AddTestService,
+            handlers: new[]
+            {
+                new HandlerBinding(typeof(TestCommand), typeof(TestHandler), typeof(TestContext)),
+            });
+
+        PipelineContributionStore.Add(contribution);
+
+        var contributions = PipelineContributionStore.GetSnapshot();
+
+        var stored = Assert.Single(contributions);
+        Assert.Equal(typeof(TestContext), stored.ContextType);
+        var handler = Assert.Single(stored.Handlers);
+        Assert.Equal(typeof(TestCommand), handler.CommandType);
+        Assert.Equal(typeof(TestHandler), handler.HandlerType);
     }
 
     [Fact]
@@ -50,7 +74,7 @@ public sealed class PipelineContributionStoreTests
         PipelineContributionStore.Add(first);
         PipelineContributionStore.Add(second);
 
-        var contributions = PipelineContributionStore.Drain();
+        var contributions = PipelineContributionStore.GetSnapshot();
 
         Assert.Equal(2, contributions.Length);
         var services = new ServiceCollection();
@@ -70,7 +94,7 @@ public sealed class PipelineContributionStoreTests
         Action<IServiceCollection> second = AddSecondService;
 
         PipelineContributionStore.Add(first);
-        var snapshot = PipelineContributionStore.Drain();
+        var snapshot = PipelineContributionStore.GetSnapshot();
 
         PipelineContributionStore.Add(second);
 
@@ -83,24 +107,24 @@ public sealed class PipelineContributionStoreTests
     }
 
     [Fact]
-    public void Does_not_clear_contributions_when_drained()
+    public void Does_not_clear_contributions_when_snapshotted()
     {
         ResetStore();
         Action<IServiceCollection> contribution = AddTestService;
 
         PipelineContributionStore.Add(contribution);
 
-        var firstDrain = PipelineContributionStore.Drain();
-        var secondDrain = PipelineContributionStore.Drain();
+        var firstSnapshot = PipelineContributionStore.GetSnapshot();
+        var secondSnapshot = PipelineContributionStore.GetSnapshot();
 
-        Assert.Single(firstDrain);
-        Assert.Single(secondDrain);
+        Assert.Single(firstSnapshot);
+        Assert.Single(secondSnapshot);
 
         var firstServices = new ServiceCollection();
         var secondServices = new ServiceCollection();
 
-        firstDrain[0].Apply(firstServices);
-        secondDrain[0].Apply(secondServices);
+        firstSnapshot[0].Apply(firstServices);
+        secondSnapshot[0].Apply(secondServices);
 
         AssertSingleRegistration<TestService>(firstServices);
         AssertSingleRegistration<TestService>(secondServices);
@@ -136,4 +160,14 @@ public sealed class PipelineContributionStoreTests
     private sealed class FirstService;
 
     private sealed class SecondService;
+
+    private sealed class TestCommand : ICommand;
+
+    private sealed class TestContext;
+
+    private sealed class TestHandler : ICommandHandler<TestCommand, TestContext>
+    {
+        public Task HandleAsync(TestCommand command, TestContext context, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+    }
 }
