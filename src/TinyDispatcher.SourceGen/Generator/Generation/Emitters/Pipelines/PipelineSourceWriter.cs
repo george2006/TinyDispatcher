@@ -22,13 +22,19 @@ internal static class PipelineSourceWriter
         w.BeginBlock($"namespace {plan.GeneratedNamespace}");
 
         if (plan.GlobalPipeline is not null)
+        {
             WritePipeline(w, plan, plan.GlobalPipeline);
+        }
 
-        for (int i = 0; i < plan.PolicyPipelines.Length; i++)
+        for (var i = 0; i < plan.PolicyPipelines.Length; i++)
+        {
             WritePipeline(w, plan, plan.PolicyPipelines[i]);
+        }
 
-        for (int i = 0; i < plan.PerCommandPipelines.Length; i++)
+        for (var i = 0; i < plan.PerCommandPipelines.Length; i++)
+        {
             WritePipeline(w, plan, plan.PerCommandPipelines[i]);
+        }
 
         w.EndBlock(); // namespace
 
@@ -47,17 +53,14 @@ internal static class PipelineSourceWriter
         var core = plan.CoreFqn;
         var ctx = plan.ContextFqn;
 
-        var cmdType = def.IsOpenGeneric ? "TCommand" : def.CommandType;
+        var commandType = GetPipelineCommandType(def);
 
         if (def.IsOpenGeneric)
         {
-            // Emit class header + where clause, then open the body WITHOUT re-emitting "class ..."
             w.Line(
                 $"internal sealed class {def.ClassName}<TCommand> : " +
                 $"{core}.ICommandPipeline<TCommand, {ctx}>");
             w.Line($"  where TCommand : {core}.ICommand");
-
-            // Open anonymous block with no header => just "{"
             w.BeginAnonymousBlock(string.Empty);
         }
         else
@@ -73,17 +76,16 @@ internal static class PipelineSourceWriter
         for (int i = 0; i < mwDistinct.Length; i++)
         {
             var mw = mwDistinct[i];
-            w.Line($"private readonly {PipelineTypeNames.CloseMiddleware(mw, cmdType, ctx)} {PipelineNameFactory.FieldName(mw)};");
+            w.Line($"private readonly {PipelineTypeNames.CloseMiddleware(mw, commandType, ctx)} {PipelineNameFactory.FieldName(mw)};");
         }
 
         w.Line();
 
-        // Runtime state is per ExecuteAsync invocation (thread-safe / re-entrant)
-        WriteRuntimeClass(w, plan, def, cmdType);
+        WriteRuntimeClass(w, plan, def, commandType);
         w.Line();
 
-        WriteCtor(w, plan, def, cmdType, mwDistinct);
-        WriteExecute(w, plan, def, cmdType);
+        WriteCtor(w, plan, def, commandType, mwDistinct);
+        WriteExecute(w, plan, def, commandType);
 
         w.EndBlock(); // class body
         w.Line();
@@ -93,10 +95,22 @@ internal static class PipelineSourceWriter
     {
         var middlewares = new List<MiddlewareRef>(def.Steps.Length);
 
-        for (int i = 0; i < def.Steps.Length; i++)
+        for (var i = 0; i < def.Steps.Length; i++)
+        {
             middlewares.Add(def.Steps[i].Middleware);
+        }
 
         return PipelineMiddlewareSets.DistinctByOpenTypeAndArity(middlewares);
+    }
+
+    private static string GetPipelineCommandType(PipelineDefinition def)
+    {
+        if (def.IsOpenGeneric)
+        {
+            return "TCommand";
+        }
+
+        return def.CommandType;
     }
 
     private static void WriteRuntimeClass(CodeWriter w, PipelinePlan plan, PipelineDefinition def, string cmdType)
@@ -104,15 +118,8 @@ internal static class PipelineSourceWriter
         var core = plan.CoreFqn;
         var ctx = plan.ContextFqn;
 
-        // The concrete pipeline type used inside the nested Runtime class
-        var pipelineType = def.IsOpenGeneric
-            ? $"{def.ClassName}<TCommand>"
-            : def.ClassName;
-
-        // The handler type depends on open/closed pipeline
-        var handlerType = def.IsOpenGeneric
-            ? $"{core}.ICommandHandler<TCommand, {ctx}>"
-            : $"{core}.ICommandHandler<{def.CommandType}, {ctx}>";
+        var pipelineType = GetRuntimePipelineType(def);
+        var handlerType = GetHandlerType(core, ctx, def);
 
         w.BeginBlock($"private sealed class Runtime : {core}.Pipeline.ICommandPipelineRuntime<{cmdType}, {ctx}>");
         w.Line($"private readonly {pipelineType} _pipeline;");
@@ -136,7 +143,7 @@ internal static class PipelineSourceWriter
         w.BeginBlock($"private ValueTask NextAsyncInternal({cmdType} command, {ctx} ctxValue, CancellationToken ct)");
         w.BeginBlock("switch (_index++)");
 
-        for (int i = 0; i < def.Steps.Length; i++)
+        for (var i = 0; i < def.Steps.Length; i++)
         {
             var mw = def.Steps[i].Middleware;
             w.Line($"case {i}: return _pipeline.{PipelineNameFactory.FieldName(mw)}.InvokeAsync(command, ctxValue, this, ct);");
@@ -156,22 +163,41 @@ internal static class PipelineSourceWriter
         w.EndBlock(); // class Runtime
     }
 
+    private static string GetRuntimePipelineType(PipelineDefinition def)
+    {
+        if (def.IsOpenGeneric)
+        {
+            return $"{def.ClassName}<TCommand>";
+        }
+
+        return def.ClassName;
+    }
+
+    private static string GetHandlerType(string core, string ctx, PipelineDefinition def)
+    {
+        if (def.IsOpenGeneric)
+        {
+            return $"{core}.ICommandHandler<TCommand, {ctx}>";
+        }
+
+        return $"{core}.ICommandHandler<{def.CommandType}, {ctx}>";
+    }
+
     private static void WriteCtor(CodeWriter w, PipelinePlan plan, PipelineDefinition def, string cmdType, MiddlewareRef[] mwDistinct)
     {
         var ctx = plan.ContextFqn;
 
-        // Constructor name does NOT include generic args in C#
         w.Line($"public {def.ClassName}(");
-        for (int i = 0; i < mwDistinct.Length; i++)
+        for (var i = 0; i < mwDistinct.Length; i++)
         {
             var mw = mwDistinct[i];
-            var comma = (i == mwDistinct.Length - 1) ? "" : ",";
+            var comma = GetParameterSeparator(i, mwDistinct.Length);
             w.Line($"  {PipelineTypeNames.CloseMiddleware(mw, cmdType, ctx)} {PipelineNameFactory.CtorParamName(mw)}{comma}");
         }
         w.Line(")");
         w.BeginAnonymousBlock(string.Empty);
 
-        for (int i = 0; i < mwDistinct.Length; i++)
+        for (var i = 0; i < mwDistinct.Length; i++)
         {
             var mw = mwDistinct[i];
             w.Line($"{PipelineNameFactory.FieldName(mw)} = {PipelineNameFactory.CtorParamName(mw)};");
@@ -181,16 +207,25 @@ internal static class PipelineSourceWriter
         w.Line();
     }
 
+    private static string GetParameterSeparator(int index, int count)
+    {
+        var isLastParameter = index == count - 1;
+
+        if (isLastParameter)
+        {
+            return string.Empty;
+        }
+
+        return ",";
+    }
+
     private static void WriteExecute(CodeWriter w, PipelinePlan plan, PipelineDefinition def, string cmdType)
     {
         var core = plan.CoreFqn;
         var ctx = plan.ContextFqn;
 
-        var handlerType = def.IsOpenGeneric
-            ? $"{core}.ICommandHandler<TCommand, {ctx}>"
-            : $"{core}.ICommandHandler<{def.CommandType}, {ctx}>";
-
-        var cmdSig = def.IsOpenGeneric ? "TCommand" : def.CommandType;
+        var handlerType = GetHandlerType(core, ctx, def);
+        var cmdSig = GetPipelineCommandType(def);
 
         w.BeginBlock($"public ValueTask ExecuteAsync({cmdSig} command, {ctx} ctxValue, {handlerType} handler)");
         w.Line("return ExecuteAsync(command, ctxValue, handler, default);");
@@ -198,8 +233,16 @@ internal static class PipelineSourceWriter
         w.Line();
 
         w.BeginBlock($"public ValueTask ExecuteAsync({cmdSig} command, {ctx} ctxValue, {handlerType} handler, CancellationToken ct)");
-        w.Line("if (command is null) throw new ArgumentNullException(nameof(command));");
-        w.Line("if (handler is null) throw new ArgumentNullException(nameof(handler));");
+        w.Line("if (command is null)");
+        w.BeginAnonymousBlock(string.Empty);
+        w.Line("throw new ArgumentNullException(nameof(command));");
+        w.EndBlock();
+        w.Line();
+        w.Line("if (handler is null)");
+        w.BeginAnonymousBlock(string.Empty);
+        w.Line("throw new ArgumentNullException(nameof(handler));");
+        w.EndBlock();
+        w.Line();
         w.Line("var runtime = new Runtime(this, handler);");
         w.Line("return runtime.StartAsync(command, ctxValue, ct);");
         w.EndBlock();
@@ -210,18 +253,24 @@ internal static class PipelineSourceWriter
     {
         w.BeginBlock("internal static partial class ThisAssemblyContribution");
         w.BeginBlock("static partial void AddGeneratedPipelines(IServiceCollection services)");
-        w.Line("if (services is null) throw new ArgumentNullException(nameof(services));");
+        w.Line("if (services is null)");
+        w.BeginAnonymousBlock(string.Empty);
+        w.Line("throw new ArgumentNullException(nameof(services));");
+        w.EndBlock();
         w.Line();
 
         if (plan.OpenGenericMiddlewareRegistrations.Length > 0)
         {
             w.Line("// Middleware open-generic registrations (required for generated pipelines ctor injection)");
-            for (int i = 0; i < plan.OpenGenericMiddlewareRegistrations.Length; i++)
+            for (var i = 0; i < plan.OpenGenericMiddlewareRegistrations.Length; i++)
+            {
                 w.Line($"services.TryAddTransient(typeof({plan.OpenGenericMiddlewareRegistrations[i].TypeofExpression}));");
+            }
+
             w.Line();
         }
 
-        for (int i = 0; i < plan.ServiceRegistrations.Length; i++)
+        for (var i = 0; i < plan.ServiceRegistrations.Length; i++)
         {
             var r = plan.ServiceRegistrations[i];
             w.Line($"services.AddScoped<{r.ServiceTypeExpression}, {r.ImplementationTypeExpression}>();");
