@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using TinyDispatcher.SourceGen.Generator.Models;
-
 using TinyDispatcher.SourceGen.Generator.Options;
 
 namespace TinyDispatcher.SourceGen.Generator.Generation.Emitters.Pipelines;
@@ -80,26 +79,6 @@ internal static class PipelinePlanner
             IsOpenGeneric: true,
             CommandType: "TCommand",
             Steps: BuildSteps(global, NoMiddlewares, NoMiddlewares));
-    }
-
-    private static bool ShouldEmitPlan(
-        PipelineDefinition? globalPipeline,
-        ImmutableArray<PipelineDefinition> policyPipelines,
-        ImmutableArray<PipelineDefinition> perCommandPipelines,
-        ImmutableArray<OpenGenericRegistration> middlewareRegistrations,
-        ImmutableArray<ServiceRegistration> serviceRegistrations)
-    {
-        var hasGlobalPipeline = globalPipeline is not null;
-        var hasPolicyPipelines = policyPipelines.Length > 0;
-        var hasPerCommandPipelines = perCommandPipelines.Length > 0;
-        var hasMiddlewareRegistrations = middlewareRegistrations.Length > 0;
-        var hasServiceRegistrations = serviceRegistrations.Length > 0;
-
-        return hasGlobalPipeline ||
-            hasPolicyPipelines ||
-            hasPerCommandPipelines ||
-            hasMiddlewareRegistrations ||
-            hasServiceRegistrations;
     }
 
     private static ImmutableArray<PipelineDefinition> BuildPolicyPipelines(
@@ -217,5 +196,24 @@ internal static class PipelinePlanner
         return regs.ToImmutableArray();
     }
 
+    private static bool ShouldEmitPlan(
+        PipelineDefinition? globalPipeline,
+        ImmutableArray<PipelineDefinition> policyPipelines,
+        ImmutableArray<PipelineDefinition> perCommandPipelines,
+        ImmutableArray<OpenGenericRegistration> middlewareRegistrations,
+        ImmutableArray<ServiceRegistration> serviceRegistrations)
+    {
+        var hasGlobalPipeline = globalPipeline is not null;
+        var hasPolicyPipelines = policyPipelines.Length > 0;
+        var hasPerCommandPipelines = perCommandPipelines.Length > 0;
+        var hasMiddlewareRegistrations = middlewareRegistrations.Length > 0;
+        var hasServiceRegistrations = serviceRegistrations.Length > 0;
+
+        return hasGlobalPipeline ||
+            hasPolicyPipelines ||
+            hasPerCommandPipelines ||
+            hasMiddlewareRegistrations ||
+            hasServiceRegistrations;
+    }
 }
 

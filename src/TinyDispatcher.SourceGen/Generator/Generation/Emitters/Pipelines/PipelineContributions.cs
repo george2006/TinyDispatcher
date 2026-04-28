@@ -43,29 +43,41 @@ internal sealed record PipelineContributions(
         for (var i = 0; i < orderedPolicies.Length; i++)
         {
             var policy = orderedPolicies[i];
-            var policyType = PipelineTypeNames.NormalizeFqn(policy.PolicyTypeFqn);
-            var policyTypeIsMissing = string.IsNullOrWhiteSpace(policyType);
+            var contribution = BuildPolicyContribution(policy);
 
-            if (policyTypeIsMissing)
+            if (contribution is null)
             {
                 continue;
             }
 
-            var middlewares = PipelineMiddlewareSets.NormalizeDistinct(policy.Middlewares);
-            var policyHasNoMiddlewares = middlewares.Length == 0;
-
-            if (policyHasNoMiddlewares)
-            {
-                continue;
-            }
-
-            normalizedPolicies.Add(new PipelinePolicyContribution(
-                policyType,
-                middlewares,
-                NormalizeCommands(policy.Commands)));
+            normalizedPolicies.Add(contribution);
         }
 
         return normalizedPolicies.ToArray();
+    }
+
+    private static PipelinePolicyContribution? BuildPolicyContribution(PolicySpec policy)
+    {
+        var policyType = PipelineTypeNames.NormalizeFqn(policy.PolicyTypeFqn);
+        var policyTypeIsMissing = string.IsNullOrWhiteSpace(policyType);
+
+        if (policyTypeIsMissing)
+        {
+            return null;
+        }
+
+        var middlewares = PipelineMiddlewareSets.NormalizeDistinct(policy.Middlewares);
+        var policyHasNoMiddlewares = middlewares.Length == 0;
+
+        if (policyHasNoMiddlewares)
+        {
+            return null;
+        }
+
+        return new PipelinePolicyContribution(
+            policyType,
+            middlewares,
+            NormalizeCommands(policy.Commands));
     }
 
     private static IReadOnlyDictionary<string, PipelinePolicyContribution> BuildPolicyByCommand(

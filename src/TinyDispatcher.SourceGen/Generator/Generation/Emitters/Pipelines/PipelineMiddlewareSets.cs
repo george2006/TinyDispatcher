@@ -13,17 +13,21 @@ internal static class PipelineMiddlewareSets
     public static MiddlewareRef[] NormalizeDistinct(ImmutableArray<MiddlewareRef> items)
     {
         if (items.IsDefaultOrEmpty)
+        {
             return Array.Empty<MiddlewareRef>();
+        }
 
         var list = new List<MiddlewareRef>(items.Length);
 
-        for (int i = 0; i < items.Length; i++)
+        for (var i = 0; i < items.Length; i++)
         {
             var x = items[i];
 
             var fqn = x.OpenTypeFqn;
             if (string.IsNullOrWhiteSpace(fqn))
+            {
                 continue;
+            }
 
             var normalizedFqn = PipelineTypeNames.NormalizeFqn(fqn);
 
@@ -44,11 +48,15 @@ internal static class PipelineMiddlewareSets
         {
             var fqn = item.OpenTypeFqn;
             if (string.IsNullOrWhiteSpace(fqn))
+            {
                 continue;
+            }
 
             var key = fqn + "|" + item.Arity.ToString(CultureInfo.InvariantCulture);
             if (seen.Add(key))
+            {
                 distinct.Add(item);
+            }
         }
 
         StableSortByOpenTypeFqn(distinct);
