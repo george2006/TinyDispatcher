@@ -16,14 +16,22 @@ internal static class PipelineRegistrationPlanner
         IReadOnlyDictionary<string, MiddlewareRef[]> perCommand,
         PipelinePolicyContribution[] policies)
     {
-        var perCommandSet = new HashSet<string>(perCommand.Keys, StringComparer.Ordinal);
         var commandToPolicyPipeline = BuildCommandToPolicyPipelineNames(generatedNamespace, policies);
-        var policyCommandSet = new HashSet<string>(commandToPolicyPipeline.Keys, StringComparer.Ordinal);
+        var state = new PipelineRegistrationState(
+            GeneratedNamespace: generatedNamespace,
+            CoreNamespace: coreNamespace,
+            ContextTypeFqn: contextTypeFqn,
+            HasGlobal: hasGlobal,
+            Discovery: discovery,
+            PerCommandSet: new HashSet<string>(perCommand.Keys, StringComparer.Ordinal),
+            PolicyCommandSet: new HashSet<string>(commandToPolicyPipeline.Keys, StringComparer.Ordinal),
+            CommandToPolicyPipeline: commandToPolicyPipeline);
+
         var registrations = new List<ServiceRegistration>(256);
 
-        AddPerCommandRegistrations(registrations, generatedNamespace, coreNamespace, contextTypeFqn, perCommandSet);
-        AddPolicyRegistrations(registrations, coreNamespace, contextTypeFqn, perCommandSet, policyCommandSet, commandToPolicyPipeline);
-        AddGlobalRegistrations(registrations, generatedNamespace, coreNamespace, contextTypeFqn, hasGlobal, discovery, perCommandSet, policyCommandSet);
+        AddPerCommandRegistrations(registrations, state);
+        AddPolicyRegistrations(registrations, state);
+        AddGlobalRegistrations(registrations, state);
 
         return registrations.ToImmutableArray();
     }
@@ -55,37 +63,30 @@ internal static class PipelineRegistrationPlanner
 
     private static void AddPerCommandRegistrations(
         List<ServiceRegistration> registrations,
-        string generatedNamespace,
-        string coreNamespace,
-        string contextTypeFqn,
-        HashSet<string> perCommandSet)
+        PipelineRegistrationState state)
     {
-        var orderedCommands = PipelineOrdering.GetStringsInStableOrder(perCommandSet);
+        var orderedCommands = PipelineOrdering.GetStringsInStableOrder(state.PerCommandSet);
 
         for (var i = 0; i < orderedCommands.Length; i++)
         {
             var command = orderedCommands[i];
 
             registrations.Add(new ServiceRegistration(
-                ServiceTypeExpression: $"{coreNamespace}.ICommandPipeline<{command}, {contextTypeFqn}>",
-                ImplementationTypeExpression: $"global::{generatedNamespace}.TinyDispatcherPipeline_{PipelineNameFactory.SanitizeCommandName(command)}"));
+                ServiceTypeExpression: $"{state.CoreNamespace}.ICommandPipeline<{command}, {state.ContextTypeFqn}>",
+                ImplementationTypeExpression: $"global::{state.GeneratedNamespace}.TinyDispatcherPipeline_{PipelineNameFactory.SanitizeCommandName(command)}"));
         }
     }
 
     private static void AddPolicyRegistrations(
         List<ServiceRegistration> registrations,
-        string coreNamespace,
-        string contextTypeFqn,
-        HashSet<string> perCommandSet,
-        HashSet<string> policyCommandSet,
-        Dictionary<string, string> commandToPolicyPipeline)
+        PipelineRegistrationState state)
     {
-        var orderedCommands = PipelineOrdering.GetStringsInStableOrder(policyCommandSet);
+        var orderedCommands = PipelineOrdering.GetStringsInStableOrder(state.PolicyCommandSet);
 
         for (var i = 0; i < orderedCommands.Length; i++)
         {
             var command = orderedCommands[i];
-            var hasPerCommandPipeline = perCommandSet.Contains(command);
+            var hasPerCommandPipeline = state.PerCommandSet.Contains(command);
 
             if (hasPerCommandPipeline)
             {
@@ -93,54 +94,40 @@ internal static class PipelineRegistrationPlanner
             }
 
             registrations.Add(new ServiceRegistration(
-                ServiceTypeExpression: $"{coreNamespace}.ICommandPipeline<{command}, {contextTypeFqn}>",
-                ImplementationTypeExpression: $"{commandToPolicyPipeline[command]}<{command}>"));
+                ServiceTypeExpression: $"{state.CoreNamespace}.ICommandPipeline<{command}, {state.ContextTypeFqn}>",
+                ImplementationTypeExpression: $"{state.CommandToPolicyPipeline[command]}<{command}>"));
         }
     }
 
     private static void AddGlobalRegistrations(
         List<ServiceRegistration> registrations,
-        string generatedNamespace,
-        string coreNamespace,
-        string contextTypeFqn,
-        bool hasGlobal,
-        DiscoveryResult discovery,
-        HashSet<string> perCommandSet,
-        HashSet<string> policyCommandSet)
+        PipelineRegistrationState state)
     {
-        if (!hasGlobal)
+        if (!state.HasGlobal)
         {
             return;
         }
 
-        var hasNoCommands = discovery.Commands.Length == 0;
+        var hasNoCommands = state.Discovery.Commands.Length == 0;
 
         if (hasNoCommands)
         {
             return;
         }
 
-        for (var i = 0; i < discovery.Commands.Length; i++)
+        for (var i = 0; i < state.Discovery.Commands.Length; i++)
         {
             AddGlobalRegistration(
                 registrations,
-                generatedNamespace,
-                coreNamespace,
-                contextTypeFqn,
-                discovery.Commands[i],
-                perCommandSet,
-                policyCommandSet);
+                state,
+                state.Discovery.Commands[i]);
         }
     }
 
     private static void AddGlobalRegistration(
         List<ServiceRegistration> registrations,
-        string generatedNamespace,
-        string coreNamespace,
-        string contextTypeFqn,
-        HandlerContract commandHandler,
-        HashSet<string> perCommandSet,
-        HashSet<string> policyCommandSet)
+        PipelineRegistrationState state,
+        HandlerContract commandHandler)
     {
         var command = PipelineTypeNames.NormalizeFqn(commandHandler.MessageTypeFqn);
         var commandIsMissing = string.IsNullOrWhiteSpace(command);
@@ -150,8 +137,8 @@ internal static class PipelineRegistrationPlanner
             return;
         }
 
-        var hasPerCommandPipeline = perCommandSet.Contains(command);
-        var hasPolicyPipeline = policyCommandSet.Contains(command);
+        var hasPerCommandPipeline = state.PerCommandSet.Contains(command);
+        var hasPolicyPipeline = state.PolicyCommandSet.Contains(command);
 
         if (hasPerCommandPipeline || hasPolicyPipeline)
         {
@@ -159,9 +146,18 @@ internal static class PipelineRegistrationPlanner
         }
 
         registrations.Add(new ServiceRegistration(
-            ServiceTypeExpression: $"{coreNamespace}.ICommandPipeline<{command}, {contextTypeFqn}>",
-            ImplementationTypeExpression: $"global::{generatedNamespace}.TinyDispatcherGlobalPipeline<{command}>"));
+            ServiceTypeExpression: $"{state.CoreNamespace}.ICommandPipeline<{command}, {state.ContextTypeFqn}>",
+            ImplementationTypeExpression: $"global::{state.GeneratedNamespace}.TinyDispatcherGlobalPipeline<{command}>"));
     }
 
+    private sealed record PipelineRegistrationState(
+        string GeneratedNamespace,
+        string CoreNamespace,
+        string ContextTypeFqn,
+        bool HasGlobal,
+        DiscoveryResult Discovery,
+        HashSet<string> PerCommandSet,
+        HashSet<string> PolicyCommandSet,
+        Dictionary<string, string> CommandToPolicyPipeline);
 }
 
