@@ -1,3 +1,9 @@
+## 1.1.0-rc2 - 2026-04-30
+
+### Fixed
+- Referenced assemblies can now contribute global middleware to host-generated pipelines.
+- The multi-project sample now covers a fuller vertical slice with referenced handlers, global middleware, and policies.
+
 ## 1.1.0-rc1 - 2026-04-23
 
 ### Added
