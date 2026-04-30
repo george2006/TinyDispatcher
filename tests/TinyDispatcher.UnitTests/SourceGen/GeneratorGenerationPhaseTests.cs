@@ -126,6 +126,7 @@ public sealed class GeneratorGenerationPhaseTests
                         "global::ExternalApp.CreateOrder",
                         "global::ExternalApp.CreateOrderHandler",
                         "global::MyApp.AppContext")),
+                    ImmutableArray<MiddlewareRef>.Empty,
                     ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
                     ImmutableDictionary<string, PolicySpec>.Empty)));
 
@@ -176,6 +177,7 @@ public sealed class GeneratorGenerationPhaseTests
                         "global::ExternalApp.CreateOrder",
                         "global::ExternalApp.CreateOrderHandler",
                         "global::MyApp.AppContext")),
+                    ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.GlobalMiddleware", 2)),
                     ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty.Add(
                         "global::ExternalApp.CreateOrder",
                         ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.OrderMiddleware", 2))),
@@ -215,6 +217,9 @@ public sealed class GeneratorGenerationPhaseTests
         Assert.Contains(
             "global::ExternalApp.OrderMiddleware",
             pipeline.Content);
+        Assert.Contains(
+            "global::ExternalApp.GlobalMiddleware",
+            pipeline.Content);
     }
 
     [Fact]
@@ -236,6 +241,7 @@ public sealed class GeneratorGenerationPhaseTests
                         "global::ExternalApp.CreateOrder",
                         "global::ExternalApp.CreateOrderHandler",
                         "global::MyApp.AppContext")),
+                    ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.GlobalMiddleware", 2)),
                     ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty.Add(
                         "global::ExternalApp.CreateOrder",
                         ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.OrderMiddleware", 2))),
@@ -247,6 +253,7 @@ public sealed class GeneratorGenerationPhaseTests
                         "global::OtherApp.CancelOrder",
                         "global::OtherApp.CancelOrderHandler",
                         "global::OtherApp.OtherContext")),
+                    ImmutableArray.Create(new MiddlewareRef("global::OtherApp.GlobalMiddleware", 2)),
                     ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty.Add(
                         "global::OtherApp.CancelOrder",
                         ImmutableArray.Create(new MiddlewareRef("global::OtherApp.CancelMiddleware", 2))),
@@ -278,7 +285,9 @@ public sealed class GeneratorGenerationPhaseTests
             source => source.HintName == "TinyDispatcherPipeline.g.cs");
 
         Assert.Contains("global::ExternalApp.CreateOrder", pipeline.Content);
+        Assert.Contains("global::ExternalApp.GlobalMiddleware", pipeline.Content);
         Assert.DoesNotContain("global::OtherApp.CancelOrder", pipeline.Content);
+        Assert.DoesNotContain("global::OtherApp.GlobalMiddleware", pipeline.Content);
         Assert.DoesNotContain("global::OtherApp.CancelMiddleware", pipeline.Content);
         Assert.DoesNotContain("global::OtherApp.CancelPolicyMiddleware", pipeline.Content);
     }

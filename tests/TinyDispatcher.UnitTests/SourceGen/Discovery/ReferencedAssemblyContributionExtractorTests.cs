@@ -66,6 +66,8 @@ using TinyDispatcher;
 
 [assembly: TinyDispatcherAssemblyContextContributionAttribute(typeof(ExternalApp.AppContext))]
 [assembly: TinyDispatcherPipelineContributionAttribute(
+    new System.Type[] { typeof(ExternalApp.GlobalMiddleware<,>) })]
+[assembly: TinyDispatcherPipelineContributionAttribute(
     new System.Type[] { typeof(ExternalApp.OrderMiddleware<,>) },
     CommandType = typeof(ExternalApp.CreateOrder))]
 [assembly: TinyDispatcherPolicyContributionAttribute(
@@ -78,6 +80,11 @@ namespace ExternalApp
     public sealed class AppContext { }
     public sealed class CreateOrder : ICommand { }
     public sealed class OrderPolicy { }
+    public sealed class GlobalMiddleware<TCommand, TContext> : ICommandMiddleware<TCommand, TContext> where TCommand : ICommand
+    {
+        public System.Threading.Tasks.ValueTask InvokeAsync(TCommand command, TContext context, TinyDispatcher.Pipeline.ICommandPipelineRuntime<TCommand, TContext> runtime, System.Threading.CancellationToken ct)
+            => runtime.NextAsync(command, context, ct);
+    }
     public sealed class OrderMiddleware<TCommand, TContext> : ICommandMiddleware<TCommand, TContext> where TCommand : ICommand
     {
         public System.Threading.Tasks.ValueTask InvokeAsync(TCommand command, TContext context, TinyDispatcher.Pipeline.ICommandPipelineRuntime<TCommand, TContext> runtime, System.Threading.CancellationToken ct)
@@ -103,6 +110,7 @@ namespace ExternalApp
             candidate => candidate.AssemblyName == "ExternalContrib");
 
         Assert.Equal("global::ExternalApp.AppContext", assembly.ContextTypeFqn);
+        Assert.Equal("global::ExternalApp.GlobalMiddleware", Assert.Single(assembly.Globals).OpenTypeFqn);
         Assert.True(assembly.PerCommand.TryGetValue("global::ExternalApp.CreateOrder", out var perCommand));
         Assert.Equal("global::ExternalApp.OrderMiddleware", Assert.Single(perCommand).OpenTypeFqn);
 

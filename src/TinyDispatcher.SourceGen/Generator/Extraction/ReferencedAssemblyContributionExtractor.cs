@@ -222,17 +222,52 @@ internal sealed class ReferencedAssemblyContributionExtractor
             return;
         }
 
-        if (!HasPipelineContribution(commandTypeFqn, middlewares))
+        var pipelineHasNoMiddlewares = PipelineHasNoMiddlewares(middlewares);
+        if (pipelineHasNoMiddlewares)
         {
             return;
         }
 
-        state.Pipelines[commandTypeFqn!] = middlewares;
+        var pipelineTargetsCommand = PipelineTargetsCommand(commandTypeFqn, out var commandType);
+        if (pipelineTargetsCommand)
+        {
+            AddPerCommandPipeline(state, commandType, middlewares);
+            return;
+        }
+
+        AddGlobalPipeline(state, middlewares);
     }
 
-    private static bool HasPipelineContribution(string? commandTypeFqn, ImmutableArray<MiddlewareRef> middlewares)
+    private static bool PipelineHasNoMiddlewares(ImmutableArray<MiddlewareRef> middlewares)
     {
-        return commandTypeFqn is not null && middlewares.Length > 0;
+        return middlewares.Length == 0;
+    }
+
+    private static bool PipelineTargetsCommand(string? commandTypeFqn, out string commandType)
+    {
+        if (commandTypeFqn is null)
+        {
+            commandType = string.Empty;
+            return false;
+        }
+
+        commandType = commandTypeFqn;
+        return true;
+    }
+
+    private static void AddGlobalPipeline(
+        ContributionState state,
+        ImmutableArray<MiddlewareRef> middlewares)
+    {
+        state.Globals.AddRange(middlewares);
+    }
+
+    private static void AddPerCommandPipeline(
+        ContributionState state,
+        string commandType,
+        ImmutableArray<MiddlewareRef> middlewares)
+    {
+        state.Pipelines[commandType] = middlewares;
     }
 
     private static bool TryReadPipeline(
@@ -419,6 +454,8 @@ internal sealed class ReferencedAssemblyContributionExtractor
     {
         public ImmutableArray<HandlerContract>.Builder Handlers { get; } = ImmutableArray.CreateBuilder<HandlerContract>();
 
+        public ImmutableArray<MiddlewareRef>.Builder Globals { get; } = ImmutableArray.CreateBuilder<MiddlewareRef>();
+
         public ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Builder Pipelines { get; }
             = ImmutableDictionary.CreateBuilder<string, ImmutableArray<MiddlewareRef>>(StringComparer.Ordinal);
 
@@ -435,6 +472,7 @@ internal sealed class ReferencedAssemblyContributionExtractor
                 assemblyName,
                 ContextTypeFqn,
                 Handlers.ToImmutable(),
+                Globals.ToImmutable(),
                 Pipelines.ToImmutable(),
                 Policies.ToImmutable());
         }
