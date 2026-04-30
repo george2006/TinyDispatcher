@@ -59,26 +59,14 @@ internal static class PipelineMiddlewareSets
             }
         }
 
-        StableSortByOpenTypeFqn(distinct);
+        distinct.Sort(CompareByOpenTypeFqn);
 
         return distinct.ToArray();
     }
 
-    private static void StableSortByOpenTypeFqn(List<MiddlewareRef> items)
+    private static int CompareByOpenTypeFqn(MiddlewareRef left, MiddlewareRef right)
     {
-        for (var i = 1; i < items.Count; i++)
-        {
-            var current = items[i];
-            var j = i - 1;
-
-            while (j >= 0 && string.Compare(items[j].OpenTypeFqn, current.OpenTypeFqn, StringComparison.Ordinal) > 0)
-            {
-                items[j + 1] = items[j];
-                j--;
-            }
-
-            items[j + 1] = current;
-        }
+        return string.Compare(left.OpenTypeFqn, right.OpenTypeFqn, StringComparison.Ordinal);
     }
 }
 
