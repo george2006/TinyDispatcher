@@ -186,13 +186,7 @@ internal static class PipelineSourceWriter
 
         w.BeginBlock($"private ValueTask NextAsyncInternal({cmdType} command, {ctx} ctxValue, CancellationToken ct)");
         w.BeginBlock("switch (_index++)");
-
-        for (var i = 0; i < def.Steps.Length; i++)
-        {
-            var mw = def.Steps[i].Middleware;
-            w.Line($"case {i}: return _pipeline.{PipelineNameFactory.FieldName(mw)}.InvokeAsync(command, ctxValue, this, ct);");
-        }
-
+        WriteRuntimeSwitchCases(w, def);
         w.Line("default: return new ValueTask(_handler.HandleAsync(command, ctxValue, ct));");
         w.EndBlock(); // switch
         w.EndBlock(); // method
@@ -205,6 +199,15 @@ internal static class PipelineSourceWriter
         w.EndBlock();
 
         w.EndBlock(); // class Runtime
+    }
+
+    private static void WriteRuntimeSwitchCases(CodeWriter w, PipelineDefinition def)
+    {
+        for (var i = 0; i < def.Steps.Length; i++)
+        {
+            var mw = def.Steps[i].Middleware;
+            w.Line($"case {i}: return _pipeline.{PipelineNameFactory.FieldName(mw)}.InvokeAsync(command, ctxValue, this, ct);");
+        }
     }
 
     private static string GetRuntimePipelineType(PipelineDefinition def)
@@ -232,6 +235,16 @@ internal static class PipelineSourceWriter
         var ctx = plan.ContextFqn;
 
         w.Line($"public {def.ClassName}(");
+        WriteConstructorParameters(w, ctx, cmdType, middlewares);
+        w.Line(")");
+        w.BeginAnonymousBlock(string.Empty);
+        WriteConstructorAssignments(w, middlewares);
+        w.EndBlock();
+        w.Line();
+    }
+
+    private static void WriteConstructorParameters(CodeWriter w, string ctx, string cmdType, MiddlewareRef[] middlewares)
+    {
         for (var i = 0; i < middlewares.Length; i++)
         {
             var middleware = middlewares[i];
@@ -241,9 +254,10 @@ internal static class PipelineSourceWriter
 
             w.Line($"  {parameterType} {parameterName}{separator}");
         }
-        w.Line(")");
-        w.BeginAnonymousBlock(string.Empty);
+    }
 
+    private static void WriteConstructorAssignments(CodeWriter w, MiddlewareRef[] middlewares)
+    {
         for (var i = 0; i < middlewares.Length; i++)
         {
             var middleware = middlewares[i];
@@ -252,9 +266,6 @@ internal static class PipelineSourceWriter
 
             w.Line($"{fieldName} = {parameterName};");
         }
-
-        w.EndBlock();
-        w.Line();
     }
 
     private static string GetConstructorParameterSeparator(int index, int count)
