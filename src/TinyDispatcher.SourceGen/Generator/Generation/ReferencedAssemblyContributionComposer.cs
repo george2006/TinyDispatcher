@@ -13,8 +13,11 @@ internal static class ReferencedAssemblyContributionComposer
         ReferencedAssemblyContributions referencedContributions,
         string expectedContextFqn)
     {
-        if (!referencedContributions.HasCommands())
+        var hasReferencedCommands = referencedContributions.HasCommands();
+        if (!hasReferencedCommands)
+        {
             return discovery;
+        }
 
         var commands = ImmutableArray.CreateBuilder<HandlerContract>(discovery.Commands.Length);
         var seen = new HashSet<string>(System.StringComparer.Ordinal);
@@ -32,22 +35,30 @@ internal static class ReferencedAssemblyContributionComposer
         ReferencedAssemblyContributions referencedContributions,
         string expectedContextFqn)
     {
+        var globals = ImmutableArray.CreateBuilder<MiddlewareRef>();
+        globals.AddRange(pipeline.Globals);
+
         var perCommand = ImmutableDictionary.CreateBuilder<string, ImmutableArray<MiddlewareRef>>(System.StringComparer.Ordinal);
         foreach (var pair in pipeline.PerCommand)
+        {
             perCommand[pair.Key] = pair.Value;
+        }
 
         var policies = ImmutableDictionary.CreateBuilder<string, PolicySpec>(System.StringComparer.Ordinal);
         foreach (var pair in pipeline.Policies)
+        {
             policies[pair.Key] = pair.Value;
+        }
 
         foreach (var assembly in referencedContributions.EnumerateMatchingContext(expectedContextFqn))
         {
             MergePerCommandContributions(perCommand, assembly.PerCommandMiddlewareFindings);
             MergePolicyContributions(policies, assembly.PolicyFindings);
+            globals.AddRange(assembly.Globals);
         }
 
         return new PipelineConfig(
-            pipeline.Globals,
+            globals.ToImmutable(),
             perCommand.ToImmutable(),
             policies.ToImmutable());
     }
@@ -60,8 +71,11 @@ internal static class ReferencedAssemblyContributionComposer
         foreach (var command in source)
         {
             var key = command.MessageTypeFqn + "|" + command.HandlerTypeFqn + "|" + command.ContextTypeFqn;
-            if (seen.Add(key))
+            var isNewCommand = seen.Add(key);
+            if (isNewCommand)
+            {
                 target.Add(command);
+            }
         }
     }
 

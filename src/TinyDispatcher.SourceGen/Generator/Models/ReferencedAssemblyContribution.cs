@@ -6,6 +6,7 @@ internal sealed record ReferencedAssemblyContribution(
     string AssemblyName,
     string? ContextTypeFqn,
     ImmutableArray<HandlerContract> Commands,
+    ImmutableArray<MiddlewareRef> Globals,
     ImmutableArray<PerCommandMiddlewareFinding> PerCommandMiddlewareFindings,
     ImmutableArray<PolicyFinding> PolicyFindings)
 {
@@ -20,6 +21,7 @@ internal sealed record ReferencedAssemblyContribution(
     public bool HasContributions()
         => !string.IsNullOrWhiteSpace(ContextTypeFqn) ||
            !Commands.IsDefaultOrEmpty ||
+           !Globals.IsDefaultOrEmpty ||
            !PerCommandMiddlewareFindings.IsDefaultOrEmpty ||
            !PolicyFindings.IsDefaultOrEmpty;
 }

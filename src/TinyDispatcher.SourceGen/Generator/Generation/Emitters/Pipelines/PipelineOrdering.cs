@@ -17,7 +17,7 @@ internal static class PipelineOrdering
 
         ordered.Sort(StringComparer.Ordinal);
 
-        return CopyStringsToArray(ordered);
+        return ordered.ToArray();
     }
 
     public static PolicySpec[] GetPoliciesInStableOrder(ImmutableDictionary<string, PolicySpec> policies)
@@ -35,7 +35,7 @@ internal static class PipelineOrdering
 
         ordered.Sort(ComparePolicies);
 
-        return CopyPoliciesToArray(ordered);
+        return ordered.ToArray();
     }
 
     private static int ComparePolicies(PolicySpec left, PolicySpec right)
@@ -44,30 +44,6 @@ internal static class PipelineOrdering
         var rightPolicyName = PipelineTypeNames.NormalizeFqn(right.PolicyTypeFqn);
 
         return string.Compare(leftPolicyName, rightPolicyName, StringComparison.Ordinal);
-    }
-
-    private static string[] CopyStringsToArray(List<string> values)
-    {
-        var result = new string[values.Count];
-
-        for (var i = 0; i < values.Count; i++)
-        {
-            result[i] = values[i];
-        }
-
-        return result;
-    }
-
-    private static PolicySpec[] CopyPoliciesToArray(List<PolicySpec> policies)
-    {
-        var result = new PolicySpec[policies.Count];
-
-        for (var i = 0; i < policies.Count; i++)
-        {
-            result[i] = policies[i];
-        }
-
-        return result;
     }
 }
 

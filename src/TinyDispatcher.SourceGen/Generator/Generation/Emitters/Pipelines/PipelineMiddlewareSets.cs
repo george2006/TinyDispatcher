@@ -13,17 +13,21 @@ internal static class PipelineMiddlewareSets
     public static MiddlewareRef[] NormalizeDistinct(ImmutableArray<MiddlewareRef> items)
     {
         if (items.IsDefaultOrEmpty)
+        {
             return Array.Empty<MiddlewareRef>();
+        }
 
         var list = new List<MiddlewareRef>(items.Length);
 
-        for (int i = 0; i < items.Length; i++)
+        for (var i = 0; i < items.Length; i++)
         {
             var x = items[i];
 
             var fqn = x.OpenTypeFqn;
             if (string.IsNullOrWhiteSpace(fqn))
+            {
                 continue;
+            }
 
             var normalizedFqn = PipelineTypeNames.NormalizeFqn(fqn);
 
@@ -44,33 +48,25 @@ internal static class PipelineMiddlewareSets
         {
             var fqn = item.OpenTypeFqn;
             if (string.IsNullOrWhiteSpace(fqn))
+            {
                 continue;
+            }
 
             var key = fqn + "|" + item.Arity.ToString(CultureInfo.InvariantCulture);
             if (seen.Add(key))
+            {
                 distinct.Add(item);
+            }
         }
 
-        StableSortByOpenTypeFqn(distinct);
+        distinct.Sort(CompareByOpenTypeFqn);
 
         return distinct.ToArray();
     }
 
-    private static void StableSortByOpenTypeFqn(List<MiddlewareRef> items)
+    private static int CompareByOpenTypeFqn(MiddlewareRef left, MiddlewareRef right)
     {
-        for (var i = 1; i < items.Count; i++)
-        {
-            var current = items[i];
-            var j = i - 1;
-
-            while (j >= 0 && string.Compare(items[j].OpenTypeFqn, current.OpenTypeFqn, StringComparison.Ordinal) > 0)
-            {
-                items[j + 1] = items[j];
-                j--;
-            }
-
-            items[j + 1] = current;
-        }
+        return string.Compare(left.OpenTypeFqn, right.OpenTypeFqn, StringComparison.Ordinal);
     }
 }
 

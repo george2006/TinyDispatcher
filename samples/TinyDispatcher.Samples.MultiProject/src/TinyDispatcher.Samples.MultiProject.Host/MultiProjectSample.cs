@@ -31,7 +31,7 @@ internal static class MultiProjectSample
         Console.WriteLine("Multi-project handler discovery sample");
         Console.WriteLine("=====================================");
         Console.WriteLine("Host project bootstraps Tiny once.");
-        Console.WriteLine("Orders and Billing handlers live in separate class libraries.");
+        Console.WriteLine("Orders and Billing handlers, middleware, and policies live in separate class libraries.");
         Console.WriteLine();
 
         await dispatcher.DispatchAsync(new CreateOrder("ORD-100", 49.95m), CancellationToken.None);

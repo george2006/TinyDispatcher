@@ -4,6 +4,4 @@
     <Project Path="src/TinyDispatcher.Samples.MultiProject.Host/TinyDispatcher.Samples.MultiProject.Host.csproj" />
     <Project Path="src/TinyDispatcher.Samples.MultiProject.Orders/TinyDispatcher.Samples.MultiProject.Orders.csproj" />
   </Folder>
-  <Project Path="../../src/TinyDispatcher.SourceGen/TinyDispatcher.SourceGen.csproj" />
-  <Project Path="../../src/TinyDispatcher/TinyDispatcher.csproj" />
 </Solution>

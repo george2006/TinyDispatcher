@@ -1,29 +1,24 @@
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Text;
 using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen.Generator.Generation.Emitters.Pipelines;
 
 internal sealed record PipelinePlan(
-        string GeneratedNamespace,
-        string ContextFqn,
-        string CoreFqn,
-        bool ShouldEmit,
-        PipelineDefinition? GlobalPipeline,
-        ImmutableArray<PipelineDefinition> PolicyPipelines,
-        ImmutableArray<PipelineDefinition> PerCommandPipelines,
-        ImmutableArray<OpenGenericRegistration> OpenGenericMiddlewareRegistrations,
-        ImmutableArray<ServiceRegistration> ServiceRegistrations
-    );
+    string GeneratedNamespace,
+    string ContextFqn,
+    string CoreFqn,
+    bool ShouldEmit,
+    PipelineDefinition? GlobalPipeline,
+    ImmutableArray<PipelineDefinition> PolicyPipelines,
+    ImmutableArray<PipelineDefinition> PerCommandPipelines,
+    ImmutableArray<OpenGenericRegistration> OpenGenericMiddlewareRegistrations,
+    ImmutableArray<ServiceRegistration> ServiceRegistrations);
 
 internal sealed record PipelineDefinition(
     string ClassName,
     bool IsOpenGeneric,
-    string CommandType, // "TCommand" or FQN
-    ImmutableArray<MiddlewareStep> Steps
-);
+    string CommandType,
+    ImmutableArray<MiddlewareStep> Steps);
 
 internal sealed record MiddlewareStep(MiddlewareRef Middleware);
 

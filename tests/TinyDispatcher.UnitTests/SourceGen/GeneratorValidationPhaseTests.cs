@@ -99,6 +99,7 @@ public sealed class GeneratorValidationPhaseTests
                     "global::ExternalApp.CreateOrder",
                     "global::ExternalApp.CreateOrderHandler",
                     "global::MyApp.AppContext")),
+                ImmutableArray<MiddlewareRef>.Empty,
                 ImmutableArray.Create(new PerCommandMiddlewareFinding(
                     "global::ExternalApp.MissingCommand",
                     ImmutableArray<MiddlewareRef>.Empty)),
@@ -145,6 +146,7 @@ public sealed class GeneratorValidationPhaseTests
                     "global::MyApp.CreateOrder",
                     "global::ExternalApp.CreateOrderHandler",
                     "global::MyApp.AppContext")),
+                ImmutableArray<MiddlewareRef>.Empty,
                 ImmutableArray<PerCommandMiddlewareFinding>.Empty,
                 ImmutableArray<PolicyFinding>.Empty)));
 
@@ -179,6 +181,7 @@ public sealed class GeneratorValidationPhaseTests
                 "ExternalApp",
                 "global::MyApp.AppContext",
                 ImmutableArray<HandlerContract>.Empty,
+                ImmutableArray<MiddlewareRef>.Empty,
                 ImmutableArray.Create(new PerCommandMiddlewareFinding(
                     "global::ExternalApp.MissingCommand",
                     ImmutableArray<MiddlewareRef>.Empty)),

@@ -25,6 +25,7 @@ public sealed class ReferencedContributionConflictValidatorTests
                     "OrdersContrib",
                     "global::MyApp.AppContext",
                     ImmutableArray<HandlerContract>.Empty,
+                    ImmutableArray<MiddlewareRef>.Empty,
                     ImmutableArray.Create(new PerCommandMiddlewareFinding(
                         "global::MyApp.CreateOrder",
                         ImmutableArray.Create(new MiddlewareRef("global::Orders.SharedMiddleware", 2)))),
@@ -48,6 +49,7 @@ public sealed class ReferencedContributionConflictValidatorTests
                     "OrdersContrib",
                     "global::MyApp.AppContext",
                     ImmutableArray<HandlerContract>.Empty,
+                    ImmutableArray<MiddlewareRef>.Empty,
                     ImmutableArray.Create(new PerCommandMiddlewareFinding(
                         "global::MyApp.CreateOrder",
                         ImmutableArray.Create(new MiddlewareRef("global::Orders.SharedMiddleware", 2)))),
@@ -56,6 +58,7 @@ public sealed class ReferencedContributionConflictValidatorTests
                     "BillingContrib",
                     "global::MyApp.AppContext",
                     ImmutableArray<HandlerContract>.Empty,
+                    ImmutableArray<MiddlewareRef>.Empty,
                     ImmutableArray.Create(new PerCommandMiddlewareFinding(
                         "global::MyApp.CreateOrder",
                         ImmutableArray.Create(new MiddlewareRef("global::Billing.SharedMiddleware", 2)))),
@@ -79,6 +82,7 @@ public sealed class ReferencedContributionConflictValidatorTests
                     "OrdersContrib",
                     "global::MyApp.AppContext",
                     ImmutableArray<HandlerContract>.Empty,
+                    ImmutableArray<MiddlewareRef>.Empty,
                     ImmutableArray.Create(
                         new PerCommandMiddlewareFinding(
                             "global::MyApp.CreateOrder",
@@ -114,6 +118,7 @@ public sealed class ReferencedContributionConflictValidatorTests
                     "OrdersContrib",
                     "global::MyApp.AppContext",
                     ImmutableArray<HandlerContract>.Empty,
+                    ImmutableArray<MiddlewareRef>.Empty,
                     ImmutableArray<PerCommandMiddlewareFinding>.Empty,
                     ImmutableArray.Create(new PolicyFinding(
                         "global::MyApp.SharedPolicy",
@@ -138,6 +143,7 @@ public sealed class ReferencedContributionConflictValidatorTests
                     "OrdersContrib",
                     "global::MyApp.AppContext",
                     ImmutableArray<HandlerContract>.Empty,
+                    ImmutableArray<MiddlewareRef>.Empty,
                     ImmutableArray<PerCommandMiddlewareFinding>.Empty,
                     ImmutableArray.Create(
                         new PolicyFinding(
@@ -167,6 +173,7 @@ public sealed class ReferencedContributionConflictValidatorTests
                     "OrdersContrib",
                     "global::MyApp.AppContext",
                     ImmutableArray<HandlerContract>.Empty,
+                    ImmutableArray<MiddlewareRef>.Empty,
                     ImmutableArray<PerCommandMiddlewareFinding>.Empty,
                     ImmutableArray.Create(new PolicyFinding(
                         "global::MyApp.SharedPolicy",
@@ -176,6 +183,7 @@ public sealed class ReferencedContributionConflictValidatorTests
                     "BillingContrib",
                     "global::MyApp.AppContext",
                     ImmutableArray<HandlerContract>.Empty,
+                    ImmutableArray<MiddlewareRef>.Empty,
                     ImmutableArray<PerCommandMiddlewareFinding>.Empty,
                     ImmutableArray.Create(new PolicyFinding(
                         "global::MyApp.SharedPolicy",
@@ -204,6 +212,7 @@ public sealed class ReferencedContributionConflictValidatorTests
                     "OrdersContrib",
                     "global::MyApp.AppContext",
                     ImmutableArray<HandlerContract>.Empty,
+                    ImmutableArray<MiddlewareRef>.Empty,
                     ImmutableArray.Create(new PerCommandMiddlewareFinding(
                         "global::MyApp.CreateOrder",
                         ImmutableArray.Create(new MiddlewareRef("global::Orders.SharedMiddleware", 2)))),
