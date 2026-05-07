@@ -70,6 +70,33 @@ public sealed class ReferencedContributionConflictValidatorTests
     }
 
     [Fact]
+    public void Validate_reports_DISP413_when_single_referenced_assembly_repeats_same_command_target()
+    {
+        var context = CreateContext(
+            localPipeline: PipelineConfig.Empty,
+            referencedContributions: Referenced(
+                new ReferencedAssemblyContribution(
+                    "OrdersContrib",
+                    "global::MyApp.AppContext",
+                    ImmutableArray<HandlerContract>.Empty,
+                    ImmutableArray.Create(
+                        new PerCommandMiddlewareFinding(
+                            "global::MyApp.CreateOrder",
+                            ImmutableArray.Create(new MiddlewareRef("global::Orders.FirstMiddleware", 2))),
+                        new PerCommandMiddlewareFinding(
+                            "global::MyApp.CreateOrder",
+                            ImmutableArray.Create(new MiddlewareRef("global::Orders.SecondMiddleware", 2)))),
+                    ImmutableArray<PolicyFinding>.Empty)));
+
+        var diagnostics = new DiagnosticBag();
+
+        new ReferencedContributionConflictValidator().Validate(context, diagnostics);
+
+        var diagnostic = Assert.Single(diagnostics.ToImmutable());
+        Assert.Equal("DISP413", diagnostic.Id);
+    }
+
+    [Fact]
     public void Validate_reports_DISP414_when_referenced_assembly_conflicts_with_local_policy()
     {
         var context = CreateContext(
@@ -92,6 +119,35 @@ public sealed class ReferencedContributionConflictValidatorTests
                         "global::MyApp.SharedPolicy",
                         ImmutableArray<MiddlewareRef>.Empty,
                         ImmutableArray<string>.Empty)))));
+
+        var diagnostics = new DiagnosticBag();
+
+        new ReferencedContributionConflictValidator().Validate(context, diagnostics);
+
+        var diagnostic = Assert.Single(diagnostics.ToImmutable());
+        Assert.Equal("DISP414", diagnostic.Id);
+    }
+
+    [Fact]
+    public void Validate_reports_DISP414_when_single_referenced_assembly_repeats_same_policy_type()
+    {
+        var context = CreateContext(
+            localPipeline: PipelineConfig.Empty,
+            referencedContributions: Referenced(
+                new ReferencedAssemblyContribution(
+                    "OrdersContrib",
+                    "global::MyApp.AppContext",
+                    ImmutableArray<HandlerContract>.Empty,
+                    ImmutableArray<PerCommandMiddlewareFinding>.Empty,
+                    ImmutableArray.Create(
+                        new PolicyFinding(
+                            "global::MyApp.SharedPolicy",
+                            ImmutableArray<MiddlewareRef>.Empty,
+                            ImmutableArray<string>.Empty),
+                        new PolicyFinding(
+                            "global::MyApp.SharedPolicy",
+                            ImmutableArray<MiddlewareRef>.Empty,
+                            ImmutableArray<string>.Empty)))));
 
         var diagnostics = new DiagnosticBag();
 

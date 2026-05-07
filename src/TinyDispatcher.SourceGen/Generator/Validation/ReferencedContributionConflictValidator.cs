@@ -58,9 +58,23 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
         Dictionary<string, string> ownersByCommand,
         ReferencedAssemblyContribution assembly)
     {
+        var reportedCommands = new HashSet<string>(StringComparer.Ordinal);
+
         for (var i = 0; i < assembly.PerCommandMiddlewareFindings.Length; i++)
         {
             var finding = assembly.PerCommandMiddlewareFindings[i];
+            var isFirstContributionForCommand = reportedCommands.Add(finding.CommandTypeFqn);
+
+            if (!isFirstContributionForCommand)
+            {
+                ReportPerCommandMiddlewareConflict(
+                    context,
+                    diags,
+                    finding.CommandTypeFqn,
+                    assembly.AssemblyName,
+                    assembly.AssemblyName);
+                continue;
+            }
 
             if (TryGetExistingOwner(ownersByCommand, finding.CommandTypeFqn, out var existingOwner))
             {
@@ -107,9 +121,23 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
         Dictionary<string, string> ownersByPolicy,
         ReferencedAssemblyContribution assembly)
     {
+        var reportedPolicies = new HashSet<string>(StringComparer.Ordinal);
+
         for (var i = 0; i < assembly.PolicyFindings.Length; i++)
         {
             var finding = assembly.PolicyFindings[i];
+            var isFirstContributionForPolicy = reportedPolicies.Add(finding.PolicyTypeFqn);
+
+            if (!isFirstContributionForPolicy)
+            {
+                ReportPolicyConflict(
+                    context,
+                    diags,
+                    finding.PolicyTypeFqn,
+                    assembly.AssemblyName,
+                    assembly.AssemblyName);
+                continue;
+            }
 
             if (TryGetExistingOwner(ownersByPolicy, finding.PolicyTypeFqn, out var existingOwner))
             {
@@ -162,6 +190,9 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
 
     private static string JoinOwners(string firstOwner, string secondOwner)
     {
+        if (string.Equals(firstOwner, secondOwner, StringComparison.Ordinal))
+            return "'" + firstOwner + "'";
+
         return string.Concat("'", firstOwner, "' and '", secondOwner, "'");
     }
 }
