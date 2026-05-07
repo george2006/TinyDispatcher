@@ -10,6 +10,7 @@ internal static class GeneratorValidator
     private static readonly DuplicateHandlerValidator _duplicateHandler = new();
     private static readonly MiddlewareRefShapeValidator _middlewareRefShape = new();
     private static readonly PipelineDiagnosticsValidator _pipelineDiagnostics = new();
+    private static readonly ReferencedContributionConflictValidator _referencedContributionConflicts = new();
 
     public static DiagnosticBag Validate(
         GeneratorValidationContext vctx,
@@ -22,6 +23,7 @@ internal static class GeneratorValidator
         _duplicateHandler.Validate(vctx, bag);
         _middlewareRefShape.Validate(vctx, commandMiddlewareInterface, middlewareTypeResolver, bag);
         _pipelineDiagnostics.Validate(vctx, bag);
+        _referencedContributionConflicts.Validate(vctx, bag);
 
         return bag;
     }

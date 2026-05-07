@@ -267,7 +267,7 @@ internal sealed class ReferencedAssemblyContributionExtractor
         string commandType,
         ImmutableArray<MiddlewareRef> middlewares)
     {
-        state.Pipelines[commandType] = middlewares;
+        state.PerCommandMiddlewareFindings.Add(new PerCommandMiddlewareFinding(commandType, middlewares));
     }
 
     private static bool TryReadPipeline(
@@ -347,7 +347,10 @@ internal sealed class ReferencedAssemblyContributionExtractor
     {
         if (TryReadPolicy(attribute, out var policy))
         {
-            state.Policies[policy.PolicyTypeFqn] = policy;
+            state.PolicyFindings.Add(new PolicyFinding(
+                policy.PolicyTypeFqn,
+                policy.Middlewares,
+                policy.Commands));
         }
     }
 
@@ -456,11 +459,11 @@ internal sealed class ReferencedAssemblyContributionExtractor
 
         public ImmutableArray<MiddlewareRef>.Builder Globals { get; } = ImmutableArray.CreateBuilder<MiddlewareRef>();
 
-        public ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Builder Pipelines { get; }
-            = ImmutableDictionary.CreateBuilder<string, ImmutableArray<MiddlewareRef>>(StringComparer.Ordinal);
+        public ImmutableArray<PerCommandMiddlewareFinding>.Builder PerCommandMiddlewareFindings { get; }
+            = ImmutableArray.CreateBuilder<PerCommandMiddlewareFinding>();
 
-        public ImmutableDictionary<string, PolicySpec>.Builder Policies { get; }
-            = ImmutableDictionary.CreateBuilder<string, PolicySpec>(StringComparer.Ordinal);
+        public ImmutableArray<PolicyFinding>.Builder PolicyFindings { get; }
+            = ImmutableArray.CreateBuilder<PolicyFinding>();
 
         public HashSet<string> SeenHandlers { get; } = new(StringComparer.Ordinal);
 
@@ -473,8 +476,8 @@ internal sealed class ReferencedAssemblyContributionExtractor
                 ContextTypeFqn,
                 Handlers.ToImmutable(),
                 Globals.ToImmutable(),
-                Pipelines.ToImmutable(),
-                Policies.ToImmutable());
+                PerCommandMiddlewareFindings.ToImmutable(),
+                PolicyFindings.ToImmutable());
         }
     }
 }

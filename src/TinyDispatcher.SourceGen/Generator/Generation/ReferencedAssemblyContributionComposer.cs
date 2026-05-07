@@ -52,9 +52,9 @@ internal static class ReferencedAssemblyContributionComposer
 
         foreach (var assembly in referencedContributions.EnumerateMatchingContext(expectedContextFqn))
         {
+            MergePerCommandContributions(perCommand, assembly.PerCommandMiddlewareFindings);
+            MergePolicyContributions(policies, assembly.PolicyFindings);
             globals.AddRange(assembly.Globals);
-            MergePerCommandContributions(perCommand, assembly.PerCommand);
-            MergePolicyContributions(policies, assembly.Policies);
         }
 
         return new PipelineConfig(
@@ -81,29 +81,35 @@ internal static class ReferencedAssemblyContributionComposer
 
     private static void MergePerCommandContributions(
         ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Builder target,
-        ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> source)
+        ImmutableArray<PerCommandMiddlewareFinding> source)
     {
-        foreach (var pair in source)
+        for (var i = 0; i < source.Length; i++)
         {
-            var commandAlreadyHasMiddlewares = target.ContainsKey(pair.Key);
-            if (!commandAlreadyHasMiddlewares)
-            {
-                target[pair.Key] = pair.Value;
-            }
+            var finding = source[i];
+
+            if (!target.ContainsKey(finding.CommandTypeFqn))
+                target[finding.CommandTypeFqn] = finding.Middlewares;
         }
     }
 
     private static void MergePolicyContributions(
         ImmutableDictionary<string, PolicySpec>.Builder target,
-        ImmutableDictionary<string, PolicySpec> source)
+        ImmutableArray<PolicyFinding> source)
     {
-        foreach (var pair in source)
+        for (var i = 0; i < source.Length; i++)
         {
-            var policyAlreadyExists = target.ContainsKey(pair.Key);
-            if (!policyAlreadyExists)
-            {
-                target[pair.Key] = pair.Value;
-            }
+            var finding = source[i];
+
+            if (!target.ContainsKey(finding.PolicyTypeFqn))
+                target[finding.PolicyTypeFqn] = ToPolicySpec(finding);
         }
+    }
+
+    private static PolicySpec ToPolicySpec(PolicyFinding finding)
+    {
+        return new PolicySpec(
+            finding.PolicyTypeFqn,
+            finding.Middlewares,
+            finding.Commands);
     }
 }

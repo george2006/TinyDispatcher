@@ -111,10 +111,12 @@ namespace ExternalApp
 
         Assert.Equal("global::ExternalApp.AppContext", assembly.ContextTypeFqn);
         Assert.Equal("global::ExternalApp.GlobalMiddleware", Assert.Single(assembly.Globals).OpenTypeFqn);
-        Assert.True(assembly.PerCommand.TryGetValue("global::ExternalApp.CreateOrder", out var perCommand));
-        Assert.Equal("global::ExternalApp.OrderMiddleware", Assert.Single(perCommand).OpenTypeFqn);
+        var perCommand = Assert.Single(assembly.PerCommandMiddlewareFindings);
+        Assert.Equal("global::ExternalApp.CreateOrder", perCommand.CommandTypeFqn);
+        Assert.Equal("global::ExternalApp.OrderMiddleware", Assert.Single(perCommand.Middlewares).OpenTypeFqn);
 
-        Assert.True(assembly.Policies.TryGetValue("global::ExternalApp.OrderPolicy", out var policy));
+        var policy = Assert.Single(assembly.PolicyFindings);
+        Assert.Equal("global::ExternalApp.OrderPolicy", policy.PolicyTypeFqn);
         Assert.Equal("global::ExternalApp.PolicyMiddleware", Assert.Single(policy.Middlewares).OpenTypeFqn);
         Assert.Equal("global::ExternalApp.CreateOrder", Assert.Single(policy.Commands));
     }
@@ -222,6 +224,71 @@ namespace ExternalApp
         Assert.Equal("global::ExternalApp.CreateOrder", handler.MessageTypeFqn);
         Assert.Equal("global::ExternalApp.CreateOrderHandler", handler.HandlerTypeFqn);
         Assert.Equal("global::ExternalApp.AppContext", handler.ContextTypeFqn);
+    }
+
+    [Fact]
+    public void Extract_preserves_repeated_pipeline_and_policy_declarations_as_findings()
+    {
+        var referencedAssembly = CreateMetadataReference(@"
+using TinyDispatcher;
+
+[assembly: TinyDispatcherAssemblyContextContributionAttribute(typeof(ExternalApp.AppContext))]
+[assembly: TinyDispatcherPipelineContributionAttribute(
+    new System.Type[] { typeof(ExternalApp.FirstMiddleware<,>) },
+    CommandType = typeof(ExternalApp.CreateOrder))]
+[assembly: TinyDispatcherPipelineContributionAttribute(
+    new System.Type[] { typeof(ExternalApp.SecondMiddleware<,>) },
+    CommandType = typeof(ExternalApp.CreateOrder))]
+[assembly: TinyDispatcherPolicyContributionAttribute(
+    typeof(ExternalApp.OrderPolicy),
+    new System.Type[] { typeof(ExternalApp.PolicyMiddleware<,>) },
+    new System.Type[] { typeof(ExternalApp.CreateOrder) })]
+[assembly: TinyDispatcherPolicyContributionAttribute(
+    typeof(ExternalApp.OrderPolicy),
+    new System.Type[] { typeof(ExternalApp.PolicyMiddleware<,>) },
+    new System.Type[] { typeof(ExternalApp.CreateOrder) })]
+
+namespace ExternalApp
+{
+    public sealed class AppContext { }
+    public sealed class CreateOrder : ICommand { }
+    public sealed class OrderPolicy { }
+    public sealed class FirstMiddleware<TCommand, TContext> : ICommandMiddleware<TCommand, TContext> where TCommand : ICommand
+    {
+        public System.Threading.Tasks.ValueTask InvokeAsync(TCommand command, TContext context, TinyDispatcher.Pipeline.ICommandPipelineRuntime<TCommand, TContext> runtime, System.Threading.CancellationToken ct)
+            => runtime.NextAsync(command, context, ct);
+    }
+    public sealed class SecondMiddleware<TCommand, TContext> : ICommandMiddleware<TCommand, TContext> where TCommand : ICommand
+    {
+        public System.Threading.Tasks.ValueTask InvokeAsync(TCommand command, TContext context, TinyDispatcher.Pipeline.ICommandPipelineRuntime<TCommand, TContext> runtime, System.Threading.CancellationToken ct)
+            => runtime.NextAsync(command, context, ct);
+    }
+    public sealed class PolicyMiddleware<TCommand, TContext> : ICommandMiddleware<TCommand, TContext> where TCommand : ICommand
+    {
+        public System.Threading.Tasks.ValueTask InvokeAsync(TCommand command, TContext context, TinyDispatcher.Pipeline.ICommandPipelineRuntime<TCommand, TContext> runtime, System.Threading.CancellationToken ct)
+            => runtime.NextAsync(command, context, ct);
+    }
+}
+");
+
+        var compilation = CSharpCompilation.Create(
+            assemblyName: "Host",
+            syntaxTrees: new[] { CSharpSyntaxTree.ParseText("namespace Host { public sealed class Marker { } }") },
+            references: CreateBaseReferences().Concat(new[] { referencedAssembly }),
+            options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        var contributions = new ReferencedAssemblyContributionExtractor().Extract(compilation);
+        var assembly = Assert.Single(
+            contributions.Assemblies,
+            candidate => candidate.AssemblyName == "ExternalContrib");
+
+        Assert.Equal(2, assembly.PerCommandMiddlewareFindings.Length);
+        Assert.All(assembly.PerCommandMiddlewareFindings, finding =>
+            Assert.Equal("global::ExternalApp.CreateOrder", finding.CommandTypeFqn));
+
+        Assert.Equal(2, assembly.PolicyFindings.Length);
+        Assert.All(assembly.PolicyFindings, finding =>
+            Assert.Equal("global::ExternalApp.OrderPolicy", finding.PolicyTypeFqn));
     }
 
     private static MetadataReference CreateMetadataReference(string source, string assemblyName = "ExternalContrib")
