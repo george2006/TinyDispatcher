@@ -20,11 +20,9 @@ internal sealed class GeneratorValidationContext
         IsHostProject = b.IsHostProject;
 
         ExpectedContextFqn = b.ExpectedContextFqn ?? string.Empty;
+        ReferencedContributions = b.ReferencedContributions ?? ReferencedAssemblyContributions.Empty;
 
-        Pipeline = b.Pipeline ?? new PipelineConfig(
-            ImmutableArray<MiddlewareRef>.Empty,
-            ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
-            ImmutableDictionary<string, PolicySpec>.Empty);
+        Pipeline = b.Pipeline ?? PipelineConfig.Empty;
     }
 
     public DiscoveryResult DiscoveryResult { get; }
@@ -36,6 +34,7 @@ internal sealed class GeneratorValidationContext
 
     // Context
     public string ExpectedContextFqn { get; }
+    public ReferencedAssemblyContributions ReferencedContributions { get; }
 
     // Pipeline config
     public PipelineConfig Pipeline { get; }
@@ -81,6 +80,7 @@ internal sealed class GeneratorValidationContext
 
         public string? ExpectedContextFqn { get; private set; }
 
+        public ReferencedAssemblyContributions? ReferencedContributions { get; private set; }
         public PipelineConfig? Pipeline { get; private set; }
 
         public Builder WithHostGate(bool isHost)
@@ -98,6 +98,12 @@ internal sealed class GeneratorValidationContext
         public Builder WithExpectedContext(string expectedContextFqn)
         {
             ExpectedContextFqn = expectedContextFqn;
+            return this;
+        }
+
+        public Builder WithReferencedContributions(ReferencedAssemblyContributions referencedContributions)
+        {
+            ReferencedContributions = referencedContributions;
             return this;
         }
 
