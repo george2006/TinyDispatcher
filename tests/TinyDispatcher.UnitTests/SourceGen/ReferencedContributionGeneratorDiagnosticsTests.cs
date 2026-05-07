@@ -136,22 +136,10 @@ namespace Microsoft.Extensions.DependencyInjection
 
 namespace HostApp
 {
-    public sealed class AppContext { }
-    public sealed class CreateOrder : TinyDispatcher.ICommand { }
-
-    public sealed class CreateOrderHandler : TinyDispatcher.ICommandHandler<CreateOrder, AppContext>
-    {
-        public System.Threading.Tasks.Task HandleAsync(
-            CreateOrder command,
-            AppContext context,
-            System.Threading.CancellationToken cancellationToken = default)
-            => System.Threading.Tasks.Task.CompletedTask;
-    }
-
     public static class Startup
     {
         public static void Configure(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
-            => services.UseTinyDispatcher<AppContext>(_ => { });
+            => services.UseTinyDispatcher<ExternalApp.AppContext>(_ => { });
     }
 }";
 
