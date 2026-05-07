@@ -103,10 +103,12 @@ namespace ExternalApp
             candidate => candidate.AssemblyName == "ExternalContrib");
 
         Assert.Equal("global::ExternalApp.AppContext", assembly.ContextTypeFqn);
-        Assert.True(assembly.PerCommand.TryGetValue("global::ExternalApp.CreateOrder", out var perCommand));
-        Assert.Equal("global::ExternalApp.OrderMiddleware", Assert.Single(perCommand).OpenTypeFqn);
+        var perCommand = Assert.Single(assembly.PerCommandMiddlewareFindings);
+        Assert.Equal("global::ExternalApp.CreateOrder", perCommand.CommandTypeFqn);
+        Assert.Equal("global::ExternalApp.OrderMiddleware", Assert.Single(perCommand.Middlewares).OpenTypeFqn);
 
-        Assert.True(assembly.Policies.TryGetValue("global::ExternalApp.OrderPolicy", out var policy));
+        var policy = Assert.Single(assembly.PolicyFindings);
+        Assert.Equal("global::ExternalApp.OrderPolicy", policy.PolicyTypeFqn);
         Assert.Equal("global::ExternalApp.PolicyMiddleware", Assert.Single(policy.Middlewares).OpenTypeFqn);
         Assert.Equal("global::ExternalApp.CreateOrder", Assert.Single(policy.Commands));
     }

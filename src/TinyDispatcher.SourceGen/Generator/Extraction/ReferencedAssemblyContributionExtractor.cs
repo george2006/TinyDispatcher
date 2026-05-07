@@ -32,8 +32,8 @@ internal sealed class ReferencedAssemblyContributionExtractor
         {
             var handlers = ImmutableArray.CreateBuilder<HandlerContract>();
             string? contextTypeFqn = null;
-            var perCommand = ImmutableDictionary.CreateBuilder<string, ImmutableArray<MiddlewareRef>>(StringComparer.Ordinal);
-            var policies = ImmutableDictionary.CreateBuilder<string, PolicySpec>(StringComparer.Ordinal);
+            var perCommandFindings = ImmutableArray.CreateBuilder<PerCommandMiddlewareFinding>();
+            var policyFindings = ImmutableArray.CreateBuilder<PolicyFinding>();
             var seen = new HashSet<string>(StringComparer.Ordinal);
 
             foreach (var attribute in assembly.GetAttributes())
@@ -62,7 +62,7 @@ internal sealed class ReferencedAssemblyContributionExtractor
                         continue;
 
                     if (commandTypeFqn is not null && middlewares.Length > 0)
-                        perCommand[commandTypeFqn] = middlewares;
+                        perCommandFindings.Add(new PerCommandMiddlewareFinding(commandTypeFqn, middlewares));
 
                     continue;
                 }
@@ -70,7 +70,10 @@ internal sealed class ReferencedAssemblyContributionExtractor
                 if (SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, policyAttribute) &&
                     TryReadPolicy(attribute, out var policy))
                 {
-                    policies[policy.PolicyTypeFqn] = policy;
+                    policyFindings.Add(new PolicyFinding(
+                        policy.PolicyTypeFqn,
+                        policy.Middlewares,
+                        policy.Commands));
                 }
             }
 
@@ -78,8 +81,8 @@ internal sealed class ReferencedAssemblyContributionExtractor
                 assembly.Identity.Name,
                 contextTypeFqn,
                 handlers.ToImmutable(),
-                perCommand.ToImmutable(),
-                policies.ToImmutable());
+                perCommandFindings.ToImmutable(),
+                policyFindings.ToImmutable());
 
             if (contribution.HasContributions())
                 assemblies.Add(contribution);

@@ -58,15 +58,22 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
         Dictionary<string, string> ownersByCommand,
         ReferencedAssemblyContribution assembly)
     {
-        foreach (var pair in assembly.PerCommand)
+        for (var i = 0; i < assembly.PerCommandMiddlewareFindings.Length; i++)
         {
-            if (TryGetExistingOwner(ownersByCommand, pair.Key, out var existingOwner))
+            var finding = assembly.PerCommandMiddlewareFindings[i];
+
+            if (TryGetExistingOwner(ownersByCommand, finding.CommandTypeFqn, out var existingOwner))
             {
-                ReportPerCommandMiddlewareConflict(context, diags, pair.Key, existingOwner, assembly.AssemblyName);
+                ReportPerCommandMiddlewareConflict(
+                    context,
+                    diags,
+                    finding.CommandTypeFqn,
+                    existingOwner,
+                    assembly.AssemblyName);
                 continue;
             }
 
-            ownersByCommand[pair.Key] = assembly.AssemblyName;
+            ownersByCommand[finding.CommandTypeFqn] = assembly.AssemblyName;
         }
     }
 
@@ -100,15 +107,22 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
         Dictionary<string, string> ownersByPolicy,
         ReferencedAssemblyContribution assembly)
     {
-        foreach (var pair in assembly.Policies)
+        for (var i = 0; i < assembly.PolicyFindings.Length; i++)
         {
-            if (TryGetExistingOwner(ownersByPolicy, pair.Key, out var existingOwner))
+            var finding = assembly.PolicyFindings[i];
+
+            if (TryGetExistingOwner(ownersByPolicy, finding.PolicyTypeFqn, out var existingOwner))
             {
-                ReportPolicyConflict(context, diags, pair.Key, existingOwner, assembly.AssemblyName);
+                ReportPolicyConflict(
+                    context,
+                    diags,
+                    finding.PolicyTypeFqn,
+                    existingOwner,
+                    assembly.AssemblyName);
                 continue;
             }
 
-            ownersByPolicy[pair.Key] = assembly.AssemblyName;
+            ownersByPolicy[finding.PolicyTypeFqn] = assembly.AssemblyName;
         }
     }
 

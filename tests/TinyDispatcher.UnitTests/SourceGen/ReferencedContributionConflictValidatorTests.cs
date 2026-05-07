@@ -25,10 +25,10 @@ public sealed class ReferencedContributionConflictValidatorTests
                     "OrdersContrib",
                     "global::MyApp.AppContext",
                     ImmutableArray<HandlerContract>.Empty,
-                    ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty.Add(
+                    ImmutableArray.Create(new PerCommandMiddlewareFinding(
                         "global::MyApp.CreateOrder",
-                        ImmutableArray.Create(new MiddlewareRef("global::Orders.SharedMiddleware", 2))),
-                    ImmutableDictionary<string, PolicySpec>.Empty)));
+                        ImmutableArray.Create(new MiddlewareRef("global::Orders.SharedMiddleware", 2)))),
+                    ImmutableArray<PolicyFinding>.Empty)));
 
         var diagnostics = new DiagnosticBag();
 
@@ -48,18 +48,18 @@ public sealed class ReferencedContributionConflictValidatorTests
                     "OrdersContrib",
                     "global::MyApp.AppContext",
                     ImmutableArray<HandlerContract>.Empty,
-                    ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty.Add(
+                    ImmutableArray.Create(new PerCommandMiddlewareFinding(
                         "global::MyApp.CreateOrder",
-                        ImmutableArray.Create(new MiddlewareRef("global::Orders.SharedMiddleware", 2))),
-                    ImmutableDictionary<string, PolicySpec>.Empty),
+                        ImmutableArray.Create(new MiddlewareRef("global::Orders.SharedMiddleware", 2)))),
+                    ImmutableArray<PolicyFinding>.Empty),
                 new ReferencedAssemblyContribution(
                     "BillingContrib",
                     "global::MyApp.AppContext",
                     ImmutableArray<HandlerContract>.Empty,
-                    ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty.Add(
+                    ImmutableArray.Create(new PerCommandMiddlewareFinding(
                         "global::MyApp.CreateOrder",
-                        ImmutableArray.Create(new MiddlewareRef("global::Billing.SharedMiddleware", 2))),
-                    ImmutableDictionary<string, PolicySpec>.Empty)));
+                        ImmutableArray.Create(new MiddlewareRef("global::Billing.SharedMiddleware", 2)))),
+                    ImmutableArray<PolicyFinding>.Empty)));
 
         var diagnostics = new DiagnosticBag();
 
@@ -87,13 +87,11 @@ public sealed class ReferencedContributionConflictValidatorTests
                     "OrdersContrib",
                     "global::MyApp.AppContext",
                     ImmutableArray<HandlerContract>.Empty,
-                    ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
-                    ImmutableDictionary<string, PolicySpec>.Empty.Add(
+                    ImmutableArray<PerCommandMiddlewareFinding>.Empty,
+                    ImmutableArray.Create(new PolicyFinding(
                         "global::MyApp.SharedPolicy",
-                        new PolicySpec(
-                            "global::MyApp.SharedPolicy",
-                            ImmutableArray<MiddlewareRef>.Empty,
-                            ImmutableArray<string>.Empty)))));
+                        ImmutableArray<MiddlewareRef>.Empty,
+                        ImmutableArray<string>.Empty)))));
 
         var diagnostics = new DiagnosticBag();
 
@@ -113,24 +111,20 @@ public sealed class ReferencedContributionConflictValidatorTests
                     "OrdersContrib",
                     "global::MyApp.AppContext",
                     ImmutableArray<HandlerContract>.Empty,
-                    ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
-                    ImmutableDictionary<string, PolicySpec>.Empty.Add(
+                    ImmutableArray<PerCommandMiddlewareFinding>.Empty,
+                    ImmutableArray.Create(new PolicyFinding(
                         "global::MyApp.SharedPolicy",
-                        new PolicySpec(
-                            "global::MyApp.SharedPolicy",
-                            ImmutableArray<MiddlewareRef>.Empty,
-                            ImmutableArray<string>.Empty))),
+                        ImmutableArray<MiddlewareRef>.Empty,
+                        ImmutableArray<string>.Empty))),
                 new ReferencedAssemblyContribution(
                     "BillingContrib",
                     "global::MyApp.AppContext",
                     ImmutableArray<HandlerContract>.Empty,
-                    ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
-                    ImmutableDictionary<string, PolicySpec>.Empty.Add(
+                    ImmutableArray<PerCommandMiddlewareFinding>.Empty,
+                    ImmutableArray.Create(new PolicyFinding(
                         "global::MyApp.SharedPolicy",
-                        new PolicySpec(
-                            "global::MyApp.SharedPolicy",
-                            ImmutableArray<MiddlewareRef>.Empty,
-                            ImmutableArray<string>.Empty)))));
+                        ImmutableArray<MiddlewareRef>.Empty,
+                        ImmutableArray<string>.Empty)))));
 
         var diagnostics = new DiagnosticBag();
 
@@ -154,10 +148,10 @@ public sealed class ReferencedContributionConflictValidatorTests
                     "OrdersContrib",
                     "global::MyApp.AppContext",
                     ImmutableArray<HandlerContract>.Empty,
-                    ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty.Add(
+                    ImmutableArray.Create(new PerCommandMiddlewareFinding(
                         "global::MyApp.CreateOrder",
-                        ImmutableArray.Create(new MiddlewareRef("global::Orders.SharedMiddleware", 2))),
-                    ImmutableDictionary<string, PolicySpec>.Empty)))
+                        ImmutableArray.Create(new MiddlewareRef("global::Orders.SharedMiddleware", 2)))),
+                    ImmutableArray<PolicyFinding>.Empty)))
             .WithPipelineConfig(PipelineConfig.Empty)
             .Build();
 

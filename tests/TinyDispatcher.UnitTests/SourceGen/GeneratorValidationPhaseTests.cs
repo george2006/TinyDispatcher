@@ -99,15 +99,13 @@ public sealed class GeneratorValidationPhaseTests
                     "global::ExternalApp.CreateOrder",
                     "global::ExternalApp.CreateOrderHandler",
                     "global::MyApp.AppContext")),
-                ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty.Add(
+                ImmutableArray.Create(new PerCommandMiddlewareFinding(
                     "global::ExternalApp.MissingCommand",
-                    ImmutableArray<MiddlewareRef>.Empty),
-                ImmutableDictionary<string, PolicySpec>.Empty.Add(
+                    ImmutableArray<MiddlewareRef>.Empty)),
+                ImmutableArray.Create(new PolicyFinding(
                     "global::ExternalApp.OrderPolicy",
-                    new PolicySpec(
-                        "global::ExternalApp.OrderPolicy",
-                        ImmutableArray<MiddlewareRef>.Empty,
-                        ImmutableArray.Create("global::ExternalApp.OtherMissingCommand"))))));
+                    ImmutableArray<MiddlewareRef>.Empty,
+                    ImmutableArray.Create("global::ExternalApp.OtherMissingCommand"))))));
 
         var analysis = new GeneratorAnalysis(
             EffectiveOptions: Options(commandContextType: null),
@@ -147,8 +145,8 @@ public sealed class GeneratorValidationPhaseTests
                     "global::MyApp.CreateOrder",
                     "global::ExternalApp.CreateOrderHandler",
                     "global::MyApp.AppContext")),
-                ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
-                ImmutableDictionary<string, PolicySpec>.Empty)));
+                ImmutableArray<PerCommandMiddlewareFinding>.Empty,
+                ImmutableArray<PolicyFinding>.Empty)));
 
         var analysis = new GeneratorAnalysis(
             EffectiveOptions: Options(commandContextType: "MyApp.AppContext"),
@@ -181,15 +179,13 @@ public sealed class GeneratorValidationPhaseTests
                 "ExternalApp",
                 "global::MyApp.AppContext",
                 ImmutableArray<HandlerContract>.Empty,
-                ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty.Add(
+                ImmutableArray.Create(new PerCommandMiddlewareFinding(
                     "global::ExternalApp.MissingCommand",
-                    ImmutableArray<MiddlewareRef>.Empty),
-                ImmutableDictionary<string, PolicySpec>.Empty.Add(
+                    ImmutableArray<MiddlewareRef>.Empty)),
+                ImmutableArray.Create(new PolicyFinding(
                     "global::ExternalApp.OrderPolicy",
-                    new PolicySpec(
-                        "global::ExternalApp.OrderPolicy",
-                        ImmutableArray<MiddlewareRef>.Empty,
-                        ImmutableArray.Create("global::ExternalApp.OtherMissingCommand"))))));
+                    ImmutableArray<MiddlewareRef>.Empty,
+                    ImmutableArray.Create("global::ExternalApp.OtherMissingCommand"))))));
 
         var analysis = new GeneratorAnalysis(
             EffectiveOptions: Options(commandContextType: "MyApp.AppContext"),

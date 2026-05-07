@@ -126,8 +126,8 @@ public sealed class GeneratorGenerationPhaseTests
                         "global::ExternalApp.CreateOrder",
                         "global::ExternalApp.CreateOrderHandler",
                         "global::MyApp.AppContext")),
-                    ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
-                    ImmutableDictionary<string, PolicySpec>.Empty)));
+                    ImmutableArray<PerCommandMiddlewareFinding>.Empty,
+                    ImmutableArray<PolicyFinding>.Empty)));
 
         var validation = new GeneratorValidationResult(
             Context: new GeneratorValidationContext.Builder(
@@ -176,15 +176,13 @@ public sealed class GeneratorGenerationPhaseTests
                         "global::ExternalApp.CreateOrder",
                         "global::ExternalApp.CreateOrderHandler",
                         "global::MyApp.AppContext")),
-                    ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty.Add(
+                    ImmutableArray.Create(new PerCommandMiddlewareFinding(
                         "global::ExternalApp.CreateOrder",
-                        ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.OrderMiddleware", 2))),
-                    ImmutableDictionary<string, PolicySpec>.Empty.Add(
+                        ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.OrderMiddleware", 2)))),
+                    ImmutableArray.Create(new PolicyFinding(
                         "global::ExternalApp.OrderPolicy",
-                        new PolicySpec(
-                            "global::ExternalApp.OrderPolicy",
-                            ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.PolicyMiddleware", 2)),
-                            ImmutableArray.Create("global::ExternalApp.CreateOrder"))))));
+                        ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.PolicyMiddleware", 2)),
+                        ImmutableArray.Create("global::ExternalApp.CreateOrder"))))));
 
         var validation = new GeneratorValidationResult(
             Context: new GeneratorValidationContext.Builder(
@@ -236,10 +234,10 @@ public sealed class GeneratorGenerationPhaseTests
                         "global::ExternalApp.CreateOrder",
                         "global::ExternalApp.CreateOrderHandler",
                         "global::MyApp.AppContext")),
-                    ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty.Add(
+                    ImmutableArray.Create(new PerCommandMiddlewareFinding(
                         "global::ExternalApp.CreateOrder",
-                        ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.OrderMiddleware", 2))),
-                    ImmutableDictionary<string, PolicySpec>.Empty),
+                        ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.OrderMiddleware", 2)))),
+                    ImmutableArray<PolicyFinding>.Empty),
                 new ReferencedAssemblyContribution(
                     "Mismatched",
                     "global::OtherApp.OtherContext",
@@ -247,15 +245,13 @@ public sealed class GeneratorGenerationPhaseTests
                         "global::OtherApp.CancelOrder",
                         "global::OtherApp.CancelOrderHandler",
                         "global::OtherApp.OtherContext")),
-                    ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty.Add(
+                    ImmutableArray.Create(new PerCommandMiddlewareFinding(
                         "global::OtherApp.CancelOrder",
-                        ImmutableArray.Create(new MiddlewareRef("global::OtherApp.CancelMiddleware", 2))),
-                    ImmutableDictionary<string, PolicySpec>.Empty.Add(
+                        ImmutableArray.Create(new MiddlewareRef("global::OtherApp.CancelMiddleware", 2)))),
+                    ImmutableArray.Create(new PolicyFinding(
                         "global::OtherApp.CancelPolicy",
-                        new PolicySpec(
-                            "global::OtherApp.CancelPolicy",
-                            ImmutableArray.Create(new MiddlewareRef("global::OtherApp.CancelPolicyMiddleware", 2)),
-                            ImmutableArray.Create("global::OtherApp.CancelOrder"))))));
+                        ImmutableArray.Create(new MiddlewareRef("global::OtherApp.CancelPolicyMiddleware", 2)),
+                        ImmutableArray.Create("global::OtherApp.CancelOrder"))))));
 
         var validation = new GeneratorValidationResult(
             Context: new GeneratorValidationContext.Builder(
