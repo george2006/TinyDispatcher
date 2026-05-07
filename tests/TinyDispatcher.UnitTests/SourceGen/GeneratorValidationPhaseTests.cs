@@ -85,6 +85,49 @@ public sealed class GeneratorValidationPhaseTests
     }
 
     [Fact]
+    public void Validate_does_not_merge_referenced_contributions_for_non_host_projects()
+    {
+        var compilation = CreateCompilation();
+        var discovery = EmptyDiscovery();
+        var extraction = new GeneratorExtraction(
+            discovery,
+            PipelineConfig.Empty,
+            Referenced(new ReferencedAssemblyContribution(
+                "ExternalApp",
+                "global::MyApp.AppContext",
+                ImmutableArray.Create(new HandlerContract(
+                    "global::ExternalApp.CreateOrder",
+                    "global::ExternalApp.CreateOrderHandler",
+                    "global::MyApp.AppContext")),
+                ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty.Add(
+                    "global::ExternalApp.MissingCommand",
+                    ImmutableArray<MiddlewareRef>.Empty),
+                ImmutableDictionary<string, PolicySpec>.Empty.Add(
+                    "global::ExternalApp.OrderPolicy",
+                    new PolicySpec(
+                        "global::ExternalApp.OrderPolicy",
+                        ImmutableArray<MiddlewareRef>.Empty,
+                        ImmutableArray.Create("global::ExternalApp.OtherMissingCommand"))))));
+
+        var analysis = new GeneratorAnalysis(
+            EffectiveOptions: Options(commandContextType: null),
+            HostBootstrap: new HostBootstrapInfo(
+                IsHostProject: false,
+                ExpectedContextFqn: string.Empty,
+                UseTinyDispatcherCalls: ImmutableArray<UseTinyDispatcherCall>.Empty));
+
+        var result = new GeneratorValidationPhase().Validate(
+            analysis.HostBootstrap,
+            extraction,
+            new DiagnosticsCatalog(),
+            ValidationRoslynDependencies.Create(compilation));
+
+        Assert.Same(discovery, result.Context.DiscoveryResult);
+        Assert.Same(extraction.Pipeline, result.Context.Pipeline);
+        Assert.Empty(result.Diagnostics.ToImmutable());
+    }
+
+    [Fact]
     public void Validate_reports_duplicate_handlers_when_referenced_assembly_contributes_same_command()
     {
         var compilation = CreateCompilation();

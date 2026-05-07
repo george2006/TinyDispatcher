@@ -31,8 +31,8 @@ internal sealed class GeneratorValidationPhase
         GeneratorExtraction extraction,
         DiagnosticsCatalog diagnosticsCatalog)
     {
-        var discovery = BuildDiscovery(extraction, hostBootstrap.ExpectedContextFqn);
-        var pipeline = BuildPipeline(extraction, hostBootstrap.ExpectedContextFqn);
+        var discovery = BuildDiscovery(hostBootstrap, extraction);
+        var pipeline = BuildPipeline(hostBootstrap, extraction);
 
         return new GeneratorValidationContext.Builder(
                 discovery,
@@ -46,19 +46,35 @@ internal sealed class GeneratorValidationPhase
             .Build();
     }
 
-    private static DiscoveryResult BuildDiscovery(GeneratorExtraction extraction, string expectedContextFqn)
+    private static DiscoveryResult BuildDiscovery(
+        HostBootstrapInfo hostBootstrap,
+        GeneratorExtraction extraction)
     {
+        if (!ShouldMergeReferencedContributions(hostBootstrap))
+            return extraction.Discovery;
+
         return ReferencedAssemblyContributionComposer.MergeDiscovery(
             extraction.Discovery,
             extraction.ReferencedContributions,
-            expectedContextFqn);
+            hostBootstrap.ExpectedContextFqn);
     }
 
-    private static PipelineConfig BuildPipeline(GeneratorExtraction extraction, string expectedContextFqn)
+    private static PipelineConfig BuildPipeline(
+        HostBootstrapInfo hostBootstrap,
+        GeneratorExtraction extraction)
     {
+        if (!ShouldMergeReferencedContributions(hostBootstrap))
+            return extraction.Pipeline;
+
         return ReferencedAssemblyContributionComposer.MergePipelineConfig(
             extraction.Pipeline,
             extraction.ReferencedContributions,
-            expectedContextFqn);
+            hostBootstrap.ExpectedContextFqn);
+    }
+
+    private static bool ShouldMergeReferencedContributions(HostBootstrapInfo hostBootstrap)
+    {
+        return hostBootstrap.IsHostProject &&
+               !string.IsNullOrWhiteSpace(hostBootstrap.ExpectedContextFqn);
     }
 }
