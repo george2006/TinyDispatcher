@@ -41,6 +41,7 @@ internal sealed class GeneratorValidationPhase
             .WithUseTinyDispatcherCalls(hostBootstrap.UseTinyDispatcherCalls)
             .WithExpectedContext(hostBootstrap.ExpectedContextFqn)
             .WithReferencedContributions(extraction.ReferencedContributions)
+            .WithLocalPipelineConfig(extraction.Pipeline)
             .WithPipelineConfig(pipeline)
             .Build();
     }

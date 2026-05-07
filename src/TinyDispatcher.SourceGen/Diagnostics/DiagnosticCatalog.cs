@@ -83,6 +83,20 @@ namespace TinyDispatcher.SourceGen.Diagnostics
                 message: "Command '{0}' is targeted by multiple policies ({1}). The first policy wins for pipeline composition.",
                 severity: DiagnosticSeverity.Warning);
 
+        public DiagnosticDescriptor DuplicatePerCommandMiddlewareContribution { get; } =
+            BuildDescriptor(
+                id: "DISP413",
+                title: "Multiple per-command middleware contributions detected",
+                message: "Command '{0}' has multiple per-command middleware contributions from {1}. Only one per-command middleware contribution is allowed.",
+                severity: DiagnosticSeverity.Error);
+
+        public DiagnosticDescriptor DuplicatePolicyContribution { get; } =
+            BuildDescriptor(
+                id: "DISP414",
+                title: "Multiple policy contributions detected",
+                message: "Policy '{0}' is contributed multiple times by {1}. Only one policy definition is allowed.",
+                severity: DiagnosticSeverity.Error);
+
         #endregion
 
         #region Context diagnostics (NEW)
