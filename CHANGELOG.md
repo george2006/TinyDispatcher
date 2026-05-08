@@ -1,3 +1,23 @@
+## 1.1.0-rc3 - 2026-05-08
+
+### Added
+- **Enhanced source generator diagnostics** for multi-assembly composition scenarios.
+  - Provenance-aware error reporting: diagnostics now indicate which referenced assembly caused a conflict.
+  - Conflict detection for referenced contributions: identifies duplicate handler registrations and conflicting middleware contributions across assemblies.
+  - Improved validation context to capture referenced contribution snapshots before validation.
+
+### Fixed
+- Generator now properly validates referenced contributions with the host's complete view of the assembly graph.
+- Non-host projects skip redundant referenced contribution validation, improving build performance.
+
+### Internal
+- Expanded test coverage for referenced contribution diagnostics and conflict scenarios.
+- Refactored generator validation to isolate referenced contribution handling.
+
+### Notes
+- This is the final release candidate before general availability (GA).
+- The hardening focus strengthens compile-time guarantees for multi-assembly scenarios.
+
 ## 1.1.0-rc2 - 2026-04-30
 
 ### Fixed
