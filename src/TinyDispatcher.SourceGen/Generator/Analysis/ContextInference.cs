@@ -56,6 +56,14 @@ internal sealed class ContextInference
         return useTinyDispatcherCalls[0].ContextTypeFqn;
     }
 
+    public bool TryResolveUseTinyDispatcherContext(
+        InvocationExpressionSyntax invocation,
+        Compilation compilation,
+        out UseTinyDispatcherCall useTinyDispatcherCall)
+    {
+        return TryResolveUseTinyDispatcherCall(invocation, compilation, out useTinyDispatcherCall);
+    }
+
     private static bool TryResolveUseTinyDispatcherCall(
         InvocationExpressionSyntax invocation,
         Compilation compilation,

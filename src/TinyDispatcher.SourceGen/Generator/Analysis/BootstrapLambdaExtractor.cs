@@ -19,16 +19,22 @@ internal sealed class BootstrapLambdaExtractor
         }
 
         var builder = ImmutableArray.CreateBuilder<ConfirmedBootstrapLambda>(useTinyCallsSyntax.Length);
+        var contextInference = new ContextInference();
 
         for (var i = 0; i < useTinyCallsSyntax.Length; i++)
         {
             var useTinyCall = useTinyCallsSyntax[i];
             var semanticModel = compilation.GetSemanticModel(useTinyCall.SyntaxTree);
             var lambda = SelectBootstrapLambda(useTinyCall, semanticModel);
+            var hasBootstrapLambda = lambda is not null;
+            var hasResolvedContext = contextInference.TryResolveUseTinyDispatcherContext(
+                useTinyCall,
+                compilation,
+                out var resolvedCall);
 
-            if (lambda is not null)
+            if (hasBootstrapLambda && hasResolvedContext)
             {
-                builder.Add(new ConfirmedBootstrapLambda(semanticModel, lambda));
+                builder.Add(new ConfirmedBootstrapLambda(semanticModel, lambda!, resolvedCall.ContextTypeFqn));
             }
         }
 
