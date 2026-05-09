@@ -142,7 +142,7 @@ namespace ConsoleApp
         var run = driver.GetRunResult();
         var hints = run.Results.SelectMany(r => r.GeneratedSources).Select(s => s.HintName).ToArray();
 
-        Assert.Contains("TinyDispatcherPipeline.g.cs", hints); 
+        Assert.Contains("TinyDispatcherPipeline.ConsoleApp_MyTestContext.g.cs", hints);
     }
 
     [Fact]

@@ -1,5 +1,6 @@
 #nullable enable
 
+using System;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -58,7 +59,7 @@ public sealed class GeneratorGenerationPhaseTests
 
         Assert.DoesNotContain(
             context.Sources,
-            source => source.HintName == "TinyDispatcherPipeline.g.cs");
+            source => IsPipelineSource(source.HintName));
     }
 
     [Fact]
@@ -145,7 +146,7 @@ public sealed class GeneratorGenerationPhaseTests
 
         var pipelineSource = Assert.Single(
             context.Sources,
-            source => source.HintName == "TinyDispatcherPipeline.g.cs");
+            source => source.HintName == "TinyDispatcherPipeline.MyApp_AppContext.g.cs");
 
         Assert.Contains(
             "global::TinyDispatcher.ICommandPipeline<global::ExternalApp.CreateOrder, global::MyApp.AppContext>",
@@ -202,7 +203,7 @@ public sealed class GeneratorGenerationPhaseTests
 
         var pipelineSource = Assert.Single(
             context.Sources,
-            source => source.HintName == "TinyDispatcherPipeline.g.cs");
+            source => source.HintName == "TinyDispatcherPipeline.MyApp_AppContext.g.cs");
 
         Assert.Contains(
             "internal sealed class TinyDispatcherPipeline_CreateOrder",
@@ -277,7 +278,7 @@ public sealed class GeneratorGenerationPhaseTests
 
         var pipelineSource = Assert.Single(
             context.Sources,
-            source => source.HintName == "TinyDispatcherPipeline.g.cs");
+            source => source.HintName == "TinyDispatcherPipeline.MyApp_AppContext.g.cs");
 
         Assert.Contains("global::ExternalApp.CreateOrder", pipelineSource.Content);
         Assert.Contains("global::ExternalApp.GlobalMiddleware", pipelineSource.Content);
@@ -333,5 +334,10 @@ public sealed class GeneratorGenerationPhaseTests
             ImmutableArray.Create(new ContextPipelineConfig(
                 "global::MyApp.AppContext",
                 pipeline)));
+    }
+
+    private static bool IsPipelineSource(string hintName)
+    {
+        return hintName.StartsWith("TinyDispatcherPipeline.", StringComparison.Ordinal);
     }
 }

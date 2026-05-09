@@ -109,7 +109,7 @@ namespace Microsoft.Extensions.DependencyInjection
             .Select(s => s.HintName)
             .ToArray();
 
-        Assert.Contains(generatedNames, n => n == "TinyDispatcherPipeline.g.cs");
+        Assert.Contains(generatedNames, n => n == "TinyDispatcherPipeline.ConsoleApp_Ctx.g.cs");
     }
 
     private static CSharpCompilation CreateCompilation(string source)
