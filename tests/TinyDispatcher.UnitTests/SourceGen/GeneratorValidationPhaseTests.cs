@@ -97,20 +97,18 @@ public sealed class GeneratorValidationPhaseTests
         var extraction = Extraction(
             discovery,
             PipelineConfig.Empty,
-            Referenced(
+            Referenced(new ReferencedAssemblyContribution(
+                "ExternalApp",
+                "global::MyApp.AppContext",
+                ImmutableArray<MiddlewareRef>.Empty,
+                ImmutableArray<PerCommandMiddlewareFinding>.Empty,
+                ImmutableArray<PolicyFinding>.Empty,
                 ImmutableArray.Create(new ReferencedHandlerContribution(
-                    "ExternalApp",
                     "global::MyApp.AppContext",
                     new HandlerContract(
                         "global::MyApp.CreateOrder",
                         "global::ExternalApp.CreateOrderHandler",
-                        "global::MyApp.AppContext"))),
-                new ReferencedAssemblyContribution(
-                    "ExternalApp",
-                    "global::MyApp.AppContext",
-                    ImmutableArray<MiddlewareRef>.Empty,
-                    ImmutableArray<PerCommandMiddlewareFinding>.Empty,
-                    ImmutableArray<PolicyFinding>.Empty)));
+                        "global::MyApp.AppContext"))))));
         var hostBootstrap = HostBootstrap("global::MyApp.AppContext");
 
         var diagnostics = new GeneratorValidationPhase().Validate(
@@ -198,18 +196,7 @@ public sealed class GeneratorValidationPhaseTests
 
     private static ReferencedAssemblyContributions Referenced(params ReferencedAssemblyContribution[] assemblies)
     {
-        return new ReferencedAssemblyContributions(
-            ImmutableArray.Create(assemblies),
-            ImmutableArray<ReferencedHandlerContribution>.Empty);
-    }
-
-    private static ReferencedAssemblyContributions Referenced(
-        ImmutableArray<ReferencedHandlerContribution> handlers,
-        params ReferencedAssemblyContribution[] assemblies)
-    {
-        return new ReferencedAssemblyContributions(
-            ImmutableArray.Create(assemblies),
-            handlers);
+        return new ReferencedAssemblyContributions(ImmutableArray.Create(assemblies));
     }
 
     private static GeneratorExtraction Extraction(

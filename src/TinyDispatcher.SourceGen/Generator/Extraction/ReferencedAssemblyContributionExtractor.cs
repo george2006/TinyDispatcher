@@ -28,7 +28,6 @@ internal sealed class ReferencedAssemblyContributionExtractor
         }
 
         var assemblies = ImmutableArray.CreateBuilder<ReferencedAssemblyContribution>();
-        var handlers = ImmutableArray.CreateBuilder<ReferencedHandlerContribution>();
 
         foreach (var assembly in compilation.SourceModule.ReferencedAssemblySymbols)
         {
@@ -37,23 +36,16 @@ internal sealed class ReferencedAssemblyContributionExtractor
                 attributeSet,
                 out var contribution))
             {
-                if (contribution.Assembly.HasContributions())
-                {
-                    assemblies.Add(contribution.Assembly);
-                }
-
-                handlers.AddRange(contribution.Handlers);
+                assemblies.Add(contribution);
             }
         }
 
-        if (assemblies.Count == 0 && handlers.Count == 0)
+        if (assemblies.Count == 0)
         {
             return ReferencedAssemblyContributions.Empty;
         }
 
-        return new ReferencedAssemblyContributions(
-            assemblies.ToImmutable(),
-            handlers.ToImmutable());
+        return new ReferencedAssemblyContributions(assemblies.ToImmutable());
     }
 
     private static bool TryCreateAttributeSet(Compilation compilation, out AttributeSet attributeSet)
@@ -83,7 +75,7 @@ internal sealed class ReferencedAssemblyContributionExtractor
     private static bool TryExtractAssemblyContribution(
         IAssemblySymbol assembly,
         AttributeSet attributeSet,
-        out ExtractedAssemblyContribution contribution)
+        out ReferencedAssemblyContribution contribution)
     {
         var state = new ContributionState();
 
@@ -507,14 +499,6 @@ internal sealed class ReferencedAssemblyContributionExtractor
         ImmutableArray<string> Commands,
         string? ContextTypeFqn);
 
-    private readonly record struct ExtractedAssemblyContribution(
-        ReferencedAssemblyContribution Assembly,
-        ImmutableArray<ReferencedHandlerContribution> Handlers)
-    {
-        public bool HasContributions()
-            => Assembly.HasContributions() || !Handlers.IsDefaultOrEmpty;
-    }
-
     private sealed class ContributionState
     {
         public ImmutableArray<HandlerContract>.Builder HandlerContracts { get; } = ImmutableArray.CreateBuilder<HandlerContract>();
@@ -531,26 +515,22 @@ internal sealed class ReferencedAssemblyContributionExtractor
 
         public string? ContextTypeFqn { get; set; }
 
-        public ExtractedAssemblyContribution Build(string assemblyName)
+        public ReferencedAssemblyContribution Build(string assemblyName)
         {
-            var assembly = new ReferencedAssemblyContribution(
-                assemblyName,
-                ContextTypeFqn,
-                Globals.ToImmutable(),
-                PerCommandMiddlewareFindings.ToImmutable(),
-                PolicyFindings.ToImmutable());
-
             var handlers = ImmutableArray.CreateBuilder<ReferencedHandlerContribution>(HandlerContracts.Count);
             for (var i = 0; i < HandlerContracts.Count; i++)
             {
                 handlers.Add(new ReferencedHandlerContribution(
-                    assemblyName,
                     ContextTypeFqn,
                     HandlerContracts[i]));
             }
 
-            return new ExtractedAssemblyContribution(
-                assembly,
+            return new ReferencedAssemblyContribution(
+                assemblyName,
+                ContextTypeFqn,
+                Globals.ToImmutable(),
+                PerCommandMiddlewareFindings.ToImmutable(),
+                PolicyFindings.ToImmutable(),
                 handlers.ToImmutable());
         }
     }

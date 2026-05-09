@@ -1,7 +1,6 @@
 namespace TinyDispatcher.SourceGen.Generator.Models;
 
 internal sealed record ReferencedHandlerContribution(
-    string AssemblyName,
     string? ContextTypeFqn,
     HandlerContract Handler)
 {

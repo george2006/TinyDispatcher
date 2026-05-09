@@ -7,7 +7,8 @@ internal sealed record ReferencedAssemblyContribution(
     string? ContextTypeFqn,
     ImmutableArray<MiddlewareRef> Globals,
     ImmutableArray<PerCommandMiddlewareFinding> PerCommandMiddlewareFindings,
-    ImmutableArray<PolicyFinding> PolicyFindings)
+    ImmutableArray<PolicyFinding> PolicyFindings,
+    ImmutableArray<ReferencedHandlerContribution> Handlers = default)
 {
     public bool MatchesContext(string expectedContextFqn)
     {
@@ -21,5 +22,6 @@ internal sealed record ReferencedAssemblyContribution(
         => !string.IsNullOrWhiteSpace(ContextTypeFqn) ||
            !Globals.IsDefaultOrEmpty ||
            !PerCommandMiddlewareFindings.IsDefaultOrEmpty ||
-           !PolicyFindings.IsDefaultOrEmpty;
+           !PolicyFindings.IsDefaultOrEmpty ||
+           !Handlers.IsDefaultOrEmpty;
 }

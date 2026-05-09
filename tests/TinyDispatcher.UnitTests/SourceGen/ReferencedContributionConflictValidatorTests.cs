@@ -302,8 +302,6 @@ public sealed class ReferencedContributionConflictValidatorTests
 
     private static ReferencedAssemblyContributions Referenced(params ReferencedAssemblyContribution[] assemblies)
     {
-        return new ReferencedAssemblyContributions(
-            ImmutableArray.Create(assemblies),
-            ImmutableArray<ReferencedHandlerContribution>.Empty);
+        return new ReferencedAssemblyContributions(ImmutableArray.Create(assemblies));
     }
 }

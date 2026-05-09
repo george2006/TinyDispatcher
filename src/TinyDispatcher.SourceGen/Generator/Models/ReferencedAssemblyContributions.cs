@@ -4,34 +4,41 @@ using System.Collections.Immutable;
 namespace TinyDispatcher.SourceGen.Generator.Models;
 
 internal sealed record ReferencedAssemblyContributions(
-    ImmutableArray<ReferencedAssemblyContribution> Assemblies,
-    ImmutableArray<ReferencedHandlerContribution> Handlers)
+    ImmutableArray<ReferencedAssemblyContribution> Assemblies)
 {
     public static ReferencedAssemblyContributions Empty { get; } =
-        new(
-            ImmutableArray<ReferencedAssemblyContribution>.Empty,
-            ImmutableArray<ReferencedHandlerContribution>.Empty);
-
-    public ReferencedAssemblyContributions(ImmutableArray<ReferencedAssemblyContribution> assemblies)
-        : this(assemblies, ImmutableArray<ReferencedHandlerContribution>.Empty)
-    {
-    }
+        new(ImmutableArray<ReferencedAssemblyContribution>.Empty);
 
     public bool HasCommands()
     {
-        return !Handlers.IsDefaultOrEmpty;
+        for (var i = 0; i < Assemblies.Length; i++)
+        {
+            if (!Assemblies[i].Handlers.IsDefaultOrEmpty)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public IEnumerable<HandlerContract> EnumerateCommands(string expectedContextFqn)
     {
-        for (var i = 0; i < Handlers.Length; i++)
+        for (var i = 0; i < Assemblies.Length; i++)
         {
-            var handlerContribution = Handlers[i];
-            if (!handlerContribution.MatchesContext(expectedContextFqn))
+            var assembly = Assemblies[i];
+            if (!assembly.MatchesContext(expectedContextFqn))
                 continue;
 
-            if (HandlerContractMatchesContext(handlerContribution.Handler, expectedContextFqn))
-                yield return handlerContribution.Handler;
+            for (var j = 0; j < assembly.Handlers.Length; j++)
+            {
+                var handlerContribution = assembly.Handlers[j];
+                if (!handlerContribution.MatchesContext(expectedContextFqn))
+                    continue;
+
+                if (HandlerContractMatchesContext(handlerContribution.Handler, expectedContextFqn))
+                    yield return handlerContribution.Handler;
+            }
         }
     }
 

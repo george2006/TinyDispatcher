@@ -99,14 +99,7 @@ namespace TinyDispatcher.SourceGen.Diagnostics
 
         #endregion
 
-        #region Context diagnostics (NEW)
-
-        public DiagnosticDescriptor MultipleContextsDetected { get; } =
-            BuildDescriptor(
-                id: "DISP110",
-                title: "Multiple TinyDispatcher contexts detected",
-                message: "Only one TinyDispatcher bootstrap call is allowed per project (UseTinyDispatcher<TContext> or UseTinyNoOpContext). Found {0}.",
-                severity: DiagnosticSeverity.Error);
+        #region Context diagnostics
 
         public DiagnosticDescriptor ContextTypeNotFound { get; } =
             BuildDescriptor(

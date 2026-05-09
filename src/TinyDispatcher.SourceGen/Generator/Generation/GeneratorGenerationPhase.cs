@@ -42,7 +42,8 @@ internal sealed class GeneratorGenerationPhase
             contextPlan.LocalDiscovery,
             contextPlan.PipelineContributions,
             contextPlan.EmitOptions,
-            GetPipelineRegistrationMethodNames(generationPlan.Contexts));
+            GetPipelineRegistrationMethodNames(generationPlan.Contexts),
+            GetPipelineContributionSources(generationPlan.Contexts));
 
         var handlerRegistrationsPlan = HandlerRegistrationsPlanner.Build(
             contextPlan.LocalDiscovery,
@@ -248,6 +249,27 @@ internal sealed class GeneratorGenerationPhase
         }
 
         return methodNames.ToImmutable();
+    }
+
+    private static ImmutableArray<EmptyPipelineContributionEmitter.PipelineContributionSource> GetPipelineContributionSources(
+        ImmutableArray<ContextGenerationPlan> contextPlans)
+    {
+        if (contextPlans.IsDefaultOrEmpty)
+        {
+            return ImmutableArray<EmptyPipelineContributionEmitter.PipelineContributionSource>.Empty;
+        }
+
+        var sources = ImmutableArray.CreateBuilder<EmptyPipelineContributionEmitter.PipelineContributionSource>(contextPlans.Length);
+
+        for (var i = 0; i < contextPlans.Length; i++)
+        {
+            var contextPlan = contextPlans[i];
+            sources.Add(new EmptyPipelineContributionEmitter.PipelineContributionSource(
+                contextPlan.EmitOptions,
+                contextPlan.PipelineContributions));
+        }
+
+        return sources.ToImmutable();
     }
 
     private static bool HasPipelinePlans(ImmutableArray<ContextGenerationPlan> contextPlans)

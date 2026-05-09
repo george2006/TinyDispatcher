@@ -45,13 +45,16 @@ namespace ExternalApp
             options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
         var contributions = new ReferencedAssemblyContributionExtractor().Extract(compilation);
+        var assembly = Assert.Single(
+            contributions.Assemblies,
+            candidate => candidate.AssemblyName == "ExternalContrib");
         var handlerContract = Assert.Single(
-            contributions.Handlers,
+            assembly.Handlers,
             c => c.Handler.MessageTypeFqn == "global::ExternalApp.CreateOrder");
         Assert.Equal("global::ExternalApp.CreateOrder", handlerContract.Handler.MessageTypeFqn);
         Assert.Equal("global::ExternalApp.CreateOrderHandler", handlerContract.Handler.HandlerTypeFqn);
         Assert.Equal("global::ExternalApp.AppContext", handlerContract.Handler.ContextTypeFqn);
-        Assert.Equal("ExternalContrib", handlerContract.AssemblyName);
+        Assert.Equal("ExternalContrib", assembly.AssemblyName);
     }
 
     [Fact]
@@ -174,7 +177,7 @@ namespace Billing
                 Assert.Equal("global::Billing.BillingContext", orders.ContextTypeFqn);
                 Assert.Equal(
                     "global::Billing.CapturePayment",
-                    Assert.Single(contributions.Handlers, handler => handler.AssemblyName == "BillingContrib").Handler.MessageTypeFqn);
+                    Assert.Single(orders.Handlers).Handler.MessageTypeFqn);
             },
             billing =>
             {
@@ -182,7 +185,7 @@ namespace Billing
                 Assert.Equal("global::Orders.OrderContext", billing.ContextTypeFqn);
                 Assert.Equal(
                     "global::Orders.CreateOrder",
-                    Assert.Single(contributions.Handlers, handler => handler.AssemblyName == "OrdersContrib").Handler.MessageTypeFqn);
+                    Assert.Single(billing.Handlers).Handler.MessageTypeFqn);
             });
     }
 
@@ -220,9 +223,11 @@ namespace ExternalApp
             options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
         var contributions = new ReferencedAssemblyContributionExtractor().Extract(compilation);
-        var handler = Assert.Single(
-            contributions.Handlers,
+        var assembly = Assert.Single(
+            contributions.Assemblies,
             candidate => candidate.AssemblyName == "ExternalContrib");
+        var handler = Assert.Single(
+            assembly.Handlers);
         Assert.Equal("global::ExternalApp.CreateOrder", handler.Handler.MessageTypeFqn);
         Assert.Equal("global::ExternalApp.CreateOrderHandler", handler.Handler.HandlerTypeFqn);
         Assert.Equal("global::ExternalApp.AppContext", handler.Handler.ContextTypeFqn);
