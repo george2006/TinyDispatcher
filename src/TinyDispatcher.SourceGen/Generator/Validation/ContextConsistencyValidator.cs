@@ -41,16 +41,54 @@ internal sealed class ContextConsistencyValidator : IGeneratorValidator
             return;
         }
 
-        // Hard rule: only one UseTinyDispatcher<TContext> call allowed per project
-        var hasMultipleBootstrapCalls = calls.Length > 1;
+        // Multiple bootstrap calls are allowed when they target the same context.
+        // Different contexts still need generation support before we can accept them.
+        var hasDifferentContext = TryFindFirstDifferentContextCall(calls, out var differentContextCall);
 
-        if (hasMultipleBootstrapCalls)
+        if (hasDifferentContext)
         {
-            var loc = calls[1].Location ?? Location.None;
+            var loc = differentContextCall.Location ?? Location.None;
             var contexts = GetDistinctContexts(calls);
 
             diags.Add(catalog.Create(catalog.MultipleContextsDetected, loc, contexts));
         }
+    }
+
+    private static bool TryFindFirstDifferentContextCall(
+        ImmutableArray<UseTinyDispatcherCall> calls,
+        out UseTinyDispatcherCall differentContextCall)
+    {
+        differentContextCall = default;
+
+        if (calls.Length <= 1)
+        {
+            return false;
+        }
+
+        var firstContext = calls[0].ContextTypeFqn;
+
+        for (var i = 1; i < calls.Length; i++)
+        {
+            var isDifferentContext = TargetsDifferentContext(calls[i], firstContext);
+
+            if (isDifferentContext)
+            {
+                differentContextCall = calls[i];
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TargetsDifferentContext(
+        UseTinyDispatcherCall call,
+        string expectedContextFqn)
+    {
+        return !string.Equals(
+            expectedContextFqn,
+            call.ContextTypeFqn,
+            StringComparison.Ordinal);
     }
 
     private static string GetDistinctContexts(ImmutableArray<UseTinyDispatcherCall> calls)
