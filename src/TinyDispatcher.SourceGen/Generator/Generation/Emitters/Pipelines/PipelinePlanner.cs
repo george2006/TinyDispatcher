@@ -13,7 +13,8 @@ internal static class PipelinePlanner
     public static PipelinePlan Build(
         PipelineContributions contributions,
         DiscoveryResult discovery,
-        GeneratorOptions options)
+        GeneratorOptions options,
+        string pipelineClassSuffix = "")
     {
         var coreNamespace = "global::TinyDispatcher";
         var generatedNamespace = options.GeneratedNamespace;
@@ -24,13 +25,14 @@ internal static class PipelinePlanner
 
         var perCommandMiddlewares = contributions.PerCommand;
         var policies = contributions.Policies;
-        var globalPipeline = BuildGlobalPipeline(global);
+        var globalPipeline = BuildGlobalPipeline(global, pipelineClassSuffix);
 
-        var policyPipelines = BuildPolicyPipelines(global, policies);
+        var policyPipelines = BuildPolicyPipelines(global, policies, pipelineClassSuffix);
         var perCommandPipelines = BuildPerCommandPipelines(
             global,
             perCommandMiddlewares,
-            contributions.PolicyByCommand);
+            contributions.PolicyByCommand,
+            pipelineClassSuffix);
 
         var middlewareRegistrations = BuildOpenGenericMiddlewareRegistrations(
             global,
@@ -44,7 +46,8 @@ internal static class PipelinePlanner
             hasGlobalMiddlewares,
             discovery,
             perCommandMiddlewares,
-            policies);
+            policies,
+            pipelineClassSuffix);
 
         var shouldEmit = ShouldEmitPlan(
             globalPipeline,
@@ -65,7 +68,9 @@ internal static class PipelinePlanner
             ServiceRegistrations: serviceRegistrations);
     }
 
-    private static PipelineDefinition? BuildGlobalPipeline(MiddlewareRef[] global)
+    private static PipelineDefinition? BuildGlobalPipeline(
+        MiddlewareRef[] global,
+        string pipelineClassSuffix)
     {
         var hasGlobalMiddlewares = global.Length > 0;
 
@@ -75,7 +80,7 @@ internal static class PipelinePlanner
         }
 
         return new PipelineDefinition(
-            ClassName: "TinyDispatcherGlobalPipeline",
+            ClassName: "TinyDispatcherGlobalPipeline" + pipelineClassSuffix,
             IsOpenGeneric: true,
             CommandType: "TCommand",
             Steps: BuildSteps(global, NoMiddlewares, NoMiddlewares));
@@ -83,7 +88,8 @@ internal static class PipelinePlanner
 
     private static ImmutableArray<PipelineDefinition> BuildPolicyPipelines(
         MiddlewareRef[] global,
-        PipelinePolicyContribution[] policies)
+        PipelinePolicyContribution[] policies,
+        string pipelineClassSuffix)
     {
         if (policies.Length == 0)
         {
@@ -97,7 +103,9 @@ internal static class PipelinePlanner
             var policy = policies[i];
 
             list.Add(new PipelineDefinition(
-                ClassName: "TinyDispatcherPolicyPipeline_" + PipelineNameFactory.SanitizePolicyName(policy.PolicyTypeFqn),
+                ClassName: "TinyDispatcherPolicyPipeline_" +
+                    PipelineNameFactory.SanitizePolicyName(policy.PolicyTypeFqn) +
+                    pipelineClassSuffix,
                 IsOpenGeneric: true,
                 CommandType: "TCommand",
                 Steps: BuildSteps(global, policy.Middlewares, NoMiddlewares)));
@@ -109,7 +117,8 @@ internal static class PipelinePlanner
     private static ImmutableArray<PipelineDefinition> BuildPerCommandPipelines(
         MiddlewareRef[] global,
         IReadOnlyDictionary<string, MiddlewareRef[]> perCmd,
-        IReadOnlyDictionary<string, PipelinePolicyContribution> policyByCommand)
+        IReadOnlyDictionary<string, PipelinePolicyContribution> policyByCommand,
+        string pipelineClassSuffix)
     {
         if (perCmd.Count == 0)
         {
@@ -135,7 +144,9 @@ internal static class PipelinePlanner
             }
 
             list.Add(new PipelineDefinition(
-                ClassName: "TinyDispatcherPipeline_" + PipelineNameFactory.SanitizeCommandName(cmdFqn),
+                ClassName: "TinyDispatcherPipeline_" +
+                    PipelineNameFactory.SanitizeCommandName(cmdFqn) +
+                    pipelineClassSuffix,
                 IsOpenGeneric: false,
                 CommandType: cmdFqn,
                 Steps: BuildSteps(global, policyMids, perCmdMids)));

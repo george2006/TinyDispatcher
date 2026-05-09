@@ -176,6 +176,47 @@ public sealed class PipelinePlannerTests
         Assert.DoesNotContain("TinyDispatcherGlobalPipeline<", reg.ImplementationTypeExpression, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Build_applies_pipeline_class_suffix_to_generated_pipeline_types()
+    {
+        var global = ImmutableArray.Create(Mw("global::MyApp.GlobalLogMiddleware", 2));
+        var perCommand = ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty.Add(
+            "global::MyApp.CmdA",
+            ImmutableArray.Create(Mw("global::MyApp.PerCommandLogMiddleware", 2)));
+        var policies = ImmutableDictionary<string, PolicySpec>.Empty.Add(
+            "global::MyApp.CheckoutPolicy",
+            new PolicySpec(
+                PolicyTypeFqn: "global::MyApp.CheckoutPolicy",
+                Middlewares: ImmutableArray.Create(Mw("global::MyApp.PolicyLogMiddleware", 2)),
+                Commands: ImmutableArray.Create("global::MyApp.CmdB")));
+        var discovery = FakeDiscovery("global::MyApp.CmdA", "global::MyApp.CmdB", "global::MyApp.CmdC");
+        var options = FakeOptions("MyApp.Generated", "global::MyApp.AppContext");
+
+        var plan = PipelinePlanner.Build(
+            Contributions(global, perCommand, policies),
+            discovery,
+            options,
+            pipelineClassSuffix: "_MyApp_AppContext");
+
+        Assert.Equal("TinyDispatcherGlobalPipeline_MyApp_AppContext", plan.GlobalPipeline!.ClassName);
+        Assert.Equal("TinyDispatcherPipeline_CmdA_MyApp_AppContext", plan.PerCommandPipelines[0].ClassName);
+        Assert.Equal(
+            "TinyDispatcherPolicyPipeline_MyApp_CheckoutPolicy_MyApp_AppContext",
+            plan.PolicyPipelines[0].ClassName);
+        Assert.Contains(plan.ServiceRegistrations, r =>
+            r.ImplementationTypeExpression.Contains(
+                "TinyDispatcherPipeline_CmdA_MyApp_AppContext",
+                StringComparison.Ordinal));
+        Assert.Contains(plan.ServiceRegistrations, r =>
+            r.ImplementationTypeExpression.Contains(
+                "TinyDispatcherPolicyPipeline_MyApp_CheckoutPolicy_MyApp_AppContext<global::MyApp.CmdB>",
+                StringComparison.Ordinal));
+        Assert.Contains(plan.ServiceRegistrations, r =>
+            r.ImplementationTypeExpression.Contains(
+                "TinyDispatcherGlobalPipeline_MyApp_AppContext<global::MyApp.CmdC>",
+                StringComparison.Ordinal));
+    }
+
     private static GeneratorOptions FakeOptions(string genNs, string ctxFqn)
         => new(
             GeneratedNamespace: genNs,
