@@ -288,6 +288,72 @@ public sealed class GeneratorGenerationPhaseTests
         Assert.DoesNotContain("global::OtherApp.CancelPolicyMiddleware", pipelineSource.Content);
     }
 
+    [Fact]
+    public void Generate_emits_pipeline_source_for_each_host_context()
+    {
+        var context = new CapturingGeneratorContext();
+        var createOrder = new HandlerContract(
+            MessageTypeFqn: "global::MyApp.CreateOrder",
+            HandlerTypeFqn: "global::MyApp.CreateOrderHandler",
+            ContextTypeFqn: "global::MyApp.CtxA");
+        var cancelOrder = new HandlerContract(
+            MessageTypeFqn: "global::MyApp.CancelOrder",
+            HandlerTypeFqn: "global::MyApp.CancelOrderHandler",
+            ContextTypeFqn: "global::MyApp.CtxB");
+        var discovery = new DiscoveryResult(
+            ImmutableArray.Create(createOrder, cancelOrder),
+            ImmutableArray<QueryHandlerContract>.Empty);
+        var pipelineA = new PipelineConfig(
+            ImmutableArray.Create(new MiddlewareRef("global::MyApp.AuditA`2", 2)),
+            ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
+            ImmutableDictionary<string, PolicySpec>.Empty);
+        var pipelineB = new PipelineConfig(
+            ImmutableArray.Create(new MiddlewareRef("global::MyApp.AuditB`2", 2)),
+            ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
+            ImmutableDictionary<string, PolicySpec>.Empty);
+        var extraction = new GeneratorExtraction(
+            discovery,
+            ReferencedAssemblyContributions.Empty,
+            ImmutableArray.Create(
+                new ContextPipelineConfig("global::MyApp.CtxA", pipelineA),
+                new ContextPipelineConfig("global::MyApp.CtxB", pipelineB)));
+        var validation = new GeneratorValidationResult(
+            Context: new GeneratorValidationContext.Builder(
+                    discovery,
+                    new DiagnosticsCatalog())
+                .WithHostGate(isHost: true)
+                .WithUseTinyDispatcherCalls(ImmutableArray.Create(
+                    new UseTinyDispatcherCall("global::MyApp.CtxA", Location.None),
+                    new UseTinyDispatcherCall("global::MyApp.CtxB", Location.None)))
+                .WithExpectedContext("global::MyApp.CtxA")
+                .WithLocalPipelineConfig(pipelineA)
+                .WithPipelineConfig(pipelineA)
+                .Build(),
+            Diagnostics: new DiagnosticBag());
+
+        new GeneratorGenerationPhase().Generate(
+            context,
+            Options(commandContextType: null),
+            extraction,
+            validation);
+
+        var pipelineAContent = Assert.Single(
+            context.Sources,
+            source => source.HintName == "TinyDispatcherPipeline.MyApp_CtxA.g.cs").Content;
+        var pipelineBContent = Assert.Single(
+            context.Sources,
+            source => source.HintName == "TinyDispatcherPipeline.MyApp_CtxB.g.cs").Content;
+
+        Assert.Contains(
+            "global::TinyDispatcher.ICommandPipeline<global::MyApp.CreateOrder, global::MyApp.CtxA>",
+            pipelineAContent);
+        Assert.DoesNotContain("global::MyApp.CancelOrder", pipelineAContent);
+        Assert.Contains(
+            "global::TinyDispatcher.ICommandPipeline<global::MyApp.CancelOrder, global::MyApp.CtxB>",
+            pipelineBContent);
+        Assert.DoesNotContain("global::MyApp.CreateOrder", pipelineBContent);
+    }
+
     private static CSharpCompilation CreateCompilation()
     {
         return CSharpCompilation.Create(

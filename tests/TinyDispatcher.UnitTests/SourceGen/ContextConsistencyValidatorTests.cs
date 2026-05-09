@@ -12,7 +12,7 @@ namespace TinyDispatcher.UnitTests.SourceGen;
 public sealed class ContextConsistencyValidatorTests
 {
     [Fact]
-    public void DISP110_when_multiple_UseTinyDispatcher_calls_exist()
+    public void Does_not_report_DISP110_when_multiple_UseTinyDispatcher_calls_target_different_contexts()
     {
         var source = @"
 using System;
@@ -64,7 +64,8 @@ namespace ConsoleApp
 
         var diagnostics = Run(source);
 
-        Assert.Contains(diagnostics, d => d.Id == "DISP110");
+        Assert.DoesNotContain(diagnostics, d => d.Id == "DISP110");
+        Assert.DoesNotContain(diagnostics, d => d.Id == "DISP112");
     }
 
     [Fact]
@@ -115,7 +116,7 @@ namespace ConsoleApp
     }
 
     [Fact]
-    public void Does_not_report_DISP110_when_multiple_UseTinyDispatcher_calls_target_same_context()
+    public void DISP112_warning_when_multiple_UseTinyDispatcher_calls_target_same_context()
     {
         var source = @"
 using System;
@@ -159,7 +160,7 @@ namespace ConsoleApp
 
         var diagnostics = Run(source);
 
-        Assert.DoesNotContain(diagnostics, d => d.Id == "DISP110");
+        Assert.Contains(diagnostics, d => d.Id == "DISP112" && d.Severity == DiagnosticSeverity.Warning);
     }
 
     // Optional: only keep if your ContextConsistencyValidator emits DISP111 for "host but no context"

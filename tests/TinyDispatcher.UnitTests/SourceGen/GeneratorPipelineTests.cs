@@ -16,7 +16,7 @@ namespace TinyDispatcher.UnitTests.SourceGen;
 public sealed class GeneratorPipelineTests
 {
     [Fact]
-    public void Execute_reports_validation_errors_and_stops_generation()
+    public void Execute_reports_missing_context_validation_errors_and_stops_generation()
     {
         var compilation = CreateCompilation(@"
 using System;
@@ -37,15 +37,11 @@ namespace Microsoft.Extensions.DependencyInjection
 
 namespace MyApp
 {
-    public sealed class CtxA { }
-    public sealed class CtxB { }
-
     public static class Startup
     {
-        public static void Configure(IServiceCollection services)
+        public static void Configure<T>(IServiceCollection services)
         {
-            services.UseTinyDispatcher<CtxA>(_ => { });
-            services.UseTinyDispatcher<CtxB>(_ => { });
+            services.UseTinyDispatcher<T>(_ => { });
         }
     }
 }
@@ -59,7 +55,7 @@ namespace MyApp
 
         new GeneratorPipeline().Execute(context, input);
 
-        Assert.Contains(context.Diagnostics, diagnostic => diagnostic.Id == "DISP110");
+        Assert.Contains(context.Diagnostics, diagnostic => diagnostic.Id == "DISP111");
         Assert.Empty(context.Sources);
     }
 

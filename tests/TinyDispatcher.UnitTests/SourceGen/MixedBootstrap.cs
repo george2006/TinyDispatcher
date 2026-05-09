@@ -12,7 +12,7 @@ namespace TinyDispatcher.UnitTests.SourceGen;
 public sealed class MixedBootstrapDiagnosticsTests
 {
     [Fact]
-    public void DISP110_when_UseTinyDispatcher_and_UseTinyNoOpContext_are_both_present()
+    public void Does_not_report_DISP110_when_UseTinyDispatcher_and_UseTinyNoOpContext_are_both_present()
     {
         var source = @"
 using System;
@@ -61,7 +61,7 @@ namespace ConsoleApp
 
         var diagnostics = Run(source);
 
-        Assert.Contains(diagnostics, d => d.Id == "DISP110" && d.Severity == DiagnosticSeverity.Error);
+        Assert.DoesNotContain(diagnostics, d => d.Id == "DISP110");
     }
 
     private static Diagnostic[] Run(string source)

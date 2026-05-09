@@ -1,5 +1,8 @@
 #nullable enable
 
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using TinyDispatcher.SourceGen.Generator.Generation.Emitters;
 using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Handlers;
 using TinyDispatcher.SourceGen.Generator.Generation.Emitters.ModuleInitializer;
@@ -19,10 +22,11 @@ internal sealed class GeneratorGenerationPhase
         GeneratorExtraction extraction,
         GeneratorValidationResult validation)
     {
-        var contextPlan = BuildContextGenerationPlan(options, validation.Context, extraction);
+        var sharedPlan = BuildSharedGenerationPlan(options, validation.Context, extraction);
+        var pipelinePlans = BuildPipelineGenerationPlans(options, validation.Context, extraction);
 
-        EmitSharedSources(context, contextPlan);
-        EmitPipelineSourceIfNeeded(context, contextPlan);
+        EmitSharedSources(context, sharedPlan);
+        EmitPipelineSourcesIfNeeded(context, pipelinePlans);
     }
 
     private static void EmitSharedSources(
@@ -55,23 +59,27 @@ internal sealed class GeneratorGenerationPhase
         new PipelineMapsEmitter().Emit(context, pipelineMapsPlan);
     }
 
-    private static void EmitPipelineSourceIfNeeded(
+    private static void EmitPipelineSourcesIfNeeded(
         IGeneratorContext context,
-        ContextGenerationPlan contextPlan)
+        ImmutableArray<ContextGenerationPlan> pipelinePlans)
     {
-        if (!contextPlan.ShouldEmitPipelines)
+        for (var i = 0; i < pipelinePlans.Length; i++)
         {
-            return;
+            var contextPlan = pipelinePlans[i];
+            if (!contextPlan.ShouldEmitPipelines)
+            {
+                continue;
+            }
+
+            var pipelinePlan = BuildPipelinePlan(contextPlan);
+
+            if (!pipelinePlan.ShouldEmit)
+            {
+                continue;
+            }
+
+            new PipelineEmitter().Emit(context, pipelinePlan);
         }
-
-        var pipelinePlan = BuildPipelinePlan(contextPlan);
-
-        if (!pipelinePlan.ShouldEmit)
-        {
-            return;
-        }
-
-        new PipelineEmitter().Emit(context, pipelinePlan);
     }
 
     private static PipelinePlan BuildPipelinePlan(ContextGenerationPlan contextPlan)
@@ -82,21 +90,64 @@ internal sealed class GeneratorGenerationPhase
             contextPlan.EmitOptions);
     }
 
-    private static ContextGenerationPlan BuildContextGenerationPlan(
+    private static ContextGenerationPlan BuildSharedGenerationPlan(
         GeneratorOptions options,
         GeneratorValidationContext validationContext,
         GeneratorExtraction extraction)
     {
-        var emitOptions = BuildEmitOptions(options, validationContext);
+        return BuildContextGenerationPlan(
+            options,
+            validationContext,
+            extraction,
+            validationContext.ExpectedContextFqn,
+            validationContext.LocalPipeline,
+            extraction.Discovery);
+    }
+
+    private static ImmutableArray<ContextGenerationPlan> BuildPipelineGenerationPlans(
+        GeneratorOptions options,
+        GeneratorValidationContext validationContext,
+        GeneratorExtraction extraction)
+    {
+        var contextFqns = GetPipelineContextFqns(validationContext);
+        var contextPlans = ImmutableArray.CreateBuilder<ContextGenerationPlan>(contextFqns.Length);
+
+        for (var i = 0; i < contextFqns.Length; i++)
+        {
+            var contextFqn = contextFqns[i];
+            var localPipeline = SelectLocalPipeline(extraction, contextFqn);
+            var localDiscovery = FilterDiscoveryByContext(extraction.Discovery, contextFqn);
+
+            contextPlans.Add(BuildContextGenerationPlan(
+                options,
+                validationContext,
+                extraction,
+                contextFqn,
+                localPipeline,
+                localDiscovery));
+        }
+
+        return contextPlans.ToImmutable();
+    }
+
+    private static ContextGenerationPlan BuildContextGenerationPlan(
+        GeneratorOptions options,
+        GeneratorValidationContext validationContext,
+        GeneratorExtraction extraction,
+        string contextFqn,
+        PipelineConfig localPipeline,
+        DiscoveryResult localDiscovery)
+    {
+        var emitOptions = BuildEmitOptions(options, contextFqn);
         var discovery = ReferencedAssemblyContributionComposer.MergeDiscovery(
-            extraction.Discovery,
+            localDiscovery,
             extraction.ReferencedContributions,
-            validationContext.ExpectedContextFqn);
+            contextFqn);
         var pipelineConfig = ReferencedAssemblyContributionComposer.MergePipelineConfig(
-            validationContext.Pipeline,
+            localPipeline,
             extraction.ReferencedContributions,
-            validationContext.ExpectedContextFqn);
-        var shouldEmitPipelines = ShouldEmitPipelines(validationContext, pipelineConfig);
+            contextFqn);
+        var shouldEmitPipelines = ShouldEmitPipelines(validationContext, contextFqn, pipelineConfig);
         var pipelineContributions = PipelineContributions.Create(pipelineConfig);
 
         return new ContextGenerationPlan(
@@ -109,9 +160,9 @@ internal sealed class GeneratorGenerationPhase
 
     private static GeneratorOptions BuildEmitOptions(
         GeneratorOptions options,
-        GeneratorValidationContext validationContext)
+        string contextFqn)
     {
-        if (string.IsNullOrWhiteSpace(validationContext.ExpectedContextFqn))
+        if (string.IsNullOrWhiteSpace(contextFqn))
         {
             return options;
         }
@@ -121,19 +172,22 @@ internal sealed class GeneratorGenerationPhase
             EmitDiExtensions: options.EmitDiExtensions,
             EmitHandlerRegistrations: options.EmitHandlerRegistrations,
             IncludeNamespacePrefix: options.IncludeNamespacePrefix,
-            CommandContextType: validationContext.ExpectedContextFqn,
+            CommandContextType: contextFqn,
             EmitPipelineMap: options.EmitPipelineMap,
             PipelineMapFormat: options.PipelineMapFormat);
     }
 
-    private static bool ShouldEmitPipelines(GeneratorValidationContext validationContext, PipelineConfig pipeline)
+    private static bool ShouldEmitPipelines(
+        GeneratorValidationContext validationContext,
+        string contextFqn,
+        PipelineConfig pipeline)
     {
         if (!validationContext.IsHostProject)
         {
             return false;
         }
 
-        if (string.IsNullOrWhiteSpace(validationContext.ExpectedContextFqn))
+        if (string.IsNullOrWhiteSpace(contextFqn))
         {
             return false;
         }
@@ -146,6 +200,98 @@ internal sealed class GeneratorGenerationPhase
         return pipeline.Globals.Length > 0 ||
                pipeline.PerCommand.Count > 0 ||
                pipeline.Policies.Count > 0;
+    }
+
+    private static ImmutableArray<string> GetPipelineContextFqns(GeneratorValidationContext validationContext)
+    {
+        var calls = validationContext.UseTinyDispatcherCalls;
+        if (calls.IsDefaultOrEmpty)
+        {
+            return GetFallbackContextFqns(validationContext);
+        }
+
+        var contextFqns = ImmutableArray.CreateBuilder<string>();
+        var seenContexts = new HashSet<string>(StringComparer.Ordinal);
+
+        for (var i = 0; i < calls.Length; i++)
+        {
+            var contextFqn = calls[i].ContextTypeFqn;
+            var isFirstContext = seenContexts.Add(contextFqn);
+
+            if (isFirstContext)
+            {
+                contextFqns.Add(contextFqn);
+            }
+        }
+
+        return contextFqns.ToImmutable();
+    }
+
+    private static ImmutableArray<string> GetFallbackContextFqns(
+        GeneratorValidationContext validationContext)
+    {
+        if (string.IsNullOrWhiteSpace(validationContext.ExpectedContextFqn))
+        {
+            return ImmutableArray<string>.Empty;
+        }
+
+        return ImmutableArray.Create(validationContext.ExpectedContextFqn);
+    }
+
+    private static PipelineConfig SelectLocalPipeline(
+        GeneratorExtraction extraction,
+        string contextFqn)
+    {
+        if (extraction.ContextPipelines.IsDefaultOrEmpty)
+        {
+            return PipelineConfig.Empty;
+        }
+
+        for (var i = 0; i < extraction.ContextPipelines.Length; i++)
+        {
+            var contextPipeline = extraction.ContextPipelines[i];
+            var isExpectedContext = string.Equals(
+                contextPipeline.ContextTypeFqn,
+                contextFqn,
+                StringComparison.Ordinal);
+
+            if (isExpectedContext)
+            {
+                return contextPipeline.Pipeline;
+            }
+        }
+
+        return PipelineConfig.Empty;
+    }
+
+    private static DiscoveryResult FilterDiscoveryByContext(
+        DiscoveryResult discovery,
+        string contextFqn)
+    {
+        if (string.IsNullOrWhiteSpace(contextFqn))
+        {
+            return discovery;
+        }
+
+        var commands = ImmutableArray.CreateBuilder<HandlerContract>();
+
+        for (var i = 0; i < discovery.Commands.Length; i++)
+        {
+            var command = discovery.Commands[i];
+            var isExpectedContext = string.Equals(
+                command.ContextTypeFqn,
+                contextFqn,
+                StringComparison.Ordinal);
+
+            if (isExpectedContext)
+            {
+                commands.Add(command);
+            }
+        }
+
+        return new DiscoveryResult(
+            commands.ToImmutable(),
+            discovery.Queries);
     }
 
     private readonly record struct ContextGenerationPlan(

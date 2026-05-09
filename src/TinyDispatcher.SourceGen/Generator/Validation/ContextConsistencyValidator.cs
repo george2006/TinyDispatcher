@@ -41,72 +41,43 @@ internal sealed class ContextConsistencyValidator : IGeneratorValidator
             return;
         }
 
-        // Multiple bootstrap calls are allowed when they target the same context.
-        // Different contexts still need generation support before we can accept them.
-        var hasDifferentContext = TryFindFirstDifferentContextCall(calls, out var differentContextCall);
+        var hasRepeatedContext = TryFindFirstRepeatedContextCall(calls, out var repeatedContextCall);
 
-        if (hasDifferentContext)
+        if (hasRepeatedContext)
         {
-            var loc = differentContextCall.Location ?? Location.None;
-            var contexts = GetDistinctContexts(calls);
-
-            diags.Add(catalog.Create(catalog.MultipleContextsDetected, loc, contexts));
+            var loc = repeatedContextCall.Location ?? Location.None;
+            diags.Add(catalog.Create(
+                catalog.RepeatedContextBootstrap,
+                loc,
+                repeatedContextCall.ContextTypeFqn));
         }
     }
 
-    private static bool TryFindFirstDifferentContextCall(
+    private static bool TryFindFirstRepeatedContextCall(
         ImmutableArray<UseTinyDispatcherCall> calls,
-        out UseTinyDispatcherCall differentContextCall)
+        out UseTinyDispatcherCall repeatedContextCall)
     {
-        differentContextCall = default;
+        repeatedContextCall = default;
 
         if (calls.Length <= 1)
         {
             return false;
         }
 
-        var firstContext = calls[0].ContextTypeFqn;
+        var seenContexts = new HashSet<string>(StringComparer.Ordinal);
 
-        for (var i = 1; i < calls.Length; i++)
+        for (var i = 0; i < calls.Length; i++)
         {
-            var isDifferentContext = TargetsDifferentContext(calls[i], firstContext);
+            var call = calls[i];
+            var isFirstCallForContext = seenContexts.Add(call.ContextTypeFqn);
 
-            if (isDifferentContext)
+            if (!isFirstCallForContext)
             {
-                differentContextCall = calls[i];
+                repeatedContextCall = call;
                 return true;
             }
         }
 
         return false;
-    }
-
-    private static bool TargetsDifferentContext(
-        UseTinyDispatcherCall call,
-        string expectedContextFqn)
-    {
-        return !string.Equals(
-            expectedContextFqn,
-            call.ContextTypeFqn,
-            StringComparison.Ordinal);
-    }
-
-    private static string GetDistinctContexts(ImmutableArray<UseTinyDispatcherCall> calls)
-    {
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-        var contexts = new List<string>();
-
-        for (var i = 0; i < calls.Length; i++)
-        {
-            var context = calls[i].ContextTypeFqn;
-            var isFirstOccurrence = seen.Add(context);
-
-            if (isFirstOccurrence)
-            {
-                contexts.Add(context);
-            }
-        }
-
-        return string.Join(", ", contexts);
     }
 }

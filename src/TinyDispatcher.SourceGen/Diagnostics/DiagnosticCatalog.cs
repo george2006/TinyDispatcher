@@ -115,6 +115,13 @@ namespace TinyDispatcher.SourceGen.Diagnostics
                 message: "No TinyDispatcher bootstrap call was found (UseTinyDispatcher<TContext> or UseTinyNoOpContext), but code generation requires a context type.",
                 severity: DiagnosticSeverity.Error);
 
+        public DiagnosticDescriptor RepeatedContextBootstrap { get; } =
+            BuildDescriptor(
+                id: "DISP112",
+                title: "Multiple TinyDispatcher bootstrap calls target the same context",
+                message: "Multiple TinyDispatcher bootstrap calls target '{0}'. The context pipeline will be composed from all matching calls.",
+                severity: DiagnosticSeverity.Warning);
+
         #endregion
 
         #region Public API for creating diagnostics
