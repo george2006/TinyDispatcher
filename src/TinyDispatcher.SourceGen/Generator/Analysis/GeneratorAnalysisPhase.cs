@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Generator.Options;
@@ -78,7 +79,8 @@ internal static class GeneratorAnalysisPhase
         return new HostBootstrapInfo(
             IsHostProject: useTinyCallsSyntax.Length > 0,
             ExpectedContextFqn: GetExpectedContextFqn(effectiveOptions),
-            UseTinyDispatcherCalls: useTinyDispatcherCalls);
+            UseTinyDispatcherCalls: useTinyDispatcherCalls,
+            Contexts: BuildHostContexts(useTinyDispatcherCalls));
     }
 
     private static string GetExpectedContextFqn(GeneratorOptions options)
@@ -89,5 +91,67 @@ internal static class GeneratorAnalysisPhase
         }
 
         return Fqn.EnsureGlobal(options.CommandContextType!);
+    }
+
+    private static ImmutableArray<HostContextInfo> BuildHostContexts(
+        ImmutableArray<UseTinyDispatcherCall> useTinyDispatcherCalls)
+    {
+        if (useTinyDispatcherCalls.IsDefaultOrEmpty)
+        {
+            return ImmutableArray<HostContextInfo>.Empty;
+        }
+
+        var contextOrder = new List<string>();
+        var callsByContext = GroupCallsByContext(useTinyDispatcherCalls, contextOrder);
+        return BuildHostContexts(contextOrder, callsByContext);
+    }
+
+    private static Dictionary<string, ImmutableArray<UseTinyDispatcherCall>.Builder> GroupCallsByContext(
+        ImmutableArray<UseTinyDispatcherCall> calls,
+        List<string> contextOrder)
+    {
+        var groups = new Dictionary<string, ImmutableArray<UseTinyDispatcherCall>.Builder>(
+            StringComparer.Ordinal);
+
+        for (var i = 0; i < calls.Length; i++)
+        {
+            var call = calls[i];
+            var builder = GetOrAddContextBuilder(groups, contextOrder, call.ContextTypeFqn);
+            builder.Add(call);
+        }
+
+        return groups;
+    }
+
+    private static ImmutableArray<UseTinyDispatcherCall>.Builder GetOrAddContextBuilder(
+        Dictionary<string, ImmutableArray<UseTinyDispatcherCall>.Builder> groups,
+        List<string> contextOrder,
+        string contextTypeFqn)
+    {
+        if (groups.TryGetValue(contextTypeFqn, out var builder))
+        {
+            return builder;
+        }
+
+        builder = ImmutableArray.CreateBuilder<UseTinyDispatcherCall>();
+        groups.Add(contextTypeFqn, builder);
+        contextOrder.Add(contextTypeFqn);
+
+        return builder;
+    }
+
+    private static ImmutableArray<HostContextInfo> BuildHostContexts(
+        List<string> contextOrder,
+        Dictionary<string, ImmutableArray<UseTinyDispatcherCall>.Builder> callsByContext)
+    {
+        var contexts = ImmutableArray.CreateBuilder<HostContextInfo>(callsByContext.Count);
+
+        for (var i = 0; i < contextOrder.Count; i++)
+        {
+            var contextTypeFqn = contextOrder[i];
+            contexts.Add(new HostContextInfo(contextTypeFqn, callsByContext[contextTypeFqn].ToImmutable()));
+        }
+
+        return contexts.ToImmutable();
     }
 }
