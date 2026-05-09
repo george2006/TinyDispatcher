@@ -97,13 +97,15 @@ public sealed class GeneratorGenerationPhaseTests
             discovery,
             pipeline,
             Referenced(
+                ImmutableArray.Create(ReferencedHandler(
+                    "ExternalApp",
+                    "global::MyApp.AppContext",
+                    "global::ExternalApp.CreateOrder",
+                    "global::ExternalApp.CreateOrderHandler",
+                    "global::MyApp.AppContext")),
                 new ReferencedAssemblyContribution(
                     "ExternalApp",
                     "global::MyApp.AppContext",
-                    ImmutableArray.Create(new HandlerContract(
-                        "global::ExternalApp.CreateOrder",
-                        "global::ExternalApp.CreateOrderHandler",
-                        "global::MyApp.AppContext")),
                     ImmutableArray<MiddlewareRef>.Empty,
                     ImmutableArray<PerCommandMiddlewareFinding>.Empty,
                     ImmutableArray<PolicyFinding>.Empty)));
@@ -141,13 +143,15 @@ public sealed class GeneratorGenerationPhaseTests
             discovery,
             pipeline,
             Referenced(
+                ImmutableArray.Create(ReferencedHandler(
+                    "ExternalApp",
+                    "global::MyApp.AppContext",
+                    "global::ExternalApp.CreateOrder",
+                    "global::ExternalApp.CreateOrderHandler",
+                    "global::MyApp.AppContext")),
                 new ReferencedAssemblyContribution(
                     "ExternalApp",
                     "global::MyApp.AppContext",
-                    ImmutableArray.Create(new HandlerContract(
-                        "global::ExternalApp.CreateOrder",
-                        "global::ExternalApp.CreateOrderHandler",
-                        "global::MyApp.AppContext")),
                     ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.GlobalMiddleware", 2)),
                     ImmutableArray.Create(new PerCommandMiddlewareFinding(
                         "global::ExternalApp.CreateOrder",
@@ -196,13 +200,22 @@ public sealed class GeneratorGenerationPhaseTests
             discovery,
             pipeline,
             Referenced(
+                ImmutableArray.Create(
+                    ReferencedHandler(
+                        "Matching",
+                        "global::MyApp.AppContext",
+                        "global::ExternalApp.CreateOrder",
+                        "global::ExternalApp.CreateOrderHandler",
+                        "global::MyApp.AppContext"),
+                    ReferencedHandler(
+                        "Mismatched",
+                        "global::OtherApp.OtherContext",
+                        "global::OtherApp.CancelOrder",
+                        "global::OtherApp.CancelOrderHandler",
+                        "global::OtherApp.OtherContext")),
                 new ReferencedAssemblyContribution(
                     "Matching",
                     "global::MyApp.AppContext",
-                    ImmutableArray.Create(new HandlerContract(
-                        "global::ExternalApp.CreateOrder",
-                        "global::ExternalApp.CreateOrderHandler",
-                        "global::MyApp.AppContext")),
                     ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.GlobalMiddleware", 2)),
                     ImmutableArray.Create(new PerCommandMiddlewareFinding(
                         "global::ExternalApp.CreateOrder",
@@ -211,10 +224,6 @@ public sealed class GeneratorGenerationPhaseTests
                 new ReferencedAssemblyContribution(
                     "Mismatched",
                     "global::OtherApp.OtherContext",
-                    ImmutableArray.Create(new HandlerContract(
-                        "global::OtherApp.CancelOrder",
-                        "global::OtherApp.CancelOrderHandler",
-                        "global::OtherApp.OtherContext")),
                     ImmutableArray.Create(new MiddlewareRef("global::OtherApp.GlobalMiddleware", 2)),
                     ImmutableArray.Create(new PerCommandMiddlewareFinding(
                         "global::OtherApp.CancelOrder",
@@ -242,6 +251,76 @@ public sealed class GeneratorGenerationPhaseTests
         Assert.DoesNotContain("global::OtherApp.GlobalMiddleware", pipelineSource.Content);
         Assert.DoesNotContain("global::OtherApp.CancelMiddleware", pipelineSource.Content);
         Assert.DoesNotContain("global::OtherApp.CancelPolicyMiddleware", pipelineSource.Content);
+    }
+
+    [Fact]
+    public void Generate_ignores_referenced_command_contributions_from_mismatched_contribution_context()
+    {
+        var context = new CapturingGeneratorContext();
+        var discovery = EmptyDiscovery();
+        var pipeline = new PipelineConfig(
+                ImmutableArray.Create(new MiddlewareRef("global::MyApp.GlobalLogMiddleware", 2)),
+                ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
+                ImmutableDictionary<string, PolicySpec>.Empty);
+        var extraction = Extraction(
+            discovery,
+            pipeline,
+            Referenced(
+                ImmutableArray.Create(
+                    ReferencedHandler(
+                        "MixedExternalApp",
+                        null,
+                        "global::ExternalApp.CreateOrder",
+                        "global::ExternalApp.CreateOrderHandler",
+                        "global::MyApp.AppContext"),
+                    ReferencedHandler(
+                        "MixedExternalApp",
+                        null,
+                        "global::ExternalApp.CancelOrder",
+                        "global::ExternalApp.CancelOrderHandler",
+                        "global::OtherApp.OtherContext")),
+                new ReferencedAssemblyContribution(
+                    "MixedExternalApp",
+                    null,
+                    ImmutableArray<MiddlewareRef>.Empty,
+                    ImmutableArray.Create(
+                        new PerCommandMiddlewareFinding(
+                            "global::ExternalApp.CreateOrder",
+                            ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.OrderMiddleware", 2)),
+                            "global::MyApp.AppContext"),
+                        new PerCommandMiddlewareFinding(
+                            "global::ExternalApp.CancelOrder",
+                            ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.CancelMiddleware", 2)),
+                            "global::OtherApp.OtherContext")),
+                    ImmutableArray.Create(
+                        new PolicyFinding(
+                            "global::ExternalApp.MixedPolicy",
+                            ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.PolicyMiddleware", 2)),
+                            ImmutableArray.Create("global::ExternalApp.CreateOrder"),
+                            "global::MyApp.AppContext"),
+                        new PolicyFinding(
+                            "global::ExternalApp.CancelPolicy",
+                            ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.CancelPolicyMiddleware", 2)),
+                            ImmutableArray.Create("global::ExternalApp.CancelOrder"),
+                            "global::OtherApp.OtherContext")))));
+        var hostBootstrap = HostBootstrap("global::MyApp.AppContext");
+
+        new GeneratorGenerationPhase().Generate(
+            context,
+            Options(commandContextType: "global::MyApp.AppContext"),
+            extraction,
+            hostBootstrap);
+
+        var pipelineSource = Assert.Single(
+            context.Sources,
+            source => source.HintName == "TinyDispatcherPipeline.MyApp_AppContext.g.cs");
+
+        Assert.Contains("global::ExternalApp.CreateOrder", pipelineSource.Content);
+        Assert.Contains("global::ExternalApp.OrderMiddleware", pipelineSource.Content);
+        Assert.Contains("global::ExternalApp.PolicyMiddleware", pipelineSource.Content);
+        Assert.DoesNotContain("global::ExternalApp.CancelOrder", pipelineSource.Content);
+        Assert.DoesNotContain("global::ExternalApp.CancelMiddleware", pipelineSource.Content);
+        Assert.DoesNotContain("global::ExternalApp.CancelPolicyMiddleware", pipelineSource.Content);
     }
 
     [Fact]
@@ -402,7 +481,34 @@ public sealed class GeneratorGenerationPhaseTests
     }
 
     private static ReferencedAssemblyContributions Referenced(params ReferencedAssemblyContribution[] assemblies)
-        => new(ImmutableArray.Create(assemblies));
+        => new(
+            ImmutableArray.Create(assemblies),
+            ImmutableArray<ReferencedHandlerContribution>.Empty);
+
+    private static ReferencedAssemblyContributions Referenced(
+        ImmutableArray<ReferencedHandlerContribution> handlers,
+        params ReferencedAssemblyContribution[] assemblies)
+    {
+        return new ReferencedAssemblyContributions(
+            ImmutableArray.Create(assemblies),
+            handlers);
+    }
+
+    private static ReferencedHandlerContribution ReferencedHandler(
+        string assemblyName,
+        string? assemblyContextTypeFqn,
+        string messageTypeFqn,
+        string handlerTypeFqn,
+        string contextTypeFqn)
+    {
+        return new ReferencedHandlerContribution(
+            assemblyName,
+            assemblyContextTypeFqn,
+            new HandlerContract(
+                messageTypeFqn,
+                handlerTypeFqn,
+                contextTypeFqn));
+    }
 
     private static GeneratorExtraction Extraction(
         DiscoveryResult discovery,

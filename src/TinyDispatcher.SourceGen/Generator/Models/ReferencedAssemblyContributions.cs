@@ -4,36 +4,34 @@ using System.Collections.Immutable;
 namespace TinyDispatcher.SourceGen.Generator.Models;
 
 internal sealed record ReferencedAssemblyContributions(
-    ImmutableArray<ReferencedAssemblyContribution> Assemblies)
+    ImmutableArray<ReferencedAssemblyContribution> Assemblies,
+    ImmutableArray<ReferencedHandlerContribution> Handlers)
 {
     public static ReferencedAssemblyContributions Empty { get; } =
-        new(ImmutableArray<ReferencedAssemblyContribution>.Empty);
+        new(
+            ImmutableArray<ReferencedAssemblyContribution>.Empty,
+            ImmutableArray<ReferencedHandlerContribution>.Empty);
+
+    public ReferencedAssemblyContributions(ImmutableArray<ReferencedAssemblyContribution> assemblies)
+        : this(assemblies, ImmutableArray<ReferencedHandlerContribution>.Empty)
+    {
+    }
 
     public bool HasCommands()
     {
-        for (var i = 0; i < Assemblies.Length; i++)
-        {
-            if (!Assemblies[i].Commands.IsDefaultOrEmpty)
-                return true;
-        }
-
-        return false;
+        return !Handlers.IsDefaultOrEmpty;
     }
 
     public IEnumerable<HandlerContract> EnumerateCommands(string expectedContextFqn)
     {
-        for (var i = 0; i < Assemblies.Length; i++)
+        for (var i = 0; i < Handlers.Length; i++)
         {
-            var assembly = Assemblies[i];
-            if (!assembly.MatchesContext(expectedContextFqn))
+            var handlerContribution = Handlers[i];
+            if (!handlerContribution.MatchesContext(expectedContextFqn))
                 continue;
 
-            for (var j = 0; j < assembly.Commands.Length; j++)
-            {
-                var command = assembly.Commands[j];
-                if (CommandMatchesContext(command, expectedContextFqn))
-                    yield return command;
-            }
+            if (HandlerContractMatchesContext(handlerContribution.Handler, expectedContextFqn))
+                yield return handlerContribution.Handler;
         }
     }
 
@@ -47,15 +45,15 @@ internal sealed record ReferencedAssemblyContributions(
         }
     }
 
-    private static bool CommandMatchesContext(
-        HandlerContract command,
+    private static bool HandlerContractMatchesContext(
+        HandlerContract handlerContract,
         string expectedContextFqn)
     {
         if (string.IsNullOrWhiteSpace(expectedContextFqn))
             return true;
 
         return string.Equals(
-            command.ContextTypeFqn,
+            handlerContract.ContextTypeFqn,
             expectedContextFqn,
             System.StringComparison.Ordinal);
     }

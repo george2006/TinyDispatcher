@@ -45,17 +45,13 @@ namespace ExternalApp
             options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
         var contributions = new ReferencedAssemblyContributionExtractor().Extract(compilation);
-        var assembly = Assert.Single(
-            contributions.Assemblies,
-            candidate => candidate.AssemblyName == "ExternalContrib");
-
-        var command = Assert.Single(
-            assembly.Commands,
-            c => c.MessageTypeFqn == "global::ExternalApp.CreateOrder");
-        Assert.Equal("global::ExternalApp.CreateOrder", command.MessageTypeFqn);
-        Assert.Equal("global::ExternalApp.CreateOrderHandler", command.HandlerTypeFqn);
-        Assert.Equal("global::ExternalApp.AppContext", command.ContextTypeFqn);
-        Assert.Equal("ExternalContrib", assembly.AssemblyName);
+        var handlerContract = Assert.Single(
+            contributions.Handlers,
+            c => c.Handler.MessageTypeFqn == "global::ExternalApp.CreateOrder");
+        Assert.Equal("global::ExternalApp.CreateOrder", handlerContract.Handler.MessageTypeFqn);
+        Assert.Equal("global::ExternalApp.CreateOrderHandler", handlerContract.Handler.HandlerTypeFqn);
+        Assert.Equal("global::ExternalApp.AppContext", handlerContract.Handler.ContextTypeFqn);
+        Assert.Equal("ExternalContrib", handlerContract.AssemblyName);
     }
 
     [Fact]
@@ -69,11 +65,13 @@ using TinyDispatcher;
     new System.Type[] { typeof(ExternalApp.GlobalMiddleware<,>) })]
 [assembly: TinyDispatcherPipelineContributionAttribute(
     new System.Type[] { typeof(ExternalApp.OrderMiddleware<,>) },
-    CommandType = typeof(ExternalApp.CreateOrder))]
+    CommandType = typeof(ExternalApp.CreateOrder),
+    ContextType = typeof(ExternalApp.AppContext))]
 [assembly: TinyDispatcherPolicyContributionAttribute(
     typeof(ExternalApp.OrderPolicy),
     new System.Type[] { typeof(ExternalApp.PolicyMiddleware<,>) },
-    new System.Type[] { typeof(ExternalApp.CreateOrder) })]
+    new System.Type[] { typeof(ExternalApp.CreateOrder) },
+    ContextType = typeof(ExternalApp.AppContext))]
 
 namespace ExternalApp
 {
@@ -113,10 +111,12 @@ namespace ExternalApp
         Assert.Equal("global::ExternalApp.GlobalMiddleware", Assert.Single(assembly.Globals).OpenTypeFqn);
         var perCommand = Assert.Single(assembly.PerCommandMiddlewareFindings);
         Assert.Equal("global::ExternalApp.CreateOrder", perCommand.CommandTypeFqn);
+        Assert.Equal("global::ExternalApp.AppContext", perCommand.ContextTypeFqn);
         Assert.Equal("global::ExternalApp.OrderMiddleware", Assert.Single(perCommand.Middlewares).OpenTypeFqn);
 
         var policy = Assert.Single(assembly.PolicyFindings);
         Assert.Equal("global::ExternalApp.OrderPolicy", policy.PolicyTypeFqn);
+        Assert.Equal("global::ExternalApp.AppContext", policy.ContextTypeFqn);
         Assert.Equal("global::ExternalApp.PolicyMiddleware", Assert.Single(policy.Middlewares).OpenTypeFqn);
         Assert.Equal("global::ExternalApp.CreateOrder", Assert.Single(policy.Commands));
     }
@@ -172,13 +172,17 @@ namespace Billing
             {
                 Assert.Equal("BillingContrib", orders.AssemblyName);
                 Assert.Equal("global::Billing.BillingContext", orders.ContextTypeFqn);
-                Assert.Equal("global::Billing.CapturePayment", Assert.Single(orders.Commands).MessageTypeFqn);
+                Assert.Equal(
+                    "global::Billing.CapturePayment",
+                    Assert.Single(contributions.Handlers, handler => handler.AssemblyName == "BillingContrib").Handler.MessageTypeFqn);
             },
             billing =>
             {
                 Assert.Equal("OrdersContrib", billing.AssemblyName);
                 Assert.Equal("global::Orders.OrderContext", billing.ContextTypeFqn);
-                Assert.Equal("global::Orders.CreateOrder", Assert.Single(billing.Commands).MessageTypeFqn);
+                Assert.Equal(
+                    "global::Orders.CreateOrder",
+                    Assert.Single(contributions.Handlers, handler => handler.AssemblyName == "OrdersContrib").Handler.MessageTypeFqn);
             });
     }
 
@@ -216,14 +220,12 @@ namespace ExternalApp
             options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
         var contributions = new ReferencedAssemblyContributionExtractor().Extract(compilation);
-        var assembly = Assert.Single(
-            contributions.Assemblies,
+        var handler = Assert.Single(
+            contributions.Handlers,
             candidate => candidate.AssemblyName == "ExternalContrib");
-
-        var handler = Assert.Single(assembly.Commands);
-        Assert.Equal("global::ExternalApp.CreateOrder", handler.MessageTypeFqn);
-        Assert.Equal("global::ExternalApp.CreateOrderHandler", handler.HandlerTypeFqn);
-        Assert.Equal("global::ExternalApp.AppContext", handler.ContextTypeFqn);
+        Assert.Equal("global::ExternalApp.CreateOrder", handler.Handler.MessageTypeFqn);
+        Assert.Equal("global::ExternalApp.CreateOrderHandler", handler.Handler.HandlerTypeFqn);
+        Assert.Equal("global::ExternalApp.AppContext", handler.Handler.ContextTypeFqn);
     }
 
     [Fact]

@@ -65,10 +65,6 @@ public sealed class GeneratorValidationPhaseTests
             Referenced(new ReferencedAssemblyContribution(
                 "ExternalApp",
                 "global::MyApp.AppContext",
-                ImmutableArray.Create(new HandlerContract(
-                    "global::ExternalApp.CreateOrder",
-                    "global::ExternalApp.CreateOrderHandler",
-                    "global::MyApp.AppContext")),
                 ImmutableArray<MiddlewareRef>.Empty,
                 ImmutableArray.Create(new PerCommandMiddlewareFinding(
                     "global::ExternalApp.MissingCommand",
@@ -101,16 +97,20 @@ public sealed class GeneratorValidationPhaseTests
         var extraction = Extraction(
             discovery,
             PipelineConfig.Empty,
-            Referenced(new ReferencedAssemblyContribution(
-                "ExternalApp",
-                "global::MyApp.AppContext",
-                ImmutableArray.Create(new HandlerContract(
-                    "global::MyApp.CreateOrder",
-                    "global::ExternalApp.CreateOrderHandler",
-                    "global::MyApp.AppContext")),
-                ImmutableArray<MiddlewareRef>.Empty,
-                ImmutableArray<PerCommandMiddlewareFinding>.Empty,
-                ImmutableArray<PolicyFinding>.Empty)));
+            Referenced(
+                ImmutableArray.Create(new ReferencedHandlerContribution(
+                    "ExternalApp",
+                    "global::MyApp.AppContext",
+                    new HandlerContract(
+                        "global::MyApp.CreateOrder",
+                        "global::ExternalApp.CreateOrderHandler",
+                        "global::MyApp.AppContext"))),
+                new ReferencedAssemblyContribution(
+                    "ExternalApp",
+                    "global::MyApp.AppContext",
+                    ImmutableArray<MiddlewareRef>.Empty,
+                    ImmutableArray<PerCommandMiddlewareFinding>.Empty,
+                    ImmutableArray<PolicyFinding>.Empty)));
         var hostBootstrap = HostBootstrap("global::MyApp.AppContext");
 
         var diagnostics = new GeneratorValidationPhase().Validate(
@@ -133,7 +133,6 @@ public sealed class GeneratorValidationPhaseTests
             Referenced(new ReferencedAssemblyContribution(
                 "ExternalApp",
                 "global::MyApp.AppContext",
-                ImmutableArray<HandlerContract>.Empty,
                 ImmutableArray<MiddlewareRef>.Empty,
                 ImmutableArray.Create(new PerCommandMiddlewareFinding(
                     "global::ExternalApp.MissingCommand",
@@ -199,7 +198,18 @@ public sealed class GeneratorValidationPhaseTests
 
     private static ReferencedAssemblyContributions Referenced(params ReferencedAssemblyContribution[] assemblies)
     {
-        return new ReferencedAssemblyContributions(ImmutableArray.Create(assemblies));
+        return new ReferencedAssemblyContributions(
+            ImmutableArray.Create(assemblies),
+            ImmutableArray<ReferencedHandlerContribution>.Empty);
+    }
+
+    private static ReferencedAssemblyContributions Referenced(
+        ImmutableArray<ReferencedHandlerContribution> handlers,
+        params ReferencedAssemblyContribution[] assemblies)
+    {
+        return new ReferencedAssemblyContributions(
+            ImmutableArray.Create(assemblies),
+            handlers);
     }
 
     private static GeneratorExtraction Extraction(

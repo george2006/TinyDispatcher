@@ -115,7 +115,7 @@ internal sealed class EmptyPipelineContributionEmitter
         if (contributions.Globals.Length > 0)
         {
             w.Line(
-                $"[assembly: global::TinyDispatcher.TinyDispatcherPipelineContributionAttribute(new System.Type[] {{ {BuildAttributeTypeList(contributions.Globals)} }})]");
+                $"[assembly: global::TinyDispatcher.TinyDispatcherPipelineContributionAttribute(new System.Type[] {{ {BuildAttributeTypeList(contributions.Globals)} }}{BuildContributionContextArgument(options)})]");
         }
 
         var orderedCommands = PipelineOrdering.GetStringsInStableOrder(contributions.PerCommand.Keys);
@@ -123,15 +123,25 @@ internal sealed class EmptyPipelineContributionEmitter
         {
             var command = orderedCommands[i];
             w.Line(
-                $"[assembly: global::TinyDispatcher.TinyDispatcherPipelineContributionAttribute(new System.Type[] {{ {BuildAttributeTypeList(contributions.PerCommand[command])} }}, CommandType = typeof({command}))]");
+                $"[assembly: global::TinyDispatcher.TinyDispatcherPipelineContributionAttribute(new System.Type[] {{ {BuildAttributeTypeList(contributions.PerCommand[command])} }}, CommandType = typeof({command}){BuildContributionContextArgument(options)})]");
         }
 
         for (var i = 0; i < contributions.Policies.Length; i++)
         {
             var policy = contributions.Policies[i];
             w.Line(
-                $"[assembly: global::TinyDispatcher.TinyDispatcherPolicyContributionAttribute(typeof({policy.PolicyTypeFqn}), new System.Type[] {{ {BuildAttributeTypeList(policy.Middlewares)} }}, new System.Type[] {{ {BuildCommandTypeList(policy.Commands)} }})]");
+                $"[assembly: global::TinyDispatcher.TinyDispatcherPolicyContributionAttribute(typeof({policy.PolicyTypeFqn}), new System.Type[] {{ {BuildAttributeTypeList(policy.Middlewares)} }}, new System.Type[] {{ {BuildCommandTypeList(policy.Commands)} }}{BuildContributionContextArgument(options)})]");
         }
+    }
+
+    private static string BuildContributionContextArgument(GeneratorOptions options)
+    {
+        if (string.IsNullOrWhiteSpace(options.CommandContextType))
+        {
+            return string.Empty;
+        }
+
+        return $", ContextType = typeof({PipelineTypeNames.NormalizeFqn(options.CommandContextType!)})";
     }
 
     private static string GetContextTypeExpression(GeneratorOptions options)

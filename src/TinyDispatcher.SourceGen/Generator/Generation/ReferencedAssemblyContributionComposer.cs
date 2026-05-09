@@ -52,9 +52,12 @@ internal static class ReferencedAssemblyContributionComposer
 
         foreach (var assembly in referencedContributions.EnumerateMatchingContext(expectedContextFqn))
         {
-            MergePerCommandContributions(perCommand, assembly.PerCommandMiddlewareFindings);
-            MergePolicyContributions(policies, assembly.PolicyFindings);
-            globals.AddRange(assembly.Globals);
+            MergeAssemblyPipeline(
+                assembly,
+                expectedContextFqn,
+                globals,
+                perCommand,
+                policies);
         }
 
         return new PipelineConfig(
@@ -79,30 +82,95 @@ internal static class ReferencedAssemblyContributionComposer
         }
     }
 
+    private static void MergeAssemblyPipeline(
+        ReferencedAssemblyContribution assembly,
+        string expectedContextFqn,
+        ImmutableArray<MiddlewareRef>.Builder globals,
+        ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Builder perCommand,
+        ImmutableDictionary<string, PolicySpec>.Builder policies)
+    {
+        globals.AddRange(assembly.Globals);
+
+        MergePerCommandContributions(
+            perCommand,
+            assembly,
+            expectedContextFqn);
+        MergePolicyContributions(
+            policies,
+            assembly,
+            expectedContextFqn);
+    }
+
     private static void MergePerCommandContributions(
         ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Builder target,
-        ImmutableArray<PerCommandMiddlewareFinding> source)
+        ReferencedAssemblyContribution assembly,
+        string expectedContextFqn)
     {
-        for (var i = 0; i < source.Length; i++)
+        for (var i = 0; i < assembly.PerCommandMiddlewareFindings.Length; i++)
         {
-            var finding = source[i];
+            var finding = assembly.PerCommandMiddlewareFindings[i];
 
-            if (!target.ContainsKey(finding.CommandTypeFqn))
+            var contributionBelongsToAnotherContext = ContributionBelongsToAnotherContext(
+                finding.ContextTypeFqn,
+                expectedContextFqn);
+            if (contributionBelongsToAnotherContext)
+            {
+                continue;
+            }
+
+            var commandWasAlreadyConfigured = target.ContainsKey(finding.CommandTypeFqn);
+            if (!commandWasAlreadyConfigured)
+            {
                 target[finding.CommandTypeFqn] = finding.Middlewares;
+            }
         }
     }
 
     private static void MergePolicyContributions(
         ImmutableDictionary<string, PolicySpec>.Builder target,
-        ImmutableArray<PolicyFinding> source)
+        ReferencedAssemblyContribution assembly,
+        string expectedContextFqn)
     {
-        for (var i = 0; i < source.Length; i++)
+        for (var i = 0; i < assembly.PolicyFindings.Length; i++)
         {
-            var finding = source[i];
+            var finding = assembly.PolicyFindings[i];
 
-            if (!target.ContainsKey(finding.PolicyTypeFqn))
+            var contributionBelongsToAnotherContext = ContributionBelongsToAnotherContext(
+                finding.ContextTypeFqn,
+                expectedContextFqn);
+            if (contributionBelongsToAnotherContext)
+            {
+                continue;
+            }
+
+            var policyHasNoCommandsForContext = finding.Commands.Length == 0;
+            if (policyHasNoCommandsForContext)
+            {
+                continue;
+            }
+
+            var policyWasAlreadyConfigured = target.ContainsKey(finding.PolicyTypeFqn);
+            if (!policyWasAlreadyConfigured)
+            {
                 target[finding.PolicyTypeFqn] = ToPolicySpec(finding);
+            }
         }
+    }
+
+    private static bool ContributionBelongsToAnotherContext(
+        string? contributionContextFqn,
+        string expectedContextFqn)
+    {
+        if (string.IsNullOrWhiteSpace(contributionContextFqn) ||
+            string.IsNullOrWhiteSpace(expectedContextFqn))
+        {
+            return false;
+        }
+
+        return !string.Equals(
+            contributionContextFqn,
+            expectedContextFqn,
+            System.StringComparison.Ordinal);
     }
 
     private static PolicySpec ToPolicySpec(PolicyFinding finding)

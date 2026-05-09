@@ -13,21 +13,22 @@ public sealed class ReferencedAssemblyContributionsTests
     public void EnumerateCommands_filters_handlers_by_expected_context()
     {
         var contributions = new ReferencedAssemblyContributions(
-            ImmutableArray.Create(new ReferencedAssemblyContribution(
-                AssemblyName: "ExternalApp",
-                ContextTypeFqn: null,
-                Commands: ImmutableArray.Create(
-                    new HandlerContract(
+            Assemblies: ImmutableArray<ReferencedAssemblyContribution>.Empty,
+            Handlers: ImmutableArray.Create(
+                new ReferencedHandlerContribution(
+                    AssemblyName: "ExternalApp",
+                    ContextTypeFqn: null,
+                    Handler: new HandlerContract(
                         MessageTypeFqn: "global::ExternalApp.CreateOrder",
                         HandlerTypeFqn: "global::ExternalApp.CreateOrderHandler",
-                        ContextTypeFqn: "global::ExternalApp.OrderContext"),
-                    new HandlerContract(
+                        ContextTypeFqn: "global::ExternalApp.OrderContext")),
+                new ReferencedHandlerContribution(
+                    AssemblyName: "ExternalApp",
+                    ContextTypeFqn: null,
+                    Handler: new HandlerContract(
                         MessageTypeFqn: "global::ExternalApp.CapturePayment",
                         HandlerTypeFqn: "global::ExternalApp.CapturePaymentHandler",
-                        ContextTypeFqn: "global::ExternalApp.BillingContext")),
-                Globals: ImmutableArray<MiddlewareRef>.Empty,
-                PerCommandMiddlewareFindings: ImmutableArray<PerCommandMiddlewareFinding>.Empty,
-                PolicyFindings: ImmutableArray<PolicyFinding>.Empty)));
+                        ContextTypeFqn: "global::ExternalApp.BillingContext"))));
 
         var commands = contributions
             .EnumerateCommands("global::ExternalApp.OrderContext")
