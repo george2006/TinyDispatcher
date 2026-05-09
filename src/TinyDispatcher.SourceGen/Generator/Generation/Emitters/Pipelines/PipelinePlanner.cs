@@ -13,13 +13,12 @@ internal static class PipelinePlanner
     public static PipelinePlan Build(
         PipelineContributions contributions,
         DiscoveryResult discovery,
-        GeneratorOptions options,
-        string pipelineContextName = "")
+        GeneratorOptions options)
     {
         var coreNamespace = "global::TinyDispatcher";
         var generatedNamespace = options.GeneratedNamespace;
         var contextType = PipelineTypeNames.NormalizeFqn(options.CommandContextType!);
-        var pipelineClassSuffix = BuildPipelineClassSuffix(pipelineContextName);
+        var pipelineClassSuffix = BuildPipelineClassSuffix(contextType);
 
         var global = contributions.Globals;
         var hasGlobalMiddlewares = global.Length > 0;
@@ -228,14 +227,14 @@ internal static class PipelinePlanner
             hasServiceRegistrations;
     }
 
-    private static string BuildPipelineClassSuffix(string pipelineContextName)
+    private static string BuildPipelineClassSuffix(string contextTypeFqn)
     {
-        if (string.IsNullOrWhiteSpace(pipelineContextName))
+        if (string.IsNullOrWhiteSpace(contextTypeFqn))
         {
             return string.Empty;
         }
 
-        return "_" + PipelineNameFactory.SanitizeTypeName(pipelineContextName);
+        return "_" + PipelineNameFactory.SanitizeTypeName(contextTypeFqn);
     }
 }
 

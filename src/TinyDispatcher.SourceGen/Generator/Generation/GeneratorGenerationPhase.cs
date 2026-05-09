@@ -64,10 +64,7 @@ internal sealed class GeneratorGenerationPhase
             return;
         }
 
-        var pipelinePlan = PipelinePlanner.Build(
-            contextPlan.PipelineContributions,
-            contextPlan.Discovery,
-            contextPlan.EmitOptions);
+        var pipelinePlan = BuildPipelinePlan(contextPlan);
 
         if (!pipelinePlan.ShouldEmit)
         {
@@ -75,6 +72,14 @@ internal sealed class GeneratorGenerationPhase
         }
 
         new PipelineEmitter().Emit(context, pipelinePlan);
+    }
+
+    private static PipelinePlan BuildPipelinePlan(ContextGenerationPlan contextPlan)
+    {
+        return PipelinePlanner.Build(
+            contextPlan.PipelineContributions,
+            contextPlan.Discovery,
+            contextPlan.EmitOptions);
     }
 
     private static ContextGenerationPlan BuildContextGenerationPlan(

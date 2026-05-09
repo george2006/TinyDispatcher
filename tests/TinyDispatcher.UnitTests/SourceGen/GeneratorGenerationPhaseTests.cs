@@ -151,7 +151,7 @@ public sealed class GeneratorGenerationPhaseTests
             "global::TinyDispatcher.ICommandPipeline<global::ExternalApp.CreateOrder, global::MyApp.AppContext>",
             pipelineSource.Content);
         Assert.Contains(
-            "TinyDispatcherGlobalPipeline<global::ExternalApp.CreateOrder>",
+            "TinyDispatcherGlobalPipeline_MyApp_AppContext<global::ExternalApp.CreateOrder>",
             pipelineSource.Content);
     }
 

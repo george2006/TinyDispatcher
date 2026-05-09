@@ -39,18 +39,18 @@ public sealed class PipelinePlannerTests
         Assert.True(plan.ShouldEmit);
         Assert.NotNull(plan.GlobalPipeline);
         Assert.True(plan.GlobalPipeline!.IsOpenGeneric);
-        Assert.Equal("TinyDispatcherGlobalPipeline", plan.GlobalPipeline.ClassName);
+        Assert.Equal("TinyDispatcherGlobalPipeline_MyApp_AppContext", plan.GlobalPipeline.ClassName);
         AssertStepNames(
             plan.GlobalPipeline.Steps,
             "global::MyApp.GlobalLogMiddleware");
 
         Assert.Contains(plan.ServiceRegistrations, r =>
             r.ServiceTypeExpression.Contains("ICommandPipeline<global::MyApp.CmdA", StringComparison.Ordinal) &&
-            r.ImplementationTypeExpression.Contains("TinyDispatcherGlobalPipeline<global::MyApp.CmdA>", StringComparison.Ordinal));
+            r.ImplementationTypeExpression.Contains("TinyDispatcherGlobalPipeline_MyApp_AppContext<global::MyApp.CmdA>", StringComparison.Ordinal));
 
         Assert.Contains(plan.ServiceRegistrations, r =>
             r.ServiceTypeExpression.Contains("ICommandPipeline<global::MyApp.CmdB", StringComparison.Ordinal) &&
-            r.ImplementationTypeExpression.Contains("TinyDispatcherGlobalPipeline<global::MyApp.CmdB>", StringComparison.Ordinal));
+            r.ImplementationTypeExpression.Contains("TinyDispatcherGlobalPipeline_MyApp_AppContext<global::MyApp.CmdB>", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -195,8 +195,7 @@ public sealed class PipelinePlannerTests
         var plan = PipelinePlanner.Build(
             Contributions(global, perCommand, policies),
             discovery,
-            options,
-            pipelineContextName: "global::MyApp.AppContext");
+            options);
 
         Assert.Equal("TinyDispatcherGlobalPipeline_MyApp_AppContext", plan.GlobalPipeline!.ClassName);
         Assert.Equal("TinyDispatcherPipeline_CmdA_MyApp_AppContext", plan.PerCommandPipelines[0].ClassName);
