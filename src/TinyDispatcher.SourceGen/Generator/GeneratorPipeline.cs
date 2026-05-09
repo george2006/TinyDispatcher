@@ -31,17 +31,21 @@ internal sealed class GeneratorPipeline
             input.HandlerSymbols,
             analysisResult.ConfirmedBootstrapLambdas,
             analysis.EffectiveOptions);
-        var validation = _validationPhase.Validate(
+        var diagnostics = _validationPhase.Validate(
             analysis.HostBootstrap,
             extraction,
             _diagnosticsCatalog,
             validationDependencies);
 
-        if (GeneratorDiagnosticReporter.ReportAndHasErrors(context, validation.Diagnostics))
+        if (GeneratorDiagnosticReporter.ReportAndHasErrors(context, diagnostics))
         {
             return;
         }
 
-        _generationPhase.Generate(context, analysis.EffectiveOptions, extraction, validation);
+        _generationPhase.Generate(
+            context,
+            analysis.EffectiveOptions,
+            extraction,
+            analysis.HostBootstrap);
     }
 }

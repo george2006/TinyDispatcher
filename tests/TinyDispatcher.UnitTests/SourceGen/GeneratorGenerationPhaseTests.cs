@@ -6,11 +6,9 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using TinyDispatcher.SourceGen;
-using TinyDispatcher.SourceGen.Diagnostics;
 using TinyDispatcher.SourceGen.Generator.Generation;
 using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Generator.Options;
-using TinyDispatcher.SourceGen.Generator.Validation;
 using Xunit;
 
 namespace TinyDispatcher.UnitTests.SourceGen;
@@ -41,21 +39,11 @@ public sealed class GeneratorGenerationPhaseTests
                 ExpectedContextFqn: "global::MyApp.AppContext",
                 UseTinyDispatcherCalls: ImmutableArray<UseTinyDispatcherCall>.Empty));
 
-        var validation = new GeneratorValidationResult(
-            Context: new GeneratorValidationContext.Builder(
-                    discovery,
-                    new DiagnosticsCatalog())
-                .WithHostGate(isHost: false)
-                .WithExpectedContext("global::MyApp.AppContext")
-                .WithPipelineConfig(pipeline)
-                .Build(),
-            Diagnostics: new DiagnosticBag());
-
         new GeneratorGenerationPhase().Generate(
             context,
             analysis.EffectiveOptions,
             extraction,
-            validation);
+            analysis.HostBootstrap);
 
         Assert.DoesNotContain(
             context.Sources,
@@ -79,21 +67,13 @@ public sealed class GeneratorGenerationPhaseTests
                 ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
                 ImmutableDictionary<string, PolicySpec>.Empty);
         var extraction = Extraction(discovery, pipeline);
-        var validation = new GeneratorValidationResult(
-            Context: new GeneratorValidationContext.Builder(
-                    discovery,
-                    new DiagnosticsCatalog())
-                .WithHostGate(isHost: true)
-                .WithExpectedContext("global::MyApp.AppContext")
-                .WithPipelineConfig(pipeline)
-                .Build(),
-            Diagnostics: new DiagnosticBag());
+        var hostBootstrap = HostBootstrap("global::MyApp.AppContext");
 
         new GeneratorGenerationPhase().Generate(
             context,
             Options(commandContextType: null),
             extraction,
-            validation);
+            hostBootstrap);
 
         var registrations = Assert.Single(
             context.Sources,
@@ -128,21 +108,13 @@ public sealed class GeneratorGenerationPhaseTests
                     ImmutableArray<PerCommandMiddlewareFinding>.Empty,
                     ImmutableArray<PolicyFinding>.Empty)));
 
-        var validation = new GeneratorValidationResult(
-            Context: new GeneratorValidationContext.Builder(
-                    discovery,
-                    new DiagnosticsCatalog())
-                .WithHostGate(isHost: true)
-                .WithExpectedContext("global::MyApp.AppContext")
-                .WithPipelineConfig(pipeline)
-                .Build(),
-            Diagnostics: new DiagnosticBag());
+        var hostBootstrap = HostBootstrap("global::MyApp.AppContext");
 
         new GeneratorGenerationPhase().Generate(
             context,
             Options(commandContextType: "global::MyApp.AppContext"),
             extraction,
-            validation);
+            hostBootstrap);
 
         var pipelineSource = Assert.Single(
             context.Sources,
@@ -185,21 +157,13 @@ public sealed class GeneratorGenerationPhaseTests
                         ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.PolicyMiddleware", 2)),
                         ImmutableArray.Create("global::ExternalApp.CreateOrder"))))));
 
-        var validation = new GeneratorValidationResult(
-            Context: new GeneratorValidationContext.Builder(
-                    discovery,
-                    new DiagnosticsCatalog())
-                .WithHostGate(isHost: true)
-                .WithExpectedContext("global::MyApp.AppContext")
-                .WithPipelineConfig(pipeline)
-                .Build(),
-            Diagnostics: new DiagnosticBag());
+        var hostBootstrap = HostBootstrap("global::MyApp.AppContext");
 
         new GeneratorGenerationPhase().Generate(
             context,
             Options(commandContextType: "global::MyApp.AppContext"),
             extraction,
-            validation);
+            hostBootstrap);
 
         var pipelineSource = Assert.Single(
             context.Sources,
@@ -260,21 +224,13 @@ public sealed class GeneratorGenerationPhaseTests
                         ImmutableArray.Create(new MiddlewareRef("global::OtherApp.CancelPolicyMiddleware", 2)),
                         ImmutableArray.Create("global::OtherApp.CancelOrder"))))));
 
-        var validation = new GeneratorValidationResult(
-            Context: new GeneratorValidationContext.Builder(
-                    discovery,
-                    new DiagnosticsCatalog())
-                .WithHostGate(isHost: true)
-                .WithExpectedContext("global::MyApp.AppContext")
-                .WithPipelineConfig(pipeline)
-                .Build(),
-            Diagnostics: new DiagnosticBag());
+        var hostBootstrap = HostBootstrap("global::MyApp.AppContext");
 
         new GeneratorGenerationPhase().Generate(
             context,
             Options(commandContextType: "global::MyApp.AppContext"),
             extraction,
-            validation);
+            hostBootstrap);
 
         var pipelineSource = Assert.Single(
             context.Sources,
@@ -317,25 +273,16 @@ public sealed class GeneratorGenerationPhaseTests
             ImmutableArray.Create(
                 new ContextPipelineConfig("global::MyApp.CtxA", pipelineA),
                 new ContextPipelineConfig("global::MyApp.CtxB", pipelineB)));
-        var validation = new GeneratorValidationResult(
-            Context: new GeneratorValidationContext.Builder(
-                    discovery,
-                    new DiagnosticsCatalog())
-                .WithHostGate(isHost: true)
-                .WithUseTinyDispatcherCalls(ImmutableArray.Create(
-                    new UseTinyDispatcherCall("global::MyApp.CtxA", Location.None),
-                    new UseTinyDispatcherCall("global::MyApp.CtxB", Location.None)))
-                .WithExpectedContext("global::MyApp.CtxA")
-                .WithLocalPipelineConfig(pipelineA)
-                .WithPipelineConfig(pipelineA)
-                .Build(),
-            Diagnostics: new DiagnosticBag());
+        var hostBootstrap = HostBootstrap(
+            "global::MyApp.CtxA",
+            "global::MyApp.CtxA",
+            "global::MyApp.CtxB");
 
         new GeneratorGenerationPhase().Generate(
             context,
             Options(commandContextType: null),
             extraction,
-            validation);
+            hostBootstrap);
 
         var pipelineAContent = Assert.Single(
             context.Sources,
@@ -343,6 +290,9 @@ public sealed class GeneratorGenerationPhaseTests
         var pipelineBContent = Assert.Single(
             context.Sources,
             source => source.HintName == "TinyDispatcherPipeline.MyApp_CtxB.g.cs").Content;
+        var contributionContent = Assert.Single(
+            context.Sources,
+            source => source.HintName == "ThisAssemblyContribution.g.cs").Content;
 
         Assert.Contains(
             "global::TinyDispatcher.ICommandPipeline<global::MyApp.CreateOrder, global::MyApp.CtxA>",
@@ -352,6 +302,43 @@ public sealed class GeneratorGenerationPhaseTests
             "global::TinyDispatcher.ICommandPipeline<global::MyApp.CancelOrder, global::MyApp.CtxB>",
             pipelineBContent);
         Assert.DoesNotContain("global::MyApp.CreateOrder", pipelineBContent);
+        Assert.Contains("AddGeneratedPipelines_MyApp_CtxA(services);", contributionContent);
+        Assert.Contains("AddGeneratedPipelines_MyApp_CtxB(services);", contributionContent);
+    }
+
+    [Fact]
+    public void Generate_emits_module_initializer_when_only_second_context_has_pipeline()
+    {
+        var context = new CapturingGeneratorContext();
+        var discovery = EmptyDiscovery();
+        var emptyPipeline = PipelineConfig.Empty;
+        var pipelineB = new PipelineConfig(
+            ImmutableArray.Create(new MiddlewareRef("global::MyApp.AuditB`2", 2)),
+            ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
+            ImmutableDictionary<string, PolicySpec>.Empty);
+        var extraction = new GeneratorExtraction(
+            discovery,
+            ReferencedAssemblyContributions.Empty,
+            ImmutableArray.Create(
+                new ContextPipelineConfig("global::MyApp.CtxA", emptyPipeline),
+                new ContextPipelineConfig("global::MyApp.CtxB", pipelineB)));
+        var hostBootstrap = HostBootstrap(
+            "global::MyApp.CtxA",
+            "global::MyApp.CtxA",
+            "global::MyApp.CtxB");
+
+        new GeneratorGenerationPhase().Generate(
+            context,
+            Options(commandContextType: null),
+            extraction,
+            hostBootstrap);
+
+        Assert.Contains(
+            context.Sources,
+            source => source.HintName == "DispatcherModuleInitializer.g.cs");
+        Assert.Contains(
+            context.Sources,
+            source => source.HintName == "TinyDispatcherPipeline.MyApp_CtxB.g.cs");
     }
 
     private static CSharpCompilation CreateCompilation()
@@ -384,6 +371,34 @@ public sealed class GeneratorGenerationPhaseTests
             CommandContextType: commandContextType,
             EmitPipelineMap: false,
             PipelineMapFormat: null);
+    }
+
+    private static HostBootstrapInfo HostBootstrap(
+        string expectedContextFqn,
+        params string[] contextFqns)
+    {
+        var effectiveContexts = contextFqns.Length == 0
+            ? new[] { expectedContextFqn }
+            : contextFqns;
+        var calls = ImmutableArray.CreateBuilder<UseTinyDispatcherCall>(effectiveContexts.Length);
+        var contexts = ImmutableArray.CreateBuilder<HostContextInfo>(effectiveContexts.Length);
+
+        for (var i = 0; i < effectiveContexts.Length; i++)
+        {
+            var contextFqn = effectiveContexts[i];
+            var call = new UseTinyDispatcherCall(contextFqn, Location.None);
+
+            calls.Add(call);
+            contexts.Add(new HostContextInfo(
+                contextFqn,
+                ImmutableArray.Create(call)));
+        }
+
+        return new HostBootstrapInfo(
+            IsHostProject: true,
+            ExpectedContextFqn: expectedContextFqn,
+            UseTinyDispatcherCalls: calls.ToImmutable(),
+            Contexts: contexts.ToImmutable());
     }
 
     private static ReferencedAssemblyContributions Referenced(params ReferencedAssemblyContribution[] assemblies)

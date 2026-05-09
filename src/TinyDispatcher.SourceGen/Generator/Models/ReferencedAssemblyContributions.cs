@@ -29,7 +29,11 @@ internal sealed record ReferencedAssemblyContributions(
                 continue;
 
             for (var j = 0; j < assembly.Commands.Length; j++)
-                yield return assembly.Commands[j];
+            {
+                var command = assembly.Commands[j];
+                if (CommandMatchesContext(command, expectedContextFqn))
+                    yield return command;
+            }
         }
     }
 
@@ -41,5 +45,18 @@ internal sealed record ReferencedAssemblyContributions(
             if (assembly.MatchesContext(expectedContextFqn))
                 yield return assembly;
         }
+    }
+
+    private static bool CommandMatchesContext(
+        HandlerContract command,
+        string expectedContextFqn)
+    {
+        if (string.IsNullOrWhiteSpace(expectedContextFqn))
+            return true;
+
+        return string.Equals(
+            command.ContextTypeFqn,
+            expectedContextFqn,
+            System.StringComparison.Ordinal);
     }
 }

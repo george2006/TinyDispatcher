@@ -15,7 +15,8 @@ internal sealed class EmptyPipelineContributionEmitter
         IGeneratorContext context,
         DiscoveryResult discovery,
         PipelineContributions contributions,
-        GeneratorOptions options)
+        GeneratorOptions options,
+        ImmutableArray<string> pipelineRegistrationMethodNames = default)
     {
         var w = new CodeWriter(capacity: 8_192);
 
@@ -59,7 +60,7 @@ internal sealed class EmptyPipelineContributionEmitter
         WritePolicyBindings(w, contributions);
         w.Line();
 
-        w.Line("static partial void AddGeneratedPipelines(IServiceCollection services);");
+        WriteAddGeneratedPipelines(w, pipelineRegistrationMethodNames);
         w.Line("static partial void AddGeneratedHandlers(IServiceCollection services);");
         w.EndBlock();
         w.Line();
@@ -73,6 +74,23 @@ internal sealed class EmptyPipelineContributionEmitter
 
         w.EnsureAllBlocksClosed();
         context.AddSource("ThisAssemblyContribution.g.cs", SourceText.From(w.ToString(), Encoding.UTF8));
+    }
+
+    private static void WriteAddGeneratedPipelines(
+        CodeWriter w,
+        ImmutableArray<string> methodNames)
+    {
+        w.BeginBlock("private static void AddGeneratedPipelines(IServiceCollection services)");
+
+        if (!methodNames.IsDefaultOrEmpty)
+        {
+            for (var i = 0; i < methodNames.Length; i++)
+            {
+                w.Line($"{methodNames[i]}(services);");
+            }
+        }
+
+        w.EndBlock();
     }
 
     private static void WriteAssemblyContributionAttributes(

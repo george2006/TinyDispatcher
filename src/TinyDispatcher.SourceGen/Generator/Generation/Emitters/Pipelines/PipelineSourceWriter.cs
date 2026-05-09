@@ -314,7 +314,7 @@ internal static class PipelineSourceWriter
     {
         w.BeginBlock($"namespace {plan.GeneratedNamespace}");
         w.BeginBlock("internal static partial class ThisAssemblyContribution");
-        w.BeginBlock("static partial void AddGeneratedPipelines(IServiceCollection services)");
+        w.BeginBlock($"private static void {PipelineNameFactory.PipelineRegistrationMethodName(plan.ContextFqn)}(IServiceCollection services)");
         w.Line("if (services is null)");
         w.BeginAnonymousBlock(string.Empty);
         w.Line("throw new ArgumentNullException(nameof(services));");

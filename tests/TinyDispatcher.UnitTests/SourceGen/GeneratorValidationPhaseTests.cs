@@ -3,11 +3,9 @@
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using TinyDispatcher.SourceGen;
 using TinyDispatcher.SourceGen.Diagnostics;
 using TinyDispatcher.SourceGen.Generator.Models;
-using TinyDispatcher.SourceGen.Generator.Options;
 using TinyDispatcher.SourceGen.Generator.Validation;
 using Xunit;
 
@@ -16,38 +14,24 @@ namespace TinyDispatcher.UnitTests.SourceGen;
 public sealed class GeneratorValidationPhaseTests
 {
     [Fact]
-    public void Validate_builds_validation_context_from_analysis_and_extraction()
+    public void Validate_reports_no_diagnostics_for_valid_host_project()
     {
         var compilation = CreateCompilation();
-        var invocation = ParseInvocation("services.UseTinyDispatcher<MyApp.AppContext>(_ => { })");
         var discovery = EmptyDiscovery();
         var pipeline = new PipelineConfig(
                 ImmutableArray<MiddlewareRef>.Empty,
                 ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
                 ImmutableDictionary<string, PolicySpec>.Empty);
         var extraction = Extraction(discovery, pipeline);
+        var hostBootstrap = HostBootstrap("global::MyApp.AppContext");
 
-        var analysis = new GeneratorAnalysis(
-            EffectiveOptions: Options(commandContextType: "MyApp.AppContext"),
-            HostBootstrap: new HostBootstrapInfo(
-                IsHostProject: true,
-                ExpectedContextFqn: "global::MyApp.AppContext",
-                UseTinyDispatcherCalls: ImmutableArray.Create(new UseTinyDispatcherCall(
-                    "global::MyApp.AppContext",
-                    Location.None))));
-
-        var result = new GeneratorValidationPhase().Validate(
-            analysis.HostBootstrap,
+        var diagnostics = new GeneratorValidationPhase().Validate(
+            hostBootstrap,
             extraction,
             new DiagnosticsCatalog(),
             ValidationRoslynDependencies.Create(compilation));
 
-        Assert.Same(discovery, result.Context.DiscoveryResult);
-        Assert.True(result.Context.IsHostProject);
-        Assert.Equal("global::MyApp.AppContext", result.Context.ExpectedContextFqn);
-        Assert.Same(extraction.ReferencedContributions, result.Context.ReferencedContributions);
-        Assert.Single(result.Context.UseTinyDispatcherCalls);
-        Assert.Empty(result.Diagnostics.ToImmutable());
+        Assert.Empty(diagnostics.ToImmutable());
     }
 
     [Fact]
@@ -59,25 +43,15 @@ public sealed class GeneratorValidationPhaseTests
                 ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
                 ImmutableDictionary<string, PolicySpec>.Empty);
         var extraction = Extraction(EmptyDiscovery(), pipeline);
+        var hostBootstrap = NonHostBootstrap();
 
-        var analysis = new GeneratorAnalysis(
-            EffectiveOptions: Options(commandContextType: null),
-            HostBootstrap: new HostBootstrapInfo(
-                IsHostProject: false,
-                ExpectedContextFqn: string.Empty,
-                UseTinyDispatcherCalls: ImmutableArray<UseTinyDispatcherCall>.Empty));
-
-        var result = new GeneratorValidationPhase().Validate(
-            analysis.HostBootstrap,
+        var diagnostics = new GeneratorValidationPhase().Validate(
+            hostBootstrap,
             extraction,
             new DiagnosticsCatalog(),
             ValidationRoslynDependencies.Create(compilation));
 
-        Assert.False(result.Context.IsHostProject);
-        Assert.Equal(string.Empty, result.Context.ExpectedContextFqn);
-        Assert.Same(extraction.ReferencedContributions, result.Context.ReferencedContributions);
-        Assert.Empty(result.Context.UseTinyDispatcherCalls);
-        Assert.Empty(result.Diagnostics.ToImmutable());
+        Assert.Empty(diagnostics.ToImmutable());
     }
 
     [Fact]
@@ -103,23 +77,15 @@ public sealed class GeneratorValidationPhaseTests
                     "global::ExternalApp.OrderPolicy",
                     ImmutableArray<MiddlewareRef>.Empty,
                     ImmutableArray.Create("global::ExternalApp.OtherMissingCommand"))))));
+        var hostBootstrap = NonHostBootstrap();
 
-        var analysis = new GeneratorAnalysis(
-            EffectiveOptions: Options(commandContextType: null),
-            HostBootstrap: new HostBootstrapInfo(
-                IsHostProject: false,
-                ExpectedContextFqn: string.Empty,
-                UseTinyDispatcherCalls: ImmutableArray<UseTinyDispatcherCall>.Empty));
-
-        var result = new GeneratorValidationPhase().Validate(
-            analysis.HostBootstrap,
+        var diagnostics = new GeneratorValidationPhase().Validate(
+            hostBootstrap,
             extraction,
             new DiagnosticsCatalog(),
             ValidationRoslynDependencies.Create(compilation));
 
-        Assert.Same(discovery, result.Context.DiscoveryResult);
-        Assert.Same(PipelineConfig.Empty, result.Context.Pipeline);
-        Assert.Empty(result.Diagnostics.ToImmutable());
+        Assert.Empty(diagnostics.ToImmutable());
     }
 
     [Fact]
@@ -145,25 +111,16 @@ public sealed class GeneratorValidationPhaseTests
                 ImmutableArray<MiddlewareRef>.Empty,
                 ImmutableArray<PerCommandMiddlewareFinding>.Empty,
                 ImmutableArray<PolicyFinding>.Empty)));
+        var hostBootstrap = HostBootstrap("global::MyApp.AppContext");
 
-        var analysis = new GeneratorAnalysis(
-            EffectiveOptions: Options(commandContextType: "MyApp.AppContext"),
-            HostBootstrap: new HostBootstrapInfo(
-                IsHostProject: true,
-                ExpectedContextFqn: "global::MyApp.AppContext",
-                UseTinyDispatcherCalls: ImmutableArray.Create(new UseTinyDispatcherCall(
-                    "global::MyApp.AppContext",
-                    Location.None))));
-
-        var result = new GeneratorValidationPhase().Validate(
-            analysis.HostBootstrap,
+        var diagnostics = new GeneratorValidationPhase().Validate(
+            hostBootstrap,
             extraction,
             new DiagnosticsCatalog(),
             ValidationRoslynDependencies.Create(compilation));
 
-        var diagnostic = Assert.Single(result.Diagnostics.ToImmutable());
+        var diagnostic = Assert.Single(diagnostics.ToImmutable());
         Assert.Equal("DISP101", diagnostic.Id);
-        Assert.Equal(2, result.Context.DiscoveryResult.Commands.Length);
     }
 
     [Fact]
@@ -185,28 +142,18 @@ public sealed class GeneratorValidationPhaseTests
                     "global::ExternalApp.OrderPolicy",
                     ImmutableArray<MiddlewareRef>.Empty,
                     ImmutableArray.Create("global::ExternalApp.OtherMissingCommand"))))));
+        var hostBootstrap = HostBootstrap("global::MyApp.AppContext");
 
-        var analysis = new GeneratorAnalysis(
-            EffectiveOptions: Options(commandContextType: "MyApp.AppContext"),
-            HostBootstrap: new HostBootstrapInfo(
-                IsHostProject: true,
-                ExpectedContextFqn: "global::MyApp.AppContext",
-                UseTinyDispatcherCalls: ImmutableArray.Create(new UseTinyDispatcherCall(
-                    "global::MyApp.AppContext",
-                    Location.None))));
-
-        var result = new GeneratorValidationPhase().Validate(
-            analysis.HostBootstrap,
+        var diagnostics = new GeneratorValidationPhase().Validate(
+            hostBootstrap,
             extraction,
             new DiagnosticsCatalog(),
             ValidationRoslynDependencies.Create(compilation));
 
         Assert.Collection(
-            result.Diagnostics.ToImmutable(),
+            diagnostics.ToImmutable(),
             diagnostic => Assert.Equal("DISP410", diagnostic.Id),
             diagnostic => Assert.Equal("DISP411", diagnostic.Id));
-        Assert.True(result.Context.PerCommand.ContainsKey("global::ExternalApp.MissingCommand"));
-        Assert.True(result.Context.Policies.ContainsKey("global::ExternalApp.OrderPolicy"));
     }
 
     private static CSharpCompilation CreateCompilation()
@@ -222,11 +169,6 @@ public sealed class GeneratorValidationPhaseTests
             options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
     }
 
-    private static InvocationExpressionSyntax ParseInvocation(string expression)
-    {
-        return Assert.IsType<InvocationExpressionSyntax>(SyntaxFactory.ParseExpression(expression));
-    }
-
     private static DiscoveryResult EmptyDiscovery()
     {
         return new DiscoveryResult(
@@ -234,16 +176,25 @@ public sealed class GeneratorValidationPhaseTests
             ImmutableArray<QueryHandlerContract>.Empty);
     }
 
-    private static GeneratorOptions Options(string? commandContextType)
+    private static HostBootstrapInfo HostBootstrap(string expectedContextFqn)
     {
-        return new GeneratorOptions(
-            GeneratedNamespace: "TinyDispatcher.Generated",
-            EmitDiExtensions: true,
-            EmitHandlerRegistrations: true,
-            IncludeNamespacePrefix: null,
-            CommandContextType: commandContextType,
-            EmitPipelineMap: false,
-            PipelineMapFormat: null);
+        var call = new UseTinyDispatcherCall(expectedContextFqn, Location.None);
+
+        return new HostBootstrapInfo(
+            IsHostProject: true,
+            ExpectedContextFqn: expectedContextFqn,
+            UseTinyDispatcherCalls: ImmutableArray.Create(call),
+            Contexts: ImmutableArray.Create(new HostContextInfo(
+                expectedContextFqn,
+                ImmutableArray.Create(call))));
+    }
+
+    private static HostBootstrapInfo NonHostBootstrap()
+    {
+        return new HostBootstrapInfo(
+            IsHostProject: false,
+            ExpectedContextFqn: string.Empty,
+            UseTinyDispatcherCalls: ImmutableArray<UseTinyDispatcherCall>.Empty);
     }
 
     private static ReferencedAssemblyContributions Referenced(params ReferencedAssemblyContribution[] assemblies)

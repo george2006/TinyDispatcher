@@ -112,6 +112,28 @@ public sealed class PipelineSourceWriterTests
         Assert.Equal(Count(source, "{"), Count(source, "}"));
     }
 
+    [Fact]
+    public void Contribution_registration_method_is_named_by_context()
+    {
+        var plan = Create_plan(
+            globalPipeline: Create_pipeline(
+                "TinyDispatcherGlobalPipeline",
+                true,
+                "TCommand",
+                new[] { Mw("global::MyApp.G1", 2) }));
+
+        var source = PipelineSourceWriter.Write(plan);
+
+        Assert.Contains(
+            "private static void AddGeneratedPipelines_MyApp_AppContext(IServiceCollection services)",
+            source,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "static partial void AddGeneratedPipelines(IServiceCollection services)",
+            source,
+            StringComparison.Ordinal);
+    }
+
     // ------------------------------------------------------------
     // Plan builders
     // ------------------------------------------------------------

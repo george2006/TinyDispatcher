@@ -1,5 +1,7 @@
 #nullable enable
 
+using System;
+using System.Collections.Immutable;
 using TinyDispatcher.SourceGen.Diagnostics;
 using TinyDispatcher.SourceGen.Generator.Generation;
 using TinyDispatcher.SourceGen.Generator.Models;
@@ -8,77 +10,124 @@ namespace TinyDispatcher.SourceGen.Generator.Validation;
 
 internal sealed class GeneratorValidationPhase
 {
-    public GeneratorValidationResult Validate(
+    public DiagnosticBag Validate(
         HostBootstrapInfo hostBootstrap,
         GeneratorExtraction extraction,
         DiagnosticsCatalog diagnosticsCatalog,
         ValidationRoslynDependencies roslynDependencies)
     {
-        var validationContext = BuildValidationContext(
+        var validationContexts = BuildValidationContexts(
             hostBootstrap,
             extraction,
             diagnosticsCatalog);
-        var diagnostics = GeneratorValidator.Validate(
-            validationContext,
-            roslynDependencies.CommandMiddlewareInterface,
-            roslynDependencies.MiddlewareTypeResolver);
+        var diagnostics = new DiagnosticBag();
 
-        return new GeneratorValidationResult(validationContext, diagnostics);
+        for (var i = 0; i < validationContexts.Length; i++)
+        {
+            var contextDiagnostics = GeneratorValidator.Validate(
+                validationContexts[i],
+                roslynDependencies.CommandMiddlewareInterface,
+                roslynDependencies.MiddlewareTypeResolver);
+
+            diagnostics.AddRange(contextDiagnostics.ToImmutable());
+        }
+
+        return diagnostics;
+    }
+
+    private static ImmutableArray<GeneratorValidationContext> BuildValidationContexts(
+        HostBootstrapInfo hostBootstrap,
+        GeneratorExtraction extraction,
+        DiagnosticsCatalog diagnosticsCatalog)
+    {
+        var hostContexts = GetHostContexts(hostBootstrap);
+        var validationContexts = ImmutableArray.CreateBuilder<GeneratorValidationContext>(hostContexts.Length);
+
+        for (var i = 0; i < hostContexts.Length; i++)
+        {
+            var hostContext = hostContexts[i];
+            validationContexts.Add(BuildValidationContext(
+                hostBootstrap,
+                extraction,
+                diagnosticsCatalog,
+                hostContext.ContextTypeFqn,
+                hostContext.UseTinyDispatcherCalls));
+        }
+
+        return validationContexts.ToImmutable();
     }
 
     private static GeneratorValidationContext BuildValidationContext(
         HostBootstrapInfo hostBootstrap,
         GeneratorExtraction extraction,
-        DiagnosticsCatalog diagnosticsCatalog)
+        DiagnosticsCatalog diagnosticsCatalog,
+        string contextFqn,
+        ImmutableArray<UseTinyDispatcherCall> useTinyDispatcherCalls)
     {
-        var discovery = BuildDiscovery(hostBootstrap, extraction);
-        var localPipeline = SelectLocalPipeline(hostBootstrap, extraction);
-        var pipeline = BuildPipeline(hostBootstrap, extraction, localPipeline);
+        var discovery = BuildDiscovery(hostBootstrap, extraction, contextFqn);
+        var localPipeline = SelectLocalPipeline(extraction, contextFqn);
+        var pipeline = BuildPipeline(hostBootstrap, extraction, contextFqn, localPipeline);
 
         return new GeneratorValidationContext.Builder(
                 discovery,
                 diagnosticsCatalog)
             .WithHostGate(isHost: hostBootstrap.IsHostProject)
-            .WithUseTinyDispatcherCalls(hostBootstrap.UseTinyDispatcherCalls)
-            .WithExpectedContext(hostBootstrap.ExpectedContextFqn)
+            .WithUseTinyDispatcherCalls(useTinyDispatcherCalls)
+            .WithExpectedContext(contextFqn)
             .WithReferencedContributions(extraction.ReferencedContributions)
             .WithLocalPipelineConfig(localPipeline)
             .WithPipelineConfig(pipeline)
             .Build();
     }
 
+    private static ImmutableArray<HostContextInfo> GetHostContexts(HostBootstrapInfo hostBootstrap)
+    {
+        if (!hostBootstrap.Contexts.IsDefaultOrEmpty)
+        {
+            return hostBootstrap.Contexts;
+        }
+
+        return ImmutableArray.Create(new HostContextInfo(
+            hostBootstrap.ExpectedContextFqn,
+            hostBootstrap.UseTinyDispatcherCalls));
+    }
+
     private static DiscoveryResult BuildDiscovery(
         HostBootstrapInfo hostBootstrap,
-        GeneratorExtraction extraction)
+        GeneratorExtraction extraction,
+        string contextFqn)
     {
-        if (!ShouldMergeReferencedContributions(hostBootstrap))
-            return extraction.Discovery;
+        var localDiscovery = FilterDiscoveryByContext(extraction.Discovery, contextFqn);
+
+        if (!ShouldMergeReferencedContributions(hostBootstrap, contextFqn))
+            return localDiscovery;
 
         return ReferencedAssemblyContributionComposer.MergeDiscovery(
-            extraction.Discovery,
+            localDiscovery,
             extraction.ReferencedContributions,
-            hostBootstrap.ExpectedContextFqn);
+            contextFqn);
     }
 
     private static PipelineConfig BuildPipeline(
         HostBootstrapInfo hostBootstrap,
         GeneratorExtraction extraction,
+        string contextFqn,
         PipelineConfig localPipeline)
     {
-        if (!ShouldMergeReferencedContributions(hostBootstrap))
+        if (!ShouldMergeReferencedContributions(hostBootstrap, contextFqn))
             return localPipeline;
 
         return ReferencedAssemblyContributionComposer.MergePipelineConfig(
             localPipeline,
             extraction.ReferencedContributions,
-            hostBootstrap.ExpectedContextFqn);
+            contextFqn);
     }
 
     private static PipelineConfig SelectLocalPipeline(
-        HostBootstrapInfo hostBootstrap,
-        GeneratorExtraction extraction)
+        GeneratorExtraction extraction,
+        string contextFqn)
     {
-        var hasExpectedContext = !string.IsNullOrWhiteSpace(hostBootstrap.ExpectedContextFqn);
+        var hasExpectedContext = !string.IsNullOrWhiteSpace(contextFqn);
         if (!hasExpectedContext)
         {
             return PipelineConfig.Empty;
@@ -95,8 +144,8 @@ internal sealed class GeneratorValidationPhase
             var contextPipeline = extraction.ContextPipelines[i];
             var isExpectedContext = string.Equals(
                 contextPipeline.ContextTypeFqn,
-                hostBootstrap.ExpectedContextFqn,
-                System.StringComparison.Ordinal);
+                contextFqn,
+                StringComparison.Ordinal);
 
             if (isExpectedContext)
             {
@@ -107,9 +156,41 @@ internal sealed class GeneratorValidationPhase
         return PipelineConfig.Empty;
     }
 
-    private static bool ShouldMergeReferencedContributions(HostBootstrapInfo hostBootstrap)
+    private static DiscoveryResult FilterDiscoveryByContext(
+        DiscoveryResult discovery,
+        string contextFqn)
+    {
+        if (string.IsNullOrWhiteSpace(contextFqn))
+        {
+            return discovery;
+        }
+
+        var commands = ImmutableArray.CreateBuilder<HandlerContract>();
+
+        for (var i = 0; i < discovery.Commands.Length; i++)
+        {
+            var command = discovery.Commands[i];
+            var isExpectedContext = string.Equals(
+                command.ContextTypeFqn,
+                contextFqn,
+                StringComparison.Ordinal);
+
+            if (isExpectedContext)
+            {
+                commands.Add(command);
+            }
+        }
+
+        return new DiscoveryResult(
+            commands.ToImmutable(),
+            discovery.Queries);
+    }
+
+    private static bool ShouldMergeReferencedContributions(
+        HostBootstrapInfo hostBootstrap,
+        string contextFqn)
     {
         return hostBootstrap.IsHostProject &&
-               !string.IsNullOrWhiteSpace(hostBootstrap.ExpectedContextFqn);
+               !string.IsNullOrWhiteSpace(contextFqn);
     }
 }

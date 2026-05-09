@@ -57,6 +57,17 @@ internal static class PipelineNameFactory
         return SanitizeName(typeName);
     }
 
+    public static string PipelineRegistrationMethodName(string contextFqn)
+    {
+        var contextName = SanitizeTypeName(contextFqn);
+        if (string.IsNullOrWhiteSpace(contextName))
+        {
+            return "AddGeneratedPipelines";
+        }
+
+        return "AddGeneratedPipelines_" + contextName;
+    }
+
     private static string RemoveGlobalPrefix(string value)
     {
         if (value.StartsWith("global::", StringComparison.Ordinal))
