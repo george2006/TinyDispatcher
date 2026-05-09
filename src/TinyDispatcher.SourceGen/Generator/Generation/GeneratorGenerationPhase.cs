@@ -19,55 +19,55 @@ internal sealed class GeneratorGenerationPhase
         GeneratorExtraction extraction,
         GeneratorValidationResult validation)
     {
-        var generationPlan = BuildGenerationPlan(options, validation.Context, extraction);
+        var contextPlan = BuildContextGenerationPlan(options, validation.Context, extraction);
 
-        EmitSharedSources(context, generationPlan);
-        EmitPipelineSourceIfNeeded(context, generationPlan);
+        EmitSharedSources(context, contextPlan);
+        EmitPipelineSourceIfNeeded(context, contextPlan);
     }
 
     private static void EmitSharedSources(
         IGeneratorContext context,
-        GenerationPlan generationPlan)
+        ContextGenerationPlan contextPlan)
     {
         var moduleInitializerPlan = ModuleInitializerPlanner.Build(
-            generationPlan.Discovery,
-            generationPlan.EmitOptions,
-            hasPipelineContributions: generationPlan.ShouldEmitPipelines);
+            contextPlan.Discovery,
+            contextPlan.EmitOptions,
+            hasPipelineContributions: contextPlan.ShouldEmitPipelines);
 
         new ModuleInitializerEmitter().Emit(context, moduleInitializerPlan);
         new EmptyPipelineContributionEmitter().Emit(
             context,
-            generationPlan.LocalDiscovery,
-            generationPlan.PipelineContributions,
-            generationPlan.EmitOptions);
+            contextPlan.LocalDiscovery,
+            contextPlan.PipelineContributions,
+            contextPlan.EmitOptions);
 
         var handlerRegistrationsPlan = HandlerRegistrationsPlanner.Build(
-            generationPlan.LocalDiscovery,
-            generationPlan.EmitOptions);
+            contextPlan.LocalDiscovery,
+            contextPlan.EmitOptions);
 
         new HandlerRegistrationsEmitter().Emit(context, handlerRegistrationsPlan);
 
         var pipelineMapsPlan = PipelineMapsPlanner.Build(
-            generationPlan.Discovery,
-            generationPlan.PipelineContributions,
-            generationPlan.EmitOptions);
+            contextPlan.Discovery,
+            contextPlan.PipelineContributions,
+            contextPlan.EmitOptions);
 
         new PipelineMapsEmitter().Emit(context, pipelineMapsPlan);
     }
 
     private static void EmitPipelineSourceIfNeeded(
         IGeneratorContext context,
-        GenerationPlan generationPlan)
+        ContextGenerationPlan contextPlan)
     {
-        if (!generationPlan.ShouldEmitPipelines)
+        if (!contextPlan.ShouldEmitPipelines)
         {
             return;
         }
 
         var pipelinePlan = PipelinePlanner.Build(
-            generationPlan.PipelineContributions,
-            generationPlan.Discovery,
-            generationPlan.EmitOptions);
+            contextPlan.PipelineContributions,
+            contextPlan.Discovery,
+            contextPlan.EmitOptions);
 
         if (!pipelinePlan.ShouldEmit)
         {
@@ -77,7 +77,7 @@ internal sealed class GeneratorGenerationPhase
         new PipelineEmitter().Emit(context, pipelinePlan);
     }
 
-    private static GenerationPlan BuildGenerationPlan(
+    private static ContextGenerationPlan BuildContextGenerationPlan(
         GeneratorOptions options,
         GeneratorValidationContext validationContext,
         GeneratorExtraction extraction)
@@ -94,7 +94,7 @@ internal sealed class GeneratorGenerationPhase
         var shouldEmitPipelines = ShouldEmitPipelines(validationContext, pipelineConfig);
         var pipelineContributions = PipelineContributions.Create(pipelineConfig);
 
-        return new GenerationPlan(
+        return new ContextGenerationPlan(
             LocalDiscovery: extraction.Discovery,
             Discovery: discovery,
             EmitOptions: emitOptions,
@@ -143,7 +143,7 @@ internal sealed class GeneratorGenerationPhase
                pipeline.Policies.Count > 0;
     }
 
-    private readonly record struct GenerationPlan(
+    private readonly record struct ContextGenerationPlan(
         DiscoveryResult LocalDiscovery,
         DiscoveryResult Discovery,
         GeneratorOptions EmitOptions,
