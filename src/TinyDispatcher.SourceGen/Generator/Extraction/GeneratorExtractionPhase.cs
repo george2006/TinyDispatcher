@@ -21,12 +21,12 @@ internal sealed class GeneratorExtractionPhase
         GeneratorOptions options)
     {
         var discovery = _handlerDiscoveryExtractor.Extract(compilation, handlerSymbols, options);
-        var pipeline = _pipelineConfigExtractor.Extract(confirmedBootstrapLambdas);
+        var contextPipelines = _pipelineConfigExtractor.ExtractByContext(confirmedBootstrapLambdas);
         var referencedContributions = _referencedAssemblyContributionExtractor.Extract(compilation);
 
         return new GeneratorExtraction(
             discovery,
-            pipeline,
-            referencedContributions);
+            referencedContributions,
+            contextPipelines);
     }
 }

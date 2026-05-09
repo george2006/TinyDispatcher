@@ -32,7 +32,8 @@ internal sealed class GeneratorValidationPhase
         DiagnosticsCatalog diagnosticsCatalog)
     {
         var discovery = BuildDiscovery(hostBootstrap, extraction);
-        var pipeline = BuildPipeline(hostBootstrap, extraction);
+        var localPipeline = SelectLocalPipeline(hostBootstrap, extraction);
+        var pipeline = BuildPipeline(hostBootstrap, extraction, localPipeline);
 
         return new GeneratorValidationContext.Builder(
                 discovery,
@@ -41,7 +42,7 @@ internal sealed class GeneratorValidationPhase
             .WithUseTinyDispatcherCalls(hostBootstrap.UseTinyDispatcherCalls)
             .WithExpectedContext(hostBootstrap.ExpectedContextFqn)
             .WithReferencedContributions(extraction.ReferencedContributions)
-            .WithLocalPipelineConfig(extraction.Pipeline)
+            .WithLocalPipelineConfig(localPipeline)
             .WithPipelineConfig(pipeline)
             .Build();
     }
@@ -61,15 +62,49 @@ internal sealed class GeneratorValidationPhase
 
     private static PipelineConfig BuildPipeline(
         HostBootstrapInfo hostBootstrap,
-        GeneratorExtraction extraction)
+        GeneratorExtraction extraction,
+        PipelineConfig localPipeline)
     {
         if (!ShouldMergeReferencedContributions(hostBootstrap))
-            return extraction.Pipeline;
+            return localPipeline;
 
         return ReferencedAssemblyContributionComposer.MergePipelineConfig(
-            extraction.Pipeline,
+            localPipeline,
             extraction.ReferencedContributions,
             hostBootstrap.ExpectedContextFqn);
+    }
+
+    private static PipelineConfig SelectLocalPipeline(
+        HostBootstrapInfo hostBootstrap,
+        GeneratorExtraction extraction)
+    {
+        var hasExpectedContext = !string.IsNullOrWhiteSpace(hostBootstrap.ExpectedContextFqn);
+        if (!hasExpectedContext)
+        {
+            return PipelineConfig.Empty;
+        }
+
+        var hasNoContextPipelines = extraction.ContextPipelines.IsDefaultOrEmpty;
+        if (hasNoContextPipelines)
+        {
+            return PipelineConfig.Empty;
+        }
+
+        for (var i = 0; i < extraction.ContextPipelines.Length; i++)
+        {
+            var contextPipeline = extraction.ContextPipelines[i];
+            var isExpectedContext = string.Equals(
+                contextPipeline.ContextTypeFqn,
+                hostBootstrap.ExpectedContextFqn,
+                System.StringComparison.Ordinal);
+
+            if (isExpectedContext)
+            {
+                return contextPipeline.Pipeline;
+            }
+        }
+
+        return PipelineConfig.Empty;
     }
 
     private static bool ShouldMergeReferencedContributions(HostBootstrapInfo hostBootstrap)

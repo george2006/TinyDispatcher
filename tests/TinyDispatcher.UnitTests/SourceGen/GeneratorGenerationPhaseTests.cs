@@ -22,9 +22,7 @@ public sealed class GeneratorGenerationPhaseTests
         var context = new CapturingGeneratorContext();
         var compilation = CreateCompilation();
         var discovery = EmptyDiscovery();
-        var extraction = new GeneratorExtraction(
-            discovery,
-            new PipelineConfig(
+        var pipeline = new PipelineConfig(
                 ImmutableArray<MiddlewareRef>.Empty,
                 ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
                 ImmutableDictionary<string, PolicySpec>.Empty.Add(
@@ -32,8 +30,8 @@ public sealed class GeneratorGenerationPhaseTests
                     new PolicySpec(
                         "global::MyApp.Policy",
                         ImmutableArray<MiddlewareRef>.Empty,
-                        ImmutableArray<string>.Empty))),
-            ReferencedAssemblyContributions.Empty);
+                        ImmutableArray<string>.Empty)));
+        var extraction = Extraction(discovery, pipeline);
 
         var analysis = new GeneratorAnalysis(
             EffectiveOptions: Options(commandContextType: "MyApp.AppContext"),
@@ -48,7 +46,7 @@ public sealed class GeneratorGenerationPhaseTests
                     new DiagnosticsCatalog())
                 .WithHostGate(isHost: false)
                 .WithExpectedContext("global::MyApp.AppContext")
-                .WithPipelineConfig(extraction.Pipeline)
+                .WithPipelineConfig(pipeline)
                 .Build(),
             Diagnostics: new DiagnosticBag());
 
@@ -75,20 +73,18 @@ public sealed class GeneratorGenerationPhaseTests
         var discovery = new DiscoveryResult(
             ImmutableArray.Create(command),
             ImmutableArray<QueryHandlerContract>.Empty);
-        var extraction = new GeneratorExtraction(
-            discovery,
-            new PipelineConfig(
+        var pipeline = new PipelineConfig(
                 ImmutableArray<MiddlewareRef>.Empty,
                 ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
-                ImmutableDictionary<string, PolicySpec>.Empty),
-            ReferencedAssemblyContributions.Empty);
+                ImmutableDictionary<string, PolicySpec>.Empty);
+        var extraction = Extraction(discovery, pipeline);
         var validation = new GeneratorValidationResult(
             Context: new GeneratorValidationContext.Builder(
                     discovery,
                     new DiagnosticsCatalog())
                 .WithHostGate(isHost: true)
                 .WithExpectedContext("global::MyApp.AppContext")
-                .WithPipelineConfig(extraction.Pipeline)
+                .WithPipelineConfig(pipeline)
                 .Build(),
             Diagnostics: new DiagnosticBag());
 
@@ -112,12 +108,13 @@ public sealed class GeneratorGenerationPhaseTests
     {
         var context = new CapturingGeneratorContext();
         var discovery = EmptyDiscovery();
-        var extraction = new GeneratorExtraction(
-            discovery,
-            new PipelineConfig(
+        var pipeline = new PipelineConfig(
                 ImmutableArray.Create(new MiddlewareRef("global::MyApp.GlobalLogMiddleware", 2)),
                 ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
-                ImmutableDictionary<string, PolicySpec>.Empty),
+                ImmutableDictionary<string, PolicySpec>.Empty);
+        var extraction = Extraction(
+            discovery,
+            pipeline,
             Referenced(
                 new ReferencedAssemblyContribution(
                     "ExternalApp",
@@ -136,7 +133,7 @@ public sealed class GeneratorGenerationPhaseTests
                     new DiagnosticsCatalog())
                 .WithHostGate(isHost: true)
                 .WithExpectedContext("global::MyApp.AppContext")
-                .WithPipelineConfig(extraction.Pipeline)
+                .WithPipelineConfig(pipeline)
                 .Build(),
             Diagnostics: new DiagnosticBag());
 
@@ -146,16 +143,16 @@ public sealed class GeneratorGenerationPhaseTests
             extraction,
             validation);
 
-        var pipeline = Assert.Single(
+        var pipelineSource = Assert.Single(
             context.Sources,
             source => source.HintName == "TinyDispatcherPipeline.g.cs");
 
         Assert.Contains(
             "global::TinyDispatcher.ICommandPipeline<global::ExternalApp.CreateOrder, global::MyApp.AppContext>",
-            pipeline.Content);
+            pipelineSource.Content);
         Assert.Contains(
             "TinyDispatcherGlobalPipeline<global::ExternalApp.CreateOrder>",
-            pipeline.Content);
+            pipelineSource.Content);
     }
 
     [Fact]
@@ -163,12 +160,13 @@ public sealed class GeneratorGenerationPhaseTests
     {
         var context = new CapturingGeneratorContext();
         var discovery = EmptyDiscovery();
-        var extraction = new GeneratorExtraction(
-            discovery,
-            new PipelineConfig(
+        var pipeline = new PipelineConfig(
                 ImmutableArray.Create(new MiddlewareRef("global::MyApp.GlobalLogMiddleware", 2)),
                 ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
-                ImmutableDictionary<string, PolicySpec>.Empty),
+                ImmutableDictionary<string, PolicySpec>.Empty);
+        var extraction = Extraction(
+            discovery,
+            pipeline,
             Referenced(
                 new ReferencedAssemblyContribution(
                     "ExternalApp",
@@ -192,7 +190,7 @@ public sealed class GeneratorGenerationPhaseTests
                     new DiagnosticsCatalog())
                 .WithHostGate(isHost: true)
                 .WithExpectedContext("global::MyApp.AppContext")
-                .WithPipelineConfig(extraction.Pipeline)
+                .WithPipelineConfig(pipeline)
                 .Build(),
             Diagnostics: new DiagnosticBag());
 
@@ -202,22 +200,22 @@ public sealed class GeneratorGenerationPhaseTests
             extraction,
             validation);
 
-        var pipeline = Assert.Single(
+        var pipelineSource = Assert.Single(
             context.Sources,
             source => source.HintName == "TinyDispatcherPipeline.g.cs");
 
         Assert.Contains(
             "internal sealed class TinyDispatcherPipeline_CreateOrder",
-            pipeline.Content);
+            pipelineSource.Content);
         Assert.Contains(
             "global::ExternalApp.PolicyMiddleware",
-            pipeline.Content);
+            pipelineSource.Content);
         Assert.Contains(
             "global::ExternalApp.OrderMiddleware",
-            pipeline.Content);
+            pipelineSource.Content);
         Assert.Contains(
             "global::ExternalApp.GlobalMiddleware",
-            pipeline.Content);
+            pipelineSource.Content);
     }
 
     [Fact]
@@ -225,12 +223,13 @@ public sealed class GeneratorGenerationPhaseTests
     {
         var context = new CapturingGeneratorContext();
         var discovery = EmptyDiscovery();
-        var extraction = new GeneratorExtraction(
-            discovery,
-            new PipelineConfig(
+        var pipeline = new PipelineConfig(
                 ImmutableArray.Create(new MiddlewareRef("global::MyApp.GlobalLogMiddleware", 2)),
                 ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
-                ImmutableDictionary<string, PolicySpec>.Empty),
+                ImmutableDictionary<string, PolicySpec>.Empty);
+        var extraction = Extraction(
+            discovery,
+            pipeline,
             Referenced(
                 new ReferencedAssemblyContribution(
                     "Matching",
@@ -266,7 +265,7 @@ public sealed class GeneratorGenerationPhaseTests
                     new DiagnosticsCatalog())
                 .WithHostGate(isHost: true)
                 .WithExpectedContext("global::MyApp.AppContext")
-                .WithPipelineConfig(extraction.Pipeline)
+                .WithPipelineConfig(pipeline)
                 .Build(),
             Diagnostics: new DiagnosticBag());
 
@@ -276,16 +275,16 @@ public sealed class GeneratorGenerationPhaseTests
             extraction,
             validation);
 
-        var pipeline = Assert.Single(
+        var pipelineSource = Assert.Single(
             context.Sources,
             source => source.HintName == "TinyDispatcherPipeline.g.cs");
 
-        Assert.Contains("global::ExternalApp.CreateOrder", pipeline.Content);
-        Assert.Contains("global::ExternalApp.GlobalMiddleware", pipeline.Content);
-        Assert.DoesNotContain("global::OtherApp.CancelOrder", pipeline.Content);
-        Assert.DoesNotContain("global::OtherApp.GlobalMiddleware", pipeline.Content);
-        Assert.DoesNotContain("global::OtherApp.CancelMiddleware", pipeline.Content);
-        Assert.DoesNotContain("global::OtherApp.CancelPolicyMiddleware", pipeline.Content);
+        Assert.Contains("global::ExternalApp.CreateOrder", pipelineSource.Content);
+        Assert.Contains("global::ExternalApp.GlobalMiddleware", pipelineSource.Content);
+        Assert.DoesNotContain("global::OtherApp.CancelOrder", pipelineSource.Content);
+        Assert.DoesNotContain("global::OtherApp.GlobalMiddleware", pipelineSource.Content);
+        Assert.DoesNotContain("global::OtherApp.CancelMiddleware", pipelineSource.Content);
+        Assert.DoesNotContain("global::OtherApp.CancelPolicyMiddleware", pipelineSource.Content);
     }
 
     private static CSharpCompilation CreateCompilation()
@@ -323,4 +322,16 @@ public sealed class GeneratorGenerationPhaseTests
     private static ReferencedAssemblyContributions Referenced(params ReferencedAssemblyContribution[] assemblies)
         => new(ImmutableArray.Create(assemblies));
 
+    private static GeneratorExtraction Extraction(
+        DiscoveryResult discovery,
+        PipelineConfig pipeline,
+        ReferencedAssemblyContributions? referencedContributions = null)
+    {
+        return new GeneratorExtraction(
+            discovery,
+            referencedContributions ?? ReferencedAssemblyContributions.Empty,
+            ImmutableArray.Create(new ContextPipelineConfig(
+                "global::MyApp.AppContext",
+                pipeline)));
+    }
 }

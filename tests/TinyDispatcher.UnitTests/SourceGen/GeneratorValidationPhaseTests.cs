@@ -21,13 +21,11 @@ public sealed class GeneratorValidationPhaseTests
         var compilation = CreateCompilation();
         var invocation = ParseInvocation("services.UseTinyDispatcher<MyApp.AppContext>(_ => { })");
         var discovery = EmptyDiscovery();
-        var extraction = new GeneratorExtraction(
-            discovery,
-            new PipelineConfig(
+        var pipeline = new PipelineConfig(
                 ImmutableArray<MiddlewareRef>.Empty,
                 ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
-                ImmutableDictionary<string, PolicySpec>.Empty),
-            ReferencedAssemblyContributions.Empty);
+                ImmutableDictionary<string, PolicySpec>.Empty);
+        var extraction = Extraction(discovery, pipeline);
 
         var analysis = new GeneratorAnalysis(
             EffectiveOptions: Options(commandContextType: "MyApp.AppContext"),
@@ -56,13 +54,11 @@ public sealed class GeneratorValidationPhaseTests
     public void Validate_marks_project_as_non_host_when_no_UseTinyDispatcher_calls_exist()
     {
         var compilation = CreateCompilation();
-        var extraction = new GeneratorExtraction(
-            EmptyDiscovery(),
-            new PipelineConfig(
+        var pipeline = new PipelineConfig(
                 ImmutableArray<MiddlewareRef>.Empty,
                 ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
-                ImmutableDictionary<string, PolicySpec>.Empty),
-            ReferencedAssemblyContributions.Empty);
+                ImmutableDictionary<string, PolicySpec>.Empty);
+        var extraction = Extraction(EmptyDiscovery(), pipeline);
 
         var analysis = new GeneratorAnalysis(
             EffectiveOptions: Options(commandContextType: null),
@@ -89,7 +85,7 @@ public sealed class GeneratorValidationPhaseTests
     {
         var compilation = CreateCompilation();
         var discovery = EmptyDiscovery();
-        var extraction = new GeneratorExtraction(
+        var extraction = Extraction(
             discovery,
             PipelineConfig.Empty,
             Referenced(new ReferencedAssemblyContribution(
@@ -122,7 +118,7 @@ public sealed class GeneratorValidationPhaseTests
             ValidationRoslynDependencies.Create(compilation));
 
         Assert.Same(discovery, result.Context.DiscoveryResult);
-        Assert.Same(extraction.Pipeline, result.Context.Pipeline);
+        Assert.Same(PipelineConfig.Empty, result.Context.Pipeline);
         Assert.Empty(result.Diagnostics.ToImmutable());
     }
 
@@ -136,7 +132,7 @@ public sealed class GeneratorValidationPhaseTests
                 "global::MyApp.CreateOrderHandler",
                 "global::MyApp.AppContext")),
             ImmutableArray<QueryHandlerContract>.Empty);
-        var extraction = new GeneratorExtraction(
+        var extraction = Extraction(
             discovery,
             PipelineConfig.Empty,
             Referenced(new ReferencedAssemblyContribution(
@@ -174,7 +170,7 @@ public sealed class GeneratorValidationPhaseTests
     public void Validate_reports_unknown_command_warnings_for_referenced_pipeline_contributions()
     {
         var compilation = CreateCompilation();
-        var extraction = new GeneratorExtraction(
+        var extraction = Extraction(
             EmptyDiscovery(),
             PipelineConfig.Empty,
             Referenced(new ReferencedAssemblyContribution(
@@ -253,5 +249,18 @@ public sealed class GeneratorValidationPhaseTests
     private static ReferencedAssemblyContributions Referenced(params ReferencedAssemblyContribution[] assemblies)
     {
         return new ReferencedAssemblyContributions(ImmutableArray.Create(assemblies));
+    }
+
+    private static GeneratorExtraction Extraction(
+        DiscoveryResult discovery,
+        PipelineConfig pipeline,
+        ReferencedAssemblyContributions? referencedContributions = null)
+    {
+        return new GeneratorExtraction(
+            discovery,
+            referencedContributions ?? ReferencedAssemblyContributions.Empty,
+            ImmutableArray.Create(new ContextPipelineConfig(
+                "global::MyApp.AppContext",
+                pipeline)));
     }
 }
