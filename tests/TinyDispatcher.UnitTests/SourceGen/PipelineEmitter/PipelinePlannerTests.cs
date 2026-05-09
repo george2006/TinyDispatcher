@@ -177,7 +177,7 @@ public sealed class PipelinePlannerTests
     }
 
     [Fact]
-    public void Build_applies_pipeline_class_suffix_to_generated_pipeline_types()
+    public void Build_uses_context_name_in_generated_pipeline_types()
     {
         var global = ImmutableArray.Create(Mw("global::MyApp.GlobalLogMiddleware", 2));
         var perCommand = ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty.Add(
@@ -196,7 +196,7 @@ public sealed class PipelinePlannerTests
             Contributions(global, perCommand, policies),
             discovery,
             options,
-            pipelineClassSuffix: "_MyApp_AppContext");
+            pipelineContextName: "global::MyApp.AppContext");
 
         Assert.Equal("TinyDispatcherGlobalPipeline_MyApp_AppContext", plan.GlobalPipeline!.ClassName);
         Assert.Equal("TinyDispatcherPipeline_CmdA_MyApp_AppContext", plan.PerCommandPipelines[0].ClassName);

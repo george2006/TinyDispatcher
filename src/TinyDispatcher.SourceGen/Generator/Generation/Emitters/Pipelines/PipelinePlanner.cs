@@ -14,11 +14,12 @@ internal static class PipelinePlanner
         PipelineContributions contributions,
         DiscoveryResult discovery,
         GeneratorOptions options,
-        string pipelineClassSuffix = "")
+        string pipelineContextName = "")
     {
         var coreNamespace = "global::TinyDispatcher";
         var generatedNamespace = options.GeneratedNamespace;
         var contextType = PipelineTypeNames.NormalizeFqn(options.CommandContextType!);
+        var pipelineClassSuffix = BuildPipelineClassSuffix(pipelineContextName);
 
         var global = contributions.Globals;
         var hasGlobalMiddlewares = global.Length > 0;
@@ -225,6 +226,16 @@ internal static class PipelinePlanner
             hasPerCommandPipelines ||
             hasMiddlewareRegistrations ||
             hasServiceRegistrations;
+    }
+
+    private static string BuildPipelineClassSuffix(string pipelineContextName)
+    {
+        if (string.IsNullOrWhiteSpace(pipelineContextName))
+        {
+            return string.Empty;
+        }
+
+        return "_" + PipelineNameFactory.SanitizeTypeName(pipelineContextName);
     }
 }
 
