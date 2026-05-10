@@ -1,0 +1,75 @@
+using System.Collections.Immutable;
+using TinyDispatcher.SourceGen.Generator.Generation.Emitters;
+using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Handlers;
+using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Pipelines;
+
+namespace TinyDispatcher.SourceGen.Generator.Generation;
+
+internal sealed class AssemblyContributionGenerationPhase
+{
+    public void Generate(
+        IGeneratorContext context,
+        AssemblyContributionSourcePlan assemblyContribution,
+        HostGenerationSourcePlan hostGeneration)
+    {
+        new EmptyPipelineContributionEmitter().Emit(
+            context,
+            assemblyContribution.Discovery,
+            assemblyContribution.PipelineContributions,
+            assemblyContribution.EmitOptions,
+            GetPipelineRegistrationMethodNames(hostGeneration.Contexts),
+            GetPipelineContributionSources(hostGeneration.Contexts));
+
+        var handlerRegistrationsPlan = HandlerRegistrationsPlanner.Build(
+            assemblyContribution.Discovery,
+            assemblyContribution.EmitOptions);
+
+        new HandlerRegistrationsEmitter().Emit(context, handlerRegistrationsPlan);
+    }
+
+    private static ImmutableArray<string> GetPipelineRegistrationMethodNames(
+        ImmutableArray<HostContextSourcePlan> contextPlans)
+    {
+        if (contextPlans.IsDefaultOrEmpty)
+        {
+            return ImmutableArray<string>.Empty;
+        }
+
+        var methodNames = ImmutableArray.CreateBuilder<string>(contextPlans.Length);
+
+        for (var i = 0; i < contextPlans.Length; i++)
+        {
+            var pipelinePlan = contextPlans[i].PipelinePlan;
+            if (pipelinePlan is null)
+            {
+                continue;
+            }
+
+            methodNames.Add(PipelineNameFactory.PipelineRegistrationMethodName(
+                pipelinePlan.ContextFqn));
+        }
+
+        return methodNames.ToImmutable();
+    }
+
+    private static ImmutableArray<EmptyPipelineContributionEmitter.PipelineContributionSource> GetPipelineContributionSources(
+        ImmutableArray<HostContextSourcePlan> contextPlans)
+    {
+        if (contextPlans.IsDefaultOrEmpty)
+        {
+            return ImmutableArray<EmptyPipelineContributionEmitter.PipelineContributionSource>.Empty;
+        }
+
+        var sources = ImmutableArray.CreateBuilder<EmptyPipelineContributionEmitter.PipelineContributionSource>(contextPlans.Length);
+
+        for (var i = 0; i < contextPlans.Length; i++)
+        {
+            var contextPlan = contextPlans[i];
+            sources.Add(new EmptyPipelineContributionEmitter.PipelineContributionSource(
+                contextPlan.EmitOptions,
+                contextPlan.PipelineContributions));
+        }
+
+        return sources.ToImmutable();
+    }
+}

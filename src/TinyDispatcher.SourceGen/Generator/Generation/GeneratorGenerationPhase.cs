@@ -1,10 +1,6 @@
 #nullable enable
 
 using System.Collections.Immutable;
-using TinyDispatcher.SourceGen.Generator.Generation.Emitters;
-using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Handlers;
-using TinyDispatcher.SourceGen.Generator.Generation.Emitters.ModuleInitializer;
-using TinyDispatcher.SourceGen.Generator.Generation.Emitters.PipelineMaps;
 using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Generator.Options;
@@ -13,6 +9,9 @@ namespace TinyDispatcher.SourceGen.Generator.Generation;
 
 internal sealed class GeneratorGenerationPhase
 {
+    private readonly AssemblyContributionGenerationPhase _assemblyContributionGenerationPhase = new();
+    private readonly HostGenerationPhase _hostGenerationPhase = new();
+
     public void Generate(
         IGeneratorContext context,
         GeneratorOptions options,
@@ -21,81 +20,14 @@ internal sealed class GeneratorGenerationPhase
     {
         var generationPlan = BuildGenerationPlan(options, hostBootstrap, composition);
 
-        EmitAssemblyContributionSources(context, generationPlan);
-        EmitHostGenerationSources(context, generationPlan);
-    }
-
-    private static void EmitAssemblyContributionSources(
-        IGeneratorContext context,
-        SourceGenerationPlan generationPlan)
-    {
-        var assemblyContribution = generationPlan.AssemblyContribution;
-        new EmptyPipelineContributionEmitter().Emit(
+        _assemblyContributionGenerationPhase.Generate(
             context,
-            assemblyContribution.Discovery,
-            assemblyContribution.PipelineContributions,
-            assemblyContribution.EmitOptions,
-            GetPipelineRegistrationMethodNames(generationPlan.HostGeneration.Contexts),
-            GetPipelineContributionSources(generationPlan.HostGeneration.Contexts));
+            generationPlan.AssemblyContribution,
+            generationPlan.HostGeneration);
 
-        var handlerRegistrationsPlan = HandlerRegistrationsPlanner.Build(
-            assemblyContribution.Discovery,
-            assemblyContribution.EmitOptions);
-
-        new HandlerRegistrationsEmitter().Emit(context, handlerRegistrationsPlan);
-    }
-
-    private static void EmitHostGenerationSources(
-        IGeneratorContext context,
-        SourceGenerationPlan generationPlan)
-    {
-        var hostGeneration = generationPlan.HostGeneration;
-        var moduleInitializerPlan = ModuleInitializerPlanner.Build(
-            hostGeneration.Discovery,
-            hostGeneration.EmitOptions,
-            hasPipelineContributions: HasPipelinePlans(hostGeneration.Contexts));
-
-        new ModuleInitializerEmitter().Emit(context, moduleInitializerPlan);
-
-        EmitPipelineSources(context, hostGeneration);
-        EmitPipelineMaps(context, hostGeneration);
-    }
-
-    private static void EmitPipelineSources(
-        IGeneratorContext context,
-        HostGenerationSourcePlan hostGeneration)
-    {
-        for (var i = 0; i < hostGeneration.Contexts.Length; i++)
-        {
-            var pipelinePlan = hostGeneration.Contexts[i].PipelinePlan;
-            if (pipelinePlan is null)
-            {
-                continue;
-            }
-
-            new PipelineEmitter().Emit(context, pipelinePlan);
-        }
-    }
-
-    private static void EmitPipelineMaps(
-        IGeneratorContext context,
-        HostGenerationSourcePlan hostGeneration)
-    {
-        for (var i = 0; i < hostGeneration.Contexts.Length; i++)
-        {
-            var contextPlan = hostGeneration.Contexts[i];
-            if (!contextPlan.ShouldEmitPipelineMaps)
-            {
-                continue;
-            }
-
-            var pipelineMapsPlan = PipelineMapsPlanner.Build(
-                contextPlan.Discovery,
-                contextPlan.PipelineContributions,
-                contextPlan.EmitOptions);
-
-            new PipelineMapsEmitter().Emit(context, pipelineMapsPlan);
-        }
+        _hostGenerationPhase.Generate(
+            context,
+            generationPlan.HostGeneration);
     }
 
     private static SourceGenerationPlan BuildGenerationPlan(
@@ -112,7 +44,7 @@ internal sealed class GeneratorGenerationPhase
         return new SourceGenerationPlan(assemblyContribution, hostGeneration);
     }
 
-    private static PipelinePlan? BuildPipelinePlan(ContextSourcePlan contextPlan)
+    private static PipelinePlan? BuildPipelinePlan(HostContextSourcePlan contextPlan)
     {
         if (!contextPlan.ShouldEmitPipelines)
         {
@@ -145,7 +77,7 @@ internal sealed class GeneratorGenerationPhase
     private static HostGenerationSourcePlan BuildHostGenerationPlan(
         GeneratorOptions options,
         HostGenerationComposition hostGeneration,
-        ImmutableArray<ContextSourcePlan> contexts)
+        ImmutableArray<HostContextSourcePlan> contexts)
     {
         return new HostGenerationSourcePlan(
             Discovery: hostGeneration.Discovery,
@@ -153,13 +85,13 @@ internal sealed class GeneratorGenerationPhase
             Contexts: contexts);
     }
 
-    private static ImmutableArray<ContextSourcePlan> BuildPipelineGenerationPlans(
+    private static ImmutableArray<HostContextSourcePlan> BuildPipelineGenerationPlans(
         GeneratorOptions options,
         HostBootstrapInfo hostBootstrap,
         HostGenerationComposition hostGeneration)
     {
         var contextInputs = hostGeneration.Contexts;
-        var contextPlans = ImmutableArray.CreateBuilder<ContextSourcePlan>(contextInputs.Length);
+        var contextPlans = ImmutableArray.CreateBuilder<HostContextSourcePlan>(contextInputs.Length);
 
         for (var i = 0; i < contextInputs.Length; i++)
         {
@@ -184,7 +116,7 @@ internal sealed class GeneratorGenerationPhase
         return contextPlans.ToImmutable();
     }
 
-    private static ContextSourcePlan BuildContextGenerationPlan(
+    private static HostContextSourcePlan BuildContextGenerationPlan(
         GeneratorOptions options,
         bool shouldEmitPipelines,
         bool shouldEmitPipelineMaps,
@@ -193,7 +125,7 @@ internal sealed class GeneratorGenerationPhase
     {
         var pipelineContributions = PipelineContributions.Create(pipelineConfig);
 
-        return new ContextSourcePlan(
+        return new HostContextSourcePlan(
             Discovery: discovery,
             EmitOptions: options,
             ShouldEmitPipelines: shouldEmitPipelines,
@@ -265,86 +197,5 @@ internal sealed class GeneratorGenerationPhase
                pipeline.PerCommand.Count > 0 ||
                pipeline.Policies.Count > 0;
     }
-
-    private static ImmutableArray<string> GetPipelineRegistrationMethodNames(
-        ImmutableArray<ContextSourcePlan> contextPlans)
-    {
-        if (contextPlans.IsDefaultOrEmpty)
-        {
-            return ImmutableArray<string>.Empty;
-        }
-
-        var methodNames = ImmutableArray.CreateBuilder<string>(contextPlans.Length);
-
-        for (var i = 0; i < contextPlans.Length; i++)
-        {
-            var pipelinePlan = contextPlans[i].PipelinePlan;
-            if (pipelinePlan is null)
-            {
-                continue;
-            }
-
-            methodNames.Add(PipelineNameFactory.PipelineRegistrationMethodName(
-                pipelinePlan.ContextFqn));
-        }
-
-        return methodNames.ToImmutable();
-    }
-
-    private static ImmutableArray<EmptyPipelineContributionEmitter.PipelineContributionSource> GetPipelineContributionSources(
-        ImmutableArray<ContextSourcePlan> contextPlans)
-    {
-        if (contextPlans.IsDefaultOrEmpty)
-        {
-            return ImmutableArray<EmptyPipelineContributionEmitter.PipelineContributionSource>.Empty;
-        }
-
-        var sources = ImmutableArray.CreateBuilder<EmptyPipelineContributionEmitter.PipelineContributionSource>(contextPlans.Length);
-
-        for (var i = 0; i < contextPlans.Length; i++)
-        {
-            var contextPlan = contextPlans[i];
-            sources.Add(new EmptyPipelineContributionEmitter.PipelineContributionSource(
-                contextPlan.EmitOptions,
-                contextPlan.PipelineContributions));
-        }
-
-        return sources.ToImmutable();
-    }
-
-    private static bool HasPipelinePlans(ImmutableArray<ContextSourcePlan> contextPlans)
-    {
-        for (var i = 0; i < contextPlans.Length; i++)
-        {
-            if (contextPlans[i].PipelinePlan is not null)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private readonly record struct SourceGenerationPlan(
-        AssemblyContributionSourcePlan AssemblyContribution,
-        HostGenerationSourcePlan HostGeneration);
-
-    private readonly record struct AssemblyContributionSourcePlan(
-        DiscoveryResult Discovery,
-        GeneratorOptions EmitOptions,
-        PipelineContributions PipelineContributions);
-
-    private readonly record struct HostGenerationSourcePlan(
-        DiscoveryResult Discovery,
-        GeneratorOptions EmitOptions,
-        ImmutableArray<ContextSourcePlan> Contexts);
-
-    private readonly record struct ContextSourcePlan(
-        DiscoveryResult Discovery,
-        GeneratorOptions EmitOptions,
-        bool ShouldEmitPipelines,
-        bool ShouldEmitPipelineMaps,
-        PipelineContributions PipelineContributions,
-        PipelinePlan? PipelinePlan);
 }
 
