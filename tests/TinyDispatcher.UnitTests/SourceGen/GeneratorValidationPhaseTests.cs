@@ -182,7 +182,6 @@ public sealed class GeneratorValidationPhaseTests
         return new HostBootstrapInfo(
             IsHostProject: true,
             ConfiguredContextFqn: contextFqn,
-            UseTinyDispatcherCalls: ImmutableArray.Create(call),
             Contexts: ImmutableArray.Create(new HostContextInfo(
                 contextFqn,
                 ImmutableArray.Create(call))));
@@ -192,8 +191,7 @@ public sealed class GeneratorValidationPhaseTests
     {
         return new HostBootstrapInfo(
             IsHostProject: false,
-            ConfiguredContextFqn: string.Empty,
-            UseTinyDispatcherCalls: ImmutableArray<UseTinyDispatcherCall>.Empty);
+            ConfiguredContextFqn: string.Empty);
     }
 
     private static ReferencedAssemblyContributions Referenced(params ReferencedAssemblyContribution[] assemblies)

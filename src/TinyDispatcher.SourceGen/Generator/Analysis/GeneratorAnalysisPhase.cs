@@ -86,7 +86,6 @@ internal static class GeneratorAnalysisPhase
         return new HostBootstrapInfo(
             IsHostProject: useTinyCallsSyntax.Length > 0,
             ConfiguredContextFqn: GetConfiguredContextFqn(effectiveOptions),
-            UseTinyDispatcherCalls: useTinyDispatcherCalls,
             Contexts: BuildHostContexts(useTinyDispatcherCalls));
     }
 

@@ -136,7 +136,7 @@ internal sealed class GeneratorCompositionPhase
 
         return ImmutableArray.Create(new HostContextInfo(
             hostBootstrap.ConfiguredContextFqn,
-            hostBootstrap.UseTinyDispatcherCalls));
+            ImmutableArray<UseTinyDispatcherCall>.Empty));
     }
 
     private static PipelineConfig SelectLocalPipeline(

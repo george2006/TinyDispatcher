@@ -37,8 +37,7 @@ public sealed class GeneratorGenerationPhaseTests
             EffectiveOptions: Options(commandContextType: "MyApp.AppContext"),
             HostBootstrap: new HostBootstrapInfo(
                 IsHostProject: false,
-                ConfiguredContextFqn: "global::MyApp.AppContext",
-                UseTinyDispatcherCalls: ImmutableArray<UseTinyDispatcherCall>.Empty));
+                ConfiguredContextFqn: "global::MyApp.AppContext"));
 
         new GeneratorGenerationPhase().Generate(
             context,
@@ -473,7 +472,6 @@ public sealed class GeneratorGenerationPhaseTests
         return new HostBootstrapInfo(
             IsHostProject: true,
             ConfiguredContextFqn: contextFqn,
-            UseTinyDispatcherCalls: calls.ToImmutable(),
             Contexts: contexts.ToImmutable());
     }
 
