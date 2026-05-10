@@ -19,7 +19,7 @@ internal sealed class GeneratorValidationContext
         UseTinyDispatcherCalls = b.UseTinyDispatcherCalls;
         IsHostProject = b.IsHostProject;
 
-        ExpectedContextFqn = b.ExpectedContextFqn ?? string.Empty;
+        ContextTypeFqn = b.ContextTypeFqn ?? string.Empty;
         ReferencedContributions = b.ReferencedContributions ?? ReferencedAssemblyContributions.Empty;
 
         LocalPipeline = b.LocalPipeline ?? PipelineConfig.Empty;
@@ -34,7 +34,7 @@ internal sealed class GeneratorValidationContext
     public bool IsHostProject { get; }
 
     // Context
-    public string ExpectedContextFqn { get; }
+    public string ContextTypeFqn { get; }
     public ReferencedAssemblyContributions ReferencedContributions { get; }
 
     // Pipeline config
@@ -80,7 +80,7 @@ internal sealed class GeneratorValidationContext
 
         public bool IsHostProject { get; private set; }
 
-        public string? ExpectedContextFqn { get; private set; }
+        public string? ContextTypeFqn { get; private set; }
 
         public ReferencedAssemblyContributions? ReferencedContributions { get; private set; }
         public PipelineConfig? LocalPipeline { get; private set; }
@@ -98,9 +98,9 @@ internal sealed class GeneratorValidationContext
             return this;
         }
 
-        public Builder WithExpectedContext(string expectedContextFqn)
+        public Builder WithContext(string contextTypeFqn)
         {
-            ExpectedContextFqn = expectedContextFqn;
+            ContextTypeFqn = contextTypeFqn;
             return this;
         }
 

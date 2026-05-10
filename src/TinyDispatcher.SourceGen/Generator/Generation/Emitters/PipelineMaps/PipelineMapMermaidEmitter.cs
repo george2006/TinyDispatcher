@@ -32,7 +32,11 @@ internal static class PipelineMapMermaidEmitter
 
         w.EnsureAllBlocksClosed();
 
-        var hint = $"PipelineMap.{PipelineNameFactory.SanitizeTypeName(d.CommandFullName)}.g.mmd";
+        var hint = "PipelineMap." +
+                   PipelineNameFactory.SanitizeTypeName(d.ContextFullName) +
+                   "." +
+                   PipelineNameFactory.SanitizeTypeName(d.CommandFullName) +
+                   ".g.mmd";
         context.AddSource(hint, SourceText.From(w.ToString(), Encoding.UTF8));
     }
 

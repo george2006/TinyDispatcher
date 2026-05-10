@@ -52,7 +52,11 @@ internal static class PipelineMapJsonEmitter
 
         w.EnsureAllBlocksClosed();
 
-        var hint = $"PipelineMap.{PipelineNameFactory.SanitizeTypeName(d.CommandFullName)}.g.cs";
+        var hint = "PipelineMap." +
+                   PipelineNameFactory.SanitizeTypeName(d.ContextFullName) +
+                   "." +
+                   PipelineNameFactory.SanitizeTypeName(d.CommandFullName) +
+                   ".g.cs";
         context.AddSource(hint, SourceText.From(w.ToString(), Encoding.UTF8));
     }
 

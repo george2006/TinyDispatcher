@@ -4,6 +4,6 @@ namespace TinyDispatcher.SourceGen.Generator.Models;
 
 internal sealed record HostBootstrapInfo(
     bool IsHostProject,
-    string ExpectedContextFqn,
+    string ConfiguredContextFqn,
     ImmutableArray<UseTinyDispatcherCall> UseTinyDispatcherCalls,
     ImmutableArray<HostContextInfo> Contexts = default);

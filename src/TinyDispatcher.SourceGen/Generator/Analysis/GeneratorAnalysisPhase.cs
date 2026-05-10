@@ -66,7 +66,14 @@ internal static class GeneratorAnalysisPhase
     {
         var baseOptions = optionsFactory.Create(compilation, optionsProvider);
 
-        var inferredContextFqn = contextInference.TryInferContextTypeFromResolvedCalls(useTinyDispatcherCalls);
+        var hasSingleInferredContext = contextInference.TryInferSingleContextTypeFromResolvedCalls(
+            useTinyDispatcherCalls,
+            out var inferredContextFqn);
+
+        if (!hasSingleInferredContext)
+        {
+            return baseOptions;
+        }
 
         return optionsFactory.ApplyInferredContextIfMissing(baseOptions, inferredContextFqn);
     }
@@ -78,12 +85,12 @@ internal static class GeneratorAnalysisPhase
     {
         return new HostBootstrapInfo(
             IsHostProject: useTinyCallsSyntax.Length > 0,
-            ExpectedContextFqn: GetExpectedContextFqn(effectiveOptions),
+            ConfiguredContextFqn: GetConfiguredContextFqn(effectiveOptions),
             UseTinyDispatcherCalls: useTinyDispatcherCalls,
             Contexts: BuildHostContexts(useTinyDispatcherCalls));
     }
 
-    private static string GetExpectedContextFqn(GeneratorOptions options)
+    private static string GetConfiguredContextFqn(GeneratorOptions options)
     {
         if (string.IsNullOrWhiteSpace(options.CommandContextType))
         {

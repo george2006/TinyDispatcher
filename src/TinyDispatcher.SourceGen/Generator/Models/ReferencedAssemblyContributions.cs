@@ -22,46 +22,46 @@ internal sealed record ReferencedAssemblyContributions(
         return false;
     }
 
-    public IEnumerable<HandlerContract> EnumerateCommands(string expectedContextFqn)
+    public IEnumerable<HandlerContract> EnumerateCommands(string contextFqn)
     {
         for (var i = 0; i < Assemblies.Length; i++)
         {
             var assembly = Assemblies[i];
-            if (!assembly.MatchesContext(expectedContextFqn))
+            if (!assembly.MatchesContext(contextFqn))
                 continue;
 
             for (var j = 0; j < assembly.Handlers.Length; j++)
             {
                 var handlerContribution = assembly.Handlers[j];
-                if (!handlerContribution.MatchesContext(expectedContextFqn))
+                if (!handlerContribution.MatchesContext(contextFqn))
                     continue;
 
-                if (HandlerContractMatchesContext(handlerContribution.Handler, expectedContextFqn))
+                if (HandlerContractMatchesContext(handlerContribution.Handler, contextFqn))
                     yield return handlerContribution.Handler;
             }
         }
     }
 
-    public IEnumerable<ReferencedAssemblyContribution> EnumerateMatchingContext(string expectedContextFqn)
+    public IEnumerable<ReferencedAssemblyContribution> EnumerateMatchingContext(string contextFqn)
     {
         for (var i = 0; i < Assemblies.Length; i++)
         {
             var assembly = Assemblies[i];
-            if (assembly.MatchesContext(expectedContextFqn))
+            if (assembly.MatchesContext(contextFqn))
                 yield return assembly;
         }
     }
 
     private static bool HandlerContractMatchesContext(
         HandlerContract handlerContract,
-        string expectedContextFqn)
+        string contextFqn)
     {
-        if (string.IsNullOrWhiteSpace(expectedContextFqn))
+        if (string.IsNullOrWhiteSpace(contextFqn))
             return true;
 
         return string.Equals(
             handlerContract.ContextTypeFqn,
-            expectedContextFqn,
+            contextFqn,
             System.StringComparison.Ordinal);
     }
 }

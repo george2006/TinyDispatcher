@@ -31,9 +31,12 @@ internal sealed class GeneratorPipeline
             input.HandlerSymbols,
             analysisResult.ConfirmedBootstrapLambdas,
             analysis.EffectiveOptions);
+        var contextComposition = ContextInputComposer.Compose(
+            analysis.HostBootstrap,
+            extraction);
         var diagnostics = _validationPhase.Validate(
             analysis.HostBootstrap,
-            extraction,
+            contextComposition,
             _diagnosticsCatalog,
             validationDependencies);
 
@@ -45,7 +48,7 @@ internal sealed class GeneratorPipeline
         _generationPhase.Generate(
             context,
             analysis.EffectiveOptions,
-            extraction,
+            contextComposition,
             analysis.HostBootstrap);
     }
 }

@@ -2,6 +2,7 @@
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System;
 using System.Collections.Immutable;
 using TinyDispatcher.SourceGen.Generator.Models;
 
@@ -34,26 +35,46 @@ internal sealed class ContextInference
 
     /// <summary>
     /// Best-effort inference of a concrete context from syntax-discovered UseTinyDispatcher calls.
-    /// Returns null if none can be inferred safely.
+    /// Succeeds only when all resolved calls agree on one context.
     /// </summary>
-    public string? TryInferContextTypeFromUseTinyCalls(
+    public bool TryInferSingleContextTypeFromUseTinyCalls(
         ImmutableArray<InvocationExpressionSyntax> useTinyCallsSyntax,
-        Compilation compilation)
+        Compilation compilation,
+        out string contextTypeFqn)
     {
         // We resolve using the same logic as the semantic resolver, but accept the syntax list.
         var all = ResolveAllUseTinyDispatcherContexts(useTinyCallsSyntax, compilation);
-        return TryInferContextTypeFromResolvedCalls(all);
+        return TryInferSingleContextTypeFromResolvedCalls(all, out contextTypeFqn);
     }
 
-    public string? TryInferContextTypeFromResolvedCalls(
-        ImmutableArray<UseTinyDispatcherCall> useTinyDispatcherCalls)
+    public bool TryInferSingleContextTypeFromResolvedCalls(
+        ImmutableArray<UseTinyDispatcherCall> useTinyDispatcherCalls,
+        out string contextTypeFqn)
     {
+        contextTypeFqn = string.Empty;
+
         if (useTinyDispatcherCalls.IsDefaultOrEmpty)
         {
-            return null;
+            return false;
         }
 
-        return useTinyDispatcherCalls[0].ContextTypeFqn;
+        contextTypeFqn = useTinyDispatcherCalls[0].ContextTypeFqn;
+
+        for (var i = 1; i < useTinyDispatcherCalls.Length; i++)
+        {
+            var isSameContext = string.Equals(
+                contextTypeFqn,
+                useTinyDispatcherCalls[i].ContextTypeFqn,
+                StringComparison.Ordinal);
+
+            if (!isSameContext)
+            {
+                contextTypeFqn = string.Empty;
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public bool TryResolveUseTinyDispatcherContext(

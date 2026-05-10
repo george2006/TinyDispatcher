@@ -11,7 +11,7 @@ internal static class ReferencedAssemblyContributionComposer
     public static DiscoveryResult MergeDiscovery(
         DiscoveryResult discovery,
         ReferencedAssemblyContributions referencedContributions,
-        string expectedContextFqn)
+        string contextFqn)
     {
         var hasReferencedCommands = referencedContributions.HasCommands();
         if (!hasReferencedCommands)
@@ -23,7 +23,7 @@ internal static class ReferencedAssemblyContributionComposer
         var seen = new HashSet<string>(System.StringComparer.Ordinal);
 
         AddCommands(commands, seen, discovery.Commands);
-        AddCommands(commands, seen, referencedContributions.EnumerateCommands(expectedContextFqn));
+        AddCommands(commands, seen, referencedContributions.EnumerateCommands(contextFqn));
 
         return new DiscoveryResult(
             commands.ToImmutable(),
@@ -33,7 +33,7 @@ internal static class ReferencedAssemblyContributionComposer
     public static PipelineConfig MergePipelineConfig(
         PipelineConfig pipeline,
         ReferencedAssemblyContributions referencedContributions,
-        string expectedContextFqn)
+        string contextFqn)
     {
         var globals = ImmutableArray.CreateBuilder<MiddlewareRef>();
         globals.AddRange(pipeline.Globals);
@@ -50,11 +50,11 @@ internal static class ReferencedAssemblyContributionComposer
             policies[pair.Key] = pair.Value;
         }
 
-        foreach (var assembly in referencedContributions.EnumerateMatchingContext(expectedContextFqn))
+        foreach (var assembly in referencedContributions.EnumerateMatchingContext(contextFqn))
         {
             MergeAssemblyPipeline(
                 assembly,
-                expectedContextFqn,
+                contextFqn,
                 globals,
                 perCommand,
                 policies);
@@ -84,7 +84,7 @@ internal static class ReferencedAssemblyContributionComposer
 
     private static void MergeAssemblyPipeline(
         ReferencedAssemblyContribution assembly,
-        string expectedContextFqn,
+        string contextFqn,
         ImmutableArray<MiddlewareRef>.Builder globals,
         ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Builder perCommand,
         ImmutableDictionary<string, PolicySpec>.Builder policies)
@@ -94,17 +94,17 @@ internal static class ReferencedAssemblyContributionComposer
         MergePerCommandContributions(
             perCommand,
             assembly,
-            expectedContextFqn);
+            contextFqn);
         MergePolicyContributions(
             policies,
             assembly,
-            expectedContextFqn);
+            contextFqn);
     }
 
     private static void MergePerCommandContributions(
         ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Builder target,
         ReferencedAssemblyContribution assembly,
-        string expectedContextFqn)
+        string contextFqn)
     {
         for (var i = 0; i < assembly.PerCommandMiddlewareFindings.Length; i++)
         {
@@ -112,7 +112,7 @@ internal static class ReferencedAssemblyContributionComposer
 
             var contributionBelongsToAnotherContext = ContributionBelongsToAnotherContext(
                 finding.ContextTypeFqn,
-                expectedContextFqn);
+                contextFqn);
             if (contributionBelongsToAnotherContext)
             {
                 continue;
@@ -129,7 +129,7 @@ internal static class ReferencedAssemblyContributionComposer
     private static void MergePolicyContributions(
         ImmutableDictionary<string, PolicySpec>.Builder target,
         ReferencedAssemblyContribution assembly,
-        string expectedContextFqn)
+        string contextFqn)
     {
         for (var i = 0; i < assembly.PolicyFindings.Length; i++)
         {
@@ -137,7 +137,7 @@ internal static class ReferencedAssemblyContributionComposer
 
             var contributionBelongsToAnotherContext = ContributionBelongsToAnotherContext(
                 finding.ContextTypeFqn,
-                expectedContextFqn);
+                contextFqn);
             if (contributionBelongsToAnotherContext)
             {
                 continue;
@@ -159,17 +159,17 @@ internal static class ReferencedAssemblyContributionComposer
 
     private static bool ContributionBelongsToAnotherContext(
         string? contributionContextFqn,
-        string expectedContextFqn)
+        string contextFqn)
     {
         if (string.IsNullOrWhiteSpace(contributionContextFqn) ||
-            string.IsNullOrWhiteSpace(expectedContextFqn))
+            string.IsNullOrWhiteSpace(contextFqn))
         {
             return false;
         }
 
         return !string.Equals(
             contributionContextFqn,
-            expectedContextFqn,
+            contextFqn,
             System.StringComparison.Ordinal);
     }
 

@@ -4,17 +4,17 @@ internal sealed record ReferencedHandlerContribution(
     string? ContextTypeFqn,
     HandlerContract Handler)
 {
-    public bool MatchesContext(string expectedContextFqn)
+    public bool MatchesContext(string contextFqn)
     {
         if (string.IsNullOrWhiteSpace(ContextTypeFqn) ||
-            string.IsNullOrWhiteSpace(expectedContextFqn))
+            string.IsNullOrWhiteSpace(contextFqn))
         {
             return true;
         }
 
         return string.Equals(
             ContextTypeFqn,
-            expectedContextFqn,
+            contextFqn,
             System.StringComparison.Ordinal);
     }
 }

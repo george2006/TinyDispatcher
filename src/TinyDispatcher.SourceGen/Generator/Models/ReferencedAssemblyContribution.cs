@@ -10,12 +10,12 @@ internal sealed record ReferencedAssemblyContribution(
     ImmutableArray<PolicyFinding> PolicyFindings,
     ImmutableArray<ReferencedHandlerContribution> Handlers = default)
 {
-    public bool MatchesContext(string expectedContextFqn)
+    public bool MatchesContext(string contextFqn)
     {
-        if (string.IsNullOrWhiteSpace(ContextTypeFqn) || string.IsNullOrWhiteSpace(expectedContextFqn))
+        if (string.IsNullOrWhiteSpace(ContextTypeFqn) || string.IsNullOrWhiteSpace(contextFqn))
             return true;
 
-        return string.Equals(ContextTypeFqn, expectedContextFqn, System.StringComparison.Ordinal);
+        return string.Equals(ContextTypeFqn, contextFqn, System.StringComparison.Ordinal);
     }
 
     public bool HasContributions()

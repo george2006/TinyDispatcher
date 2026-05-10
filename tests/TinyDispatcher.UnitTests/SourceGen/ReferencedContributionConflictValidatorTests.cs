@@ -257,7 +257,7 @@ public sealed class ReferencedContributionConflictValidatorTests
                 EmptyDiscovery(),
                 new DiagnosticsCatalog())
             .WithHostGate(isHost: false)
-            .WithExpectedContext(string.Empty)
+            .WithContext(string.Empty)
             .WithLocalPipelineConfig(PipelineConfig.Empty)
             .WithReferencedContributions(Referenced(
                 new ReferencedAssemblyContribution(
@@ -286,7 +286,7 @@ public sealed class ReferencedContributionConflictValidatorTests
                 EmptyDiscovery(),
                 new DiagnosticsCatalog())
             .WithHostGate(isHost: true)
-            .WithExpectedContext("global::MyApp.AppContext")
+            .WithContext("global::MyApp.AppContext")
             .WithLocalPipelineConfig(localPipeline)
             .WithReferencedContributions(referencedContributions)
             .WithPipelineConfig(PipelineConfig.Empty)

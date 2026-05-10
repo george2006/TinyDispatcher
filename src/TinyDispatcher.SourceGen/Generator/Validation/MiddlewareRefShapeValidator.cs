@@ -22,8 +22,8 @@ internal sealed class MiddlewareRefShapeValidator : IGeneratorValidator
         if (!context.IsHostProject)
             return;
 
-        var expectedContextFqn = context.ExpectedContextFqn;
-        if (string.IsNullOrWhiteSpace(expectedContextFqn))
+        var contextTypeFqn = context.ContextTypeFqn;
+        if (string.IsNullOrWhiteSpace(contextTypeFqn))
             return; // ContextConsistencyValidator will report the real issue.
 
         if (commandMiddlewareInterface is null)
@@ -137,7 +137,7 @@ internal sealed class MiddlewareRefShapeValidator : IGeneratorValidator
                     iface.TypeArguments[1]
                         .ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
 
-                if (!string.Equals(ctxFqn, expectedContextFqn, StringComparison.Ordinal))
+                if (!string.Equals(ctxFqn, contextTypeFqn, StringComparison.Ordinal))
                     continue;
 
                 matches++;
@@ -150,7 +150,7 @@ internal sealed class MiddlewareRefShapeValidator : IGeneratorValidator
                     context.Diagnostics.InvalidContextClosedMiddleware,
                     Location.None,
                     mw.OpenTypeFqn,
-                    expectedContextFqn));
+                    contextTypeFqn));
             }
         }
     }

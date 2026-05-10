@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using TinyDispatcher.SourceGen;
 using TinyDispatcher.SourceGen.Diagnostics;
+using TinyDispatcher.SourceGen.Generator.Generation;
 using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Generator.Validation;
 using Xunit;
@@ -27,7 +28,7 @@ public sealed class GeneratorValidationPhaseTests
 
         var diagnostics = new GeneratorValidationPhase().Validate(
             hostBootstrap,
-            extraction,
+            Composition(hostBootstrap, extraction),
             new DiagnosticsCatalog(),
             ValidationRoslynDependencies.Create(compilation));
 
@@ -47,7 +48,7 @@ public sealed class GeneratorValidationPhaseTests
 
         var diagnostics = new GeneratorValidationPhase().Validate(
             hostBootstrap,
-            extraction,
+            Composition(hostBootstrap, extraction),
             new DiagnosticsCatalog(),
             ValidationRoslynDependencies.Create(compilation));
 
@@ -77,7 +78,7 @@ public sealed class GeneratorValidationPhaseTests
 
         var diagnostics = new GeneratorValidationPhase().Validate(
             hostBootstrap,
-            extraction,
+            Composition(hostBootstrap, extraction),
             new DiagnosticsCatalog(),
             ValidationRoslynDependencies.Create(compilation));
 
@@ -113,7 +114,7 @@ public sealed class GeneratorValidationPhaseTests
 
         var diagnostics = new GeneratorValidationPhase().Validate(
             hostBootstrap,
-            extraction,
+            Composition(hostBootstrap, extraction),
             new DiagnosticsCatalog(),
             ValidationRoslynDependencies.Create(compilation));
 
@@ -143,7 +144,7 @@ public sealed class GeneratorValidationPhaseTests
 
         var diagnostics = new GeneratorValidationPhase().Validate(
             hostBootstrap,
-            extraction,
+            Composition(hostBootstrap, extraction),
             new DiagnosticsCatalog(),
             ValidationRoslynDependencies.Create(compilation));
 
@@ -173,16 +174,16 @@ public sealed class GeneratorValidationPhaseTests
             ImmutableArray<QueryHandlerContract>.Empty);
     }
 
-    private static HostBootstrapInfo HostBootstrap(string expectedContextFqn)
+    private static HostBootstrapInfo HostBootstrap(string contextFqn)
     {
-        var call = new UseTinyDispatcherCall(expectedContextFqn, Location.None);
+        var call = new UseTinyDispatcherCall(contextFqn, Location.None);
 
         return new HostBootstrapInfo(
             IsHostProject: true,
-            ExpectedContextFqn: expectedContextFqn,
+            ConfiguredContextFqn: contextFqn,
             UseTinyDispatcherCalls: ImmutableArray.Create(call),
             Contexts: ImmutableArray.Create(new HostContextInfo(
-                expectedContextFqn,
+                contextFqn,
                 ImmutableArray.Create(call))));
     }
 
@@ -190,7 +191,7 @@ public sealed class GeneratorValidationPhaseTests
     {
         return new HostBootstrapInfo(
             IsHostProject: false,
-            ExpectedContextFqn: string.Empty,
+            ConfiguredContextFqn: string.Empty,
             UseTinyDispatcherCalls: ImmutableArray<UseTinyDispatcherCall>.Empty);
     }
 
@@ -210,5 +211,12 @@ public sealed class GeneratorValidationPhaseTests
             ImmutableArray.Create(new ContextPipelineConfig(
                 "global::MyApp.AppContext",
                 pipeline)));
+    }
+
+    private static GeneratorContextComposition Composition(
+        HostBootstrapInfo hostBootstrap,
+        GeneratorExtraction extraction)
+    {
+        return ContextInputComposer.Compose(hostBootstrap, extraction);
     }
 }

@@ -36,13 +36,13 @@ public sealed class GeneratorGenerationPhaseTests
             EffectiveOptions: Options(commandContextType: "MyApp.AppContext"),
             HostBootstrap: new HostBootstrapInfo(
                 IsHostProject: false,
-                ExpectedContextFqn: "global::MyApp.AppContext",
+                ConfiguredContextFqn: "global::MyApp.AppContext",
                 UseTinyDispatcherCalls: ImmutableArray<UseTinyDispatcherCall>.Empty));
 
         new GeneratorGenerationPhase().Generate(
             context,
             analysis.EffectiveOptions,
-            extraction,
+            Composition(analysis.HostBootstrap, extraction),
             analysis.HostBootstrap);
 
         Assert.DoesNotContain(
@@ -72,7 +72,7 @@ public sealed class GeneratorGenerationPhaseTests
         new GeneratorGenerationPhase().Generate(
             context,
             Options(commandContextType: null),
-            extraction,
+            Composition(hostBootstrap, extraction),
             hostBootstrap);
 
         var registrations = Assert.Single(
@@ -114,7 +114,7 @@ public sealed class GeneratorGenerationPhaseTests
         new GeneratorGenerationPhase().Generate(
             context,
             Options(commandContextType: "global::MyApp.AppContext"),
-            extraction,
+            Composition(hostBootstrap, extraction),
             hostBootstrap);
 
         var pipelineSource = Assert.Single(
@@ -164,7 +164,7 @@ public sealed class GeneratorGenerationPhaseTests
         new GeneratorGenerationPhase().Generate(
             context,
             Options(commandContextType: "global::MyApp.AppContext"),
-            extraction,
+            Composition(hostBootstrap, extraction),
             hostBootstrap);
 
         var pipelineSource = Assert.Single(
@@ -233,7 +233,7 @@ public sealed class GeneratorGenerationPhaseTests
         new GeneratorGenerationPhase().Generate(
             context,
             Options(commandContextType: "global::MyApp.AppContext"),
-            extraction,
+            Composition(hostBootstrap, extraction),
             hostBootstrap);
 
         var pipelineSource = Assert.Single(
@@ -301,7 +301,7 @@ public sealed class GeneratorGenerationPhaseTests
         new GeneratorGenerationPhase().Generate(
             context,
             Options(commandContextType: "global::MyApp.AppContext"),
-            extraction,
+            Composition(hostBootstrap, extraction),
             hostBootstrap);
 
         var pipelineSource = Assert.Single(
@@ -353,7 +353,7 @@ public sealed class GeneratorGenerationPhaseTests
         new GeneratorGenerationPhase().Generate(
             context,
             Options(commandContextType: null),
-            extraction,
+            Composition(hostBootstrap, extraction),
             hostBootstrap);
 
         var pipelineAContent = Assert.Single(
@@ -405,7 +405,7 @@ public sealed class GeneratorGenerationPhaseTests
         new GeneratorGenerationPhase().Generate(
             context,
             Options(commandContextType: null),
-            extraction,
+            Composition(hostBootstrap, extraction),
             hostBootstrap);
 
         Assert.Contains(
@@ -449,29 +449,29 @@ public sealed class GeneratorGenerationPhaseTests
     }
 
     private static HostBootstrapInfo HostBootstrap(
-        string expectedContextFqn,
+        string contextFqn,
         params string[] contextFqns)
     {
         var effectiveContexts = contextFqns.Length == 0
-            ? new[] { expectedContextFqn }
+            ? new[] { contextFqn }
             : contextFqns;
         var calls = ImmutableArray.CreateBuilder<UseTinyDispatcherCall>(effectiveContexts.Length);
         var contexts = ImmutableArray.CreateBuilder<HostContextInfo>(effectiveContexts.Length);
 
         for (var i = 0; i < effectiveContexts.Length; i++)
         {
-            var contextFqn = effectiveContexts[i];
-            var call = new UseTinyDispatcherCall(contextFqn, Location.None);
+            var currentContextFqn = effectiveContexts[i];
+            var call = new UseTinyDispatcherCall(currentContextFqn, Location.None);
 
             calls.Add(call);
             contexts.Add(new HostContextInfo(
-                contextFqn,
+                currentContextFqn,
                 ImmutableArray.Create(call)));
         }
 
         return new HostBootstrapInfo(
             IsHostProject: true,
-            ExpectedContextFqn: expectedContextFqn,
+            ConfiguredContextFqn: contextFqn,
             UseTinyDispatcherCalls: calls.ToImmutable(),
             Contexts: contexts.ToImmutable());
     }
@@ -504,6 +504,13 @@ public sealed class GeneratorGenerationPhaseTests
             ImmutableArray.Create(new ContextPipelineConfig(
                 "global::MyApp.AppContext",
                 pipeline)));
+    }
+
+    private static GeneratorContextComposition Composition(
+        HostBootstrapInfo hostBootstrap,
+        GeneratorExtraction extraction)
+    {
+        return ContextInputComposer.Compose(hostBootstrap, extraction);
     }
 
     private static bool IsPipelineSource(string hintName)

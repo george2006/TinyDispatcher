@@ -139,6 +139,25 @@ namespace MyApp
         Assert.Empty(result);
     }
 
+    [Fact]
+    public void TryInferSingleContextTypeFromResolvedCalls_returns_false_for_multiple_contexts()
+    {
+        var calls = ImmutableArray.Create(
+            new TinyDispatcher.SourceGen.Generator.Models.UseTinyDispatcherCall(
+                "global::MyApp.AppContext",
+                Location.None),
+            new TinyDispatcher.SourceGen.Generator.Models.UseTinyDispatcherCall(
+                "global::MyApp.OtherContext",
+                Location.None));
+
+        var result = new ContextInference().TryInferSingleContextTypeFromResolvedCalls(
+            calls,
+            out var contextTypeFqn);
+
+        Assert.False(result);
+        Assert.Equal(string.Empty, contextTypeFqn);
+    }
+
     private static CSharpCompilation CreateCompilation(string source)
     {
         var references =

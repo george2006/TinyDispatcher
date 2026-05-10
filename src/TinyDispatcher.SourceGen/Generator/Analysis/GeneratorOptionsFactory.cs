@@ -27,7 +27,7 @@ internal sealed class GeneratorOptionsFactory
             PipelineMapFormat: "json");
     }
 
-    public GeneratorOptions ApplyInferredContextIfMissing(GeneratorOptions baseOptions, string? inferredCtx)
+    public GeneratorOptions ApplyInferredContextIfMissing(GeneratorOptions baseOptions, string inferredCtx)
     {
         if (!string.IsNullOrWhiteSpace(baseOptions.CommandContextType))
             return baseOptions;

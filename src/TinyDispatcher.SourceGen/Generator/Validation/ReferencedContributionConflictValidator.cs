@@ -25,7 +25,7 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
     private static bool ShouldValidate(GeneratorValidationContext context)
     {
         return context.IsHostProject &&
-               !string.IsNullOrWhiteSpace(context.ExpectedContextFqn);
+               !string.IsNullOrWhiteSpace(context.ContextTypeFqn);
     }
 
     private static void ValidatePerCommandMiddlewareConflicts(
@@ -36,7 +36,7 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
 
         RememberLocalPerCommandMiddleware(context.LocalPipeline, ownersByCommand);
 
-        foreach (var assembly in context.ReferencedContributions.EnumerateMatchingContext(context.ExpectedContextFqn))
+        foreach (var assembly in context.ReferencedContributions.EnumerateMatchingContext(context.ContextTypeFqn))
         {
             RememberReferencedPerCommandMiddleware(context, diags, ownersByCommand, assembly);
         }
@@ -65,7 +65,7 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
             var finding = assembly.PerCommandMiddlewareFindings[i];
             if (ContributionBelongsToAnotherContext(
                 finding.ContextTypeFqn,
-                context.ExpectedContextFqn))
+                context.ContextTypeFqn))
             {
                 continue;
             }
@@ -106,7 +106,7 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
 
         RememberLocalPolicies(context.LocalPipeline, ownersByPolicy);
 
-        foreach (var assembly in context.ReferencedContributions.EnumerateMatchingContext(context.ExpectedContextFqn))
+        foreach (var assembly in context.ReferencedContributions.EnumerateMatchingContext(context.ContextTypeFqn))
         {
             RememberReferencedPolicies(context, diags, ownersByPolicy, assembly);
         }
@@ -135,7 +135,7 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
             var finding = assembly.PolicyFindings[i];
             if (ContributionBelongsToAnotherContext(
                 finding.ContextTypeFqn,
-                context.ExpectedContextFqn))
+                context.ContextTypeFqn))
             {
                 continue;
             }
@@ -178,17 +178,17 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
 
     private static bool ContributionBelongsToAnotherContext(
         string? contributionContextFqn,
-        string expectedContextFqn)
+        string contextFqn)
     {
         if (string.IsNullOrWhiteSpace(contributionContextFqn) ||
-            string.IsNullOrWhiteSpace(expectedContextFqn))
+            string.IsNullOrWhiteSpace(contextFqn))
         {
             return false;
         }
 
         return !string.Equals(
             contributionContextFqn,
-            expectedContextFqn,
+            contextFqn,
             StringComparison.Ordinal);
     }
 
