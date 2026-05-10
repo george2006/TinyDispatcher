@@ -107,6 +107,16 @@ public sealed class PipelineNamingTests
     }
 
     [Fact]
+    public void Ctor_param_name_handles_global_namespace_type()
+    {
+        var mw = Mw("global::GlobalLogMiddleware`2", 2);
+
+        var name = PipelineNameFactory.CtorParamName(mw);
+
+        Assert.Equal("globalLog", name);
+    }
+
+    [Fact]
     public void Ctor_param_name_when_type_name_is_single_letter_lowercases_only()
     {
         var mw = Mw("global::MyApp.XMiddleware", 1);
