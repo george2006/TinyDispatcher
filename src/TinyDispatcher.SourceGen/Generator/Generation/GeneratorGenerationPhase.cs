@@ -16,10 +16,10 @@ internal sealed class GeneratorGenerationPhase
     public void Generate(
         IGeneratorContext context,
         GeneratorOptions options,
-        GeneratorContextComposition contextComposition,
+        GeneratorComposition composition,
         HostBootstrapInfo hostBootstrap)
     {
-        var generationPlan = BuildGenerationPlan(options, hostBootstrap, contextComposition);
+        var generationPlan = BuildGenerationPlan(options, hostBootstrap, composition);
 
         EmitAssemblyContributionSources(context, generationPlan);
         EmitHostGenerationSources(context, generationPlan);
@@ -101,11 +101,13 @@ internal sealed class GeneratorGenerationPhase
     private static SourceGenerationPlan BuildGenerationPlan(
         GeneratorOptions options,
         HostBootstrapInfo hostBootstrap,
-        GeneratorContextComposition contextComposition)
+        GeneratorComposition composition)
     {
-        var contexts = BuildPipelineGenerationPlans(options, hostBootstrap, contextComposition.HostGeneration);
-        var assemblyContribution = BuildAssemblyContributionPlan(options, contextComposition.AssemblyContribution);
-        var hostGeneration = BuildHostGenerationPlan(options, contextComposition.HostGeneration, contexts);
+        var contexts = BuildPipelineGenerationPlans(options, hostBootstrap, composition.HostGeneration);
+        var assemblyContribution = BuildAssemblyContributionPlan(
+            options,
+            composition.AssemblyContributionDiscovery);
+        var hostGeneration = BuildHostGenerationPlan(options, composition.HostGeneration, contexts);
 
         return new SourceGenerationPlan(assemblyContribution, hostGeneration);
     }
@@ -132,10 +134,10 @@ internal sealed class GeneratorGenerationPhase
 
     private static AssemblyContributionSourcePlan BuildAssemblyContributionPlan(
         GeneratorOptions options,
-        AssemblyContributionComposition assemblyContribution)
+        DiscoveryResult assemblyContributionDiscovery)
     {
         return new AssemblyContributionSourcePlan(
-            Discovery: assemblyContribution.Discovery,
+            Discovery: assemblyContributionDiscovery,
             EmitOptions: BuildSharedEmitOptions(options),
             PipelineContributions: PipelineContributions.Create(PipelineConfig.Empty));
     }

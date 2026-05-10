@@ -212,7 +212,7 @@ public sealed class GeneratorValidationPhaseTests
                 pipeline)));
     }
 
-    private static GeneratorContextComposition Composition(
+    private static GeneratorComposition Composition(
         HostBootstrapInfo hostBootstrap,
         GeneratorExtraction extraction)
     {

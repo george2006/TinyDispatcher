@@ -10,13 +10,13 @@ internal sealed class GeneratorValidationPhase
 {
     public DiagnosticBag Validate(
         HostBootstrapInfo hostBootstrap,
-        GeneratorContextComposition contextComposition,
+        GeneratorComposition composition,
         DiagnosticsCatalog diagnosticsCatalog,
         ValidationRoslynDependencies roslynDependencies)
     {
         var validationContexts = BuildValidationContexts(
             hostBootstrap,
-            contextComposition,
+            composition,
             diagnosticsCatalog);
         var diagnostics = new DiagnosticBag();
 
@@ -35,17 +35,17 @@ internal sealed class GeneratorValidationPhase
 
     private static ImmutableArray<GeneratorValidationContext> BuildValidationContexts(
         HostBootstrapInfo hostBootstrap,
-        GeneratorContextComposition contextComposition,
+        GeneratorComposition composition,
         DiagnosticsCatalog diagnosticsCatalog)
     {
-        var contexts = contextComposition.ValidationContexts;
+        var contexts = composition.ValidationContexts;
         var validationContexts = ImmutableArray.CreateBuilder<GeneratorValidationContext>(contexts.Length);
 
         for (var i = 0; i < contexts.Length; i++)
         {
             validationContexts.Add(BuildValidationContext(
                 hostBootstrap,
-                contextComposition,
+                composition,
                 diagnosticsCatalog,
                 contexts[i]));
         }
@@ -55,7 +55,7 @@ internal sealed class GeneratorValidationPhase
 
     private static GeneratorValidationContext BuildValidationContext(
         HostBootstrapInfo hostBootstrap,
-        GeneratorContextComposition contextComposition,
+        GeneratorComposition composition,
         DiagnosticsCatalog diagnosticsCatalog,
         ContextValidationInput contextInput)
     {
@@ -67,7 +67,7 @@ internal sealed class GeneratorValidationPhase
             .WithHostGate(isHost: hostBootstrap.IsHostProject)
             .WithUseTinyDispatcherCalls(contextInput.BootstrapCalls)
             .WithContext(contextInput.ContextTypeFqn)
-            .WithReferencedContributions(contextComposition.HostGeneration.ReferencedContributions)
+            .WithReferencedContributions(composition.HostGeneration.ReferencedContributions)
             .WithThisAssemblyPipelineConfig(contextInput.ThisAssemblyPipeline)
             .WithPipelineConfig(generationInput.Pipeline)
             .Build();
