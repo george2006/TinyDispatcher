@@ -14,7 +14,7 @@ public sealed class ReferencedContributionConflictValidatorTests
     public void Validate_reports_DISP413_when_referenced_assembly_conflicts_with_local_per_command_pipeline()
     {
         var context = CreateContext(
-            localPipeline: new PipelineConfig(
+            thisAssemblyPipeline: new PipelineConfig(
                 ImmutableArray<MiddlewareRef>.Empty,
                 ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty.Add(
                     "global::MyApp.CreateOrder",
@@ -42,7 +42,7 @@ public sealed class ReferencedContributionConflictValidatorTests
     public void Validate_reports_DISP413_when_referenced_assemblies_contribute_same_per_command_pipeline()
     {
         var context = CreateContext(
-            localPipeline: PipelineConfig.Empty,
+            thisAssemblyPipeline: PipelineConfig.Empty,
             referencedContributions: Referenced(
                 new ReferencedAssemblyContribution(
                     "OrdersContrib",
@@ -73,7 +73,7 @@ public sealed class ReferencedContributionConflictValidatorTests
     public void Validate_reports_DISP413_when_single_referenced_assembly_repeats_same_command_target()
     {
         var context = CreateContext(
-            localPipeline: PipelineConfig.Empty,
+            thisAssemblyPipeline: PipelineConfig.Empty,
             referencedContributions: Referenced(
                 new ReferencedAssemblyContribution(
                     "OrdersContrib",
@@ -100,7 +100,7 @@ public sealed class ReferencedContributionConflictValidatorTests
     public void Validate_does_not_report_DISP413_for_referenced_command_in_other_context()
     {
         var context = CreateContext(
-            localPipeline: new PipelineConfig(
+            thisAssemblyPipeline: new PipelineConfig(
                 ImmutableArray<MiddlewareRef>.Empty,
                 ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty.Add(
                     "global::MyApp.CreateOrder",
@@ -128,7 +128,7 @@ public sealed class ReferencedContributionConflictValidatorTests
     public void Validate_reports_DISP414_when_referenced_assembly_conflicts_with_local_policy()
     {
         var context = CreateContext(
-            localPipeline: new PipelineConfig(
+            thisAssemblyPipeline: new PipelineConfig(
                 ImmutableArray<MiddlewareRef>.Empty,
                 ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
                 ImmutableDictionary<string, PolicySpec>.Empty.Add(
@@ -160,7 +160,7 @@ public sealed class ReferencedContributionConflictValidatorTests
     public void Validate_reports_DISP414_when_single_referenced_assembly_repeats_same_policy_type()
     {
         var context = CreateContext(
-            localPipeline: PipelineConfig.Empty,
+            thisAssemblyPipeline: PipelineConfig.Empty,
             referencedContributions: Referenced(
                 new ReferencedAssemblyContribution(
                     "OrdersContrib",
@@ -189,7 +189,7 @@ public sealed class ReferencedContributionConflictValidatorTests
     public void Validate_reports_DISP414_when_referenced_assemblies_define_same_policy()
     {
         var context = CreateContext(
-            localPipeline: PipelineConfig.Empty,
+            thisAssemblyPipeline: PipelineConfig.Empty,
             referencedContributions: Referenced(
                 new ReferencedAssemblyContribution(
                     "OrdersContrib",
@@ -222,7 +222,7 @@ public sealed class ReferencedContributionConflictValidatorTests
     public void Validate_does_not_report_DISP414_for_referenced_policy_in_other_context()
     {
         var context = CreateContext(
-            localPipeline: new PipelineConfig(
+            thisAssemblyPipeline: new PipelineConfig(
                 ImmutableArray<MiddlewareRef>.Empty,
                 ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
                 ImmutableDictionary<string, PolicySpec>.Empty.Add(
@@ -258,7 +258,7 @@ public sealed class ReferencedContributionConflictValidatorTests
                 new DiagnosticsCatalog())
             .WithHostGate(isHost: false)
             .WithContext(string.Empty)
-            .WithLocalPipelineConfig(PipelineConfig.Empty)
+            .WithThisAssemblyPipelineConfig(PipelineConfig.Empty)
             .WithReferencedContributions(Referenced(
                 new ReferencedAssemblyContribution(
                     "OrdersContrib",
@@ -279,7 +279,7 @@ public sealed class ReferencedContributionConflictValidatorTests
     }
 
     private static GeneratorValidationContext CreateContext(
-        PipelineConfig localPipeline,
+        PipelineConfig thisAssemblyPipeline,
         ReferencedAssemblyContributions referencedContributions)
     {
         return new GeneratorValidationContext.Builder(
@@ -287,7 +287,7 @@ public sealed class ReferencedContributionConflictValidatorTests
                 new DiagnosticsCatalog())
             .WithHostGate(isHost: true)
             .WithContext("global::MyApp.AppContext")
-            .WithLocalPipelineConfig(localPipeline)
+            .WithThisAssemblyPipelineConfig(thisAssemblyPipeline)
             .WithReferencedContributions(referencedContributions)
             .WithPipelineConfig(PipelineConfig.Empty)
             .Build();

@@ -32,21 +32,21 @@ internal sealed class GeneratorGenerationPhase
     {
         var contextPlan = generationPlan.SharedSources;
         var moduleInitializerPlan = ModuleInitializerPlanner.Build(
-            contextPlan.Discovery,
+            contextPlan.HostComposition.Discovery,
             contextPlan.EmitOptions,
             hasPipelineContributions: HasPipelinePlans(generationPlan.Contexts));
 
         new ModuleInitializerEmitter().Emit(context, moduleInitializerPlan);
         new EmptyPipelineContributionEmitter().Emit(
             context,
-            contextPlan.LocalDiscovery,
+            contextPlan.ThisAssemblyContribution.Discovery,
             contextPlan.PipelineContributions,
             contextPlan.EmitOptions,
             GetPipelineRegistrationMethodNames(generationPlan.Contexts),
             GetPipelineContributionSources(generationPlan.Contexts));
 
         var handlerRegistrationsPlan = HandlerRegistrationsPlanner.Build(
-            contextPlan.LocalDiscovery,
+            contextPlan.ThisAssemblyContribution.Discovery,
             contextPlan.EmitOptions);
 
         new HandlerRegistrationsEmitter().Emit(context, handlerRegistrationsPlan);
@@ -120,17 +120,15 @@ internal sealed class GeneratorGenerationPhase
         return pipelinePlan;
     }
 
-    private static ContextSourcePlan BuildSharedGenerationPlan(
+    private static SharedSourcePlan BuildSharedGenerationPlan(
         GeneratorOptions options,
         GeneratorContextComposition contextComposition)
     {
-        return BuildContextGenerationPlan(
-            BuildSharedEmitOptions(options),
-            shouldEmitPipelines: false,
-            shouldEmitPipelineMaps: false,
-            contextComposition.LocalDiscovery,
-            contextComposition.Discovery,
-            PipelineConfig.Empty);
+        return new SharedSourcePlan(
+            ThisAssemblyContribution: contextComposition.ThisAssemblyContribution,
+            HostComposition: contextComposition.HostComposition,
+            EmitOptions: BuildSharedEmitOptions(options),
+            PipelineContributions: PipelineContributions.Create(PipelineConfig.Empty));
     }
 
     private static ImmutableArray<ContextSourcePlan> BuildPipelineGenerationPlans(
@@ -152,7 +150,6 @@ internal sealed class GeneratorGenerationPhase
                     contextInput.ContextTypeFqn,
                     contextInput.Pipeline),
                 shouldEmitPipelineMaps: ShouldEmitPipelineMaps(hostBootstrap, contextInput.ContextTypeFqn),
-                contextInput.LocalDiscovery,
                 contextInput.Discovery,
                 contextInput.Pipeline);
 
@@ -169,14 +166,12 @@ internal sealed class GeneratorGenerationPhase
         GeneratorOptions options,
         bool shouldEmitPipelines,
         bool shouldEmitPipelineMaps,
-        DiscoveryResult localDiscovery,
         DiscoveryResult discovery,
         PipelineConfig pipelineConfig)
     {
         var pipelineContributions = PipelineContributions.Create(pipelineConfig);
 
         return new ContextSourcePlan(
-            LocalDiscovery: localDiscovery,
             Discovery: discovery,
             EmitOptions: options,
             ShouldEmitPipelines: shouldEmitPipelines,
@@ -309,11 +304,16 @@ internal sealed class GeneratorGenerationPhase
     }
 
     private readonly record struct SourceGenerationPlan(
-        ContextSourcePlan SharedSources,
+        SharedSourcePlan SharedSources,
         ImmutableArray<ContextSourcePlan> Contexts);
 
+    private readonly record struct SharedSourcePlan(
+        ThisAssemblyContributionInput ThisAssemblyContribution,
+        HostCompositionInput HostComposition,
+        GeneratorOptions EmitOptions,
+        PipelineContributions PipelineContributions);
+
     private readonly record struct ContextSourcePlan(
-        DiscoveryResult LocalDiscovery,
         DiscoveryResult Discovery,
         GeneratorOptions EmitOptions,
         bool ShouldEmitPipelines,

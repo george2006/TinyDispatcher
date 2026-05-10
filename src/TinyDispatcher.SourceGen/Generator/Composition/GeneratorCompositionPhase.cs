@@ -15,11 +15,11 @@ internal sealed class GeneratorCompositionPhase
         var composedContexts = BuildContexts(hostBootstrap, extraction);
         var generationContexts = SelectGenerationInputs(composedContexts);
         var validationContexts = SelectValidationInputs(composedContexts);
-        var discovery = BuildSharedDiscovery(extraction, generationContexts);
+        var hostComposition = BuildHostComposition(extraction, generationContexts);
 
         return new GeneratorContextComposition(
-            LocalDiscovery: extraction.Discovery,
-            Discovery: discovery,
+            ThisAssemblyContribution: new ThisAssemblyContributionInput(extraction.Discovery),
+            HostComposition: hostComposition,
             ReferencedContributions: extraction.ReferencedContributions,
             GenerationContexts: generationContexts,
             ValidationContexts: validationContexts);
@@ -47,9 +47,9 @@ internal sealed class GeneratorCompositionPhase
     {
         var contextFqn = hostContext.ContextTypeFqn;
         var localDiscovery = FilterDiscoveryByContext(extraction.Discovery, contextFqn);
-        var localPipeline = SelectLocalPipeline(extraction, contextFqn);
+        var thisAssemblyPipeline = SelectThisAssemblyPipeline(extraction, contextFqn);
         var discovery = localDiscovery;
-        var pipeline = localPipeline;
+        var pipeline = thisAssemblyPipeline;
         var shouldMergeReferencedContributions = ShouldMergeReferencedContributions(
             hostBootstrap,
             contextFqn);
@@ -61,20 +61,19 @@ internal sealed class GeneratorCompositionPhase
                 extraction.ReferencedContributions,
                 contextFqn);
             pipeline = ReferencedAssemblyContributionComposer.MergePipelineConfig(
-                localPipeline,
+                thisAssemblyPipeline,
                 extraction.ReferencedContributions,
                 contextFqn);
         }
 
         var generationInput = new ContextGenerationInput(
             ContextTypeFqn: contextFqn,
-            LocalDiscovery: localDiscovery,
             Discovery: discovery,
-            LocalPipeline: localPipeline,
             Pipeline: pipeline);
 
         var validationInput = new ContextValidationInput(
             BootstrapCalls: hostContext.UseTinyDispatcherCalls,
+            ThisAssemblyPipeline: thisAssemblyPipeline,
             GenerationInput: generationInput);
 
         return new ComposedContextInput(generationInput, validationInput);
@@ -106,13 +105,13 @@ internal sealed class GeneratorCompositionPhase
         return validationInputs.ToImmutable();
     }
 
-    private static DiscoveryResult BuildSharedDiscovery(
+    private static HostCompositionInput BuildHostComposition(
         GeneratorExtraction extraction,
         ImmutableArray<ContextGenerationInput> contexts)
     {
         if (contexts.IsDefaultOrEmpty)
         {
-            return extraction.Discovery;
+            return new HostCompositionInput(extraction.Discovery);
         }
 
         var commands = ImmutableArray.CreateBuilder<HandlerContract>();
@@ -122,9 +121,9 @@ internal sealed class GeneratorCompositionPhase
             commands.AddRange(contexts[i].Discovery.Commands);
         }
 
-        return new DiscoveryResult(
+        return new HostCompositionInput(new DiscoveryResult(
             commands.ToImmutable(),
-            extraction.Discovery.Queries);
+            extraction.Discovery.Queries));
     }
 
     private static ImmutableArray<HostContextInfo> GetHostContexts(HostBootstrapInfo hostBootstrap)
@@ -139,7 +138,7 @@ internal sealed class GeneratorCompositionPhase
             ImmutableArray<UseTinyDispatcherCall>.Empty));
     }
 
-    private static PipelineConfig SelectLocalPipeline(
+    private static PipelineConfig SelectThisAssemblyPipeline(
         GeneratorExtraction extraction,
         string contextFqn)
     {

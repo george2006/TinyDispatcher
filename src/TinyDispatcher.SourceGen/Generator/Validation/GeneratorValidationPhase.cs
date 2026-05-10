@@ -68,7 +68,7 @@ internal sealed class GeneratorValidationPhase
             .WithUseTinyDispatcherCalls(contextInput.BootstrapCalls)
             .WithContext(contextInput.ContextTypeFqn)
             .WithReferencedContributions(contextComposition.ReferencedContributions)
-            .WithLocalPipelineConfig(generationInput.LocalPipeline)
+            .WithThisAssemblyPipelineConfig(contextInput.ThisAssemblyPipeline)
             .WithPipelineConfig(generationInput.Pipeline)
             .Build();
     }

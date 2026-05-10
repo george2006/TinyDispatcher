@@ -22,7 +22,7 @@ internal sealed class GeneratorValidationContext
         ContextTypeFqn = b.ContextTypeFqn ?? string.Empty;
         ReferencedContributions = b.ReferencedContributions ?? ReferencedAssemblyContributions.Empty;
 
-        LocalPipeline = b.LocalPipeline ?? PipelineConfig.Empty;
+        ThisAssemblyPipeline = b.ThisAssemblyPipeline ?? PipelineConfig.Empty;
         Pipeline = b.Pipeline ?? PipelineConfig.Empty;
     }
 
@@ -38,7 +38,7 @@ internal sealed class GeneratorValidationContext
     public ReferencedAssemblyContributions ReferencedContributions { get; }
 
     // Pipeline config
-    public PipelineConfig LocalPipeline { get; }
+    public PipelineConfig ThisAssemblyPipeline { get; }
     public PipelineConfig Pipeline { get; }
     public ImmutableArray<MiddlewareRef> Globals => Pipeline.Globals;
     public ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> PerCommand => Pipeline.PerCommand;
@@ -83,7 +83,7 @@ internal sealed class GeneratorValidationContext
         public string? ContextTypeFqn { get; private set; }
 
         public ReferencedAssemblyContributions? ReferencedContributions { get; private set; }
-        public PipelineConfig? LocalPipeline { get; private set; }
+        public PipelineConfig? ThisAssemblyPipeline { get; private set; }
         public PipelineConfig? Pipeline { get; private set; }
 
         public Builder WithHostGate(bool isHost)
@@ -110,9 +110,9 @@ internal sealed class GeneratorValidationContext
             return this;
         }
 
-        public Builder WithLocalPipelineConfig(PipelineConfig pipeline)
+        public Builder WithThisAssemblyPipelineConfig(PipelineConfig pipeline)
         {
-            LocalPipeline = pipeline;
+            ThisAssemblyPipeline = pipeline;
             return this;
         }
 

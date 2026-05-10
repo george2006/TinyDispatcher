@@ -34,7 +34,7 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
     {
         var ownersByCommand = new Dictionary<string, string>(StringComparer.Ordinal);
 
-        RememberLocalPerCommandMiddleware(context.LocalPipeline, ownersByCommand);
+        RememberThisAssemblyPerCommandMiddleware(context.ThisAssemblyPipeline, ownersByCommand);
 
         foreach (var assembly in context.ReferencedContributions.EnumerateMatchingContext(context.ContextTypeFqn))
         {
@@ -42,7 +42,7 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
         }
     }
 
-    private static void RememberLocalPerCommandMiddleware(
+    private static void RememberThisAssemblyPerCommandMiddleware(
         PipelineConfig pipeline,
         Dictionary<string, string> ownersByCommand)
     {
@@ -104,7 +104,7 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
     {
         var ownersByPolicy = new Dictionary<string, string>(StringComparer.Ordinal);
 
-        RememberLocalPolicies(context.LocalPipeline, ownersByPolicy);
+        RememberThisAssemblyPolicies(context.ThisAssemblyPipeline, ownersByPolicy);
 
         foreach (var assembly in context.ReferencedContributions.EnumerateMatchingContext(context.ContextTypeFqn))
         {
@@ -112,7 +112,7 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
         }
     }
 
-    private static void RememberLocalPolicies(
+    private static void RememberThisAssemblyPolicies(
         PipelineConfig pipeline,
         Dictionary<string, string> ownersByPolicy)
     {
