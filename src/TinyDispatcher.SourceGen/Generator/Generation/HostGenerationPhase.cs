@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-using TinyDispatcher.SourceGen.Generator.Generation.Emitters.ModuleInitializer;
 using TinyDispatcher.SourceGen.Generator.Generation.Emitters.PipelineMaps;
 using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
@@ -26,13 +25,6 @@ internal sealed class HostGenerationPhase
         IGeneratorContext context,
         HostGenerationSourcePlan hostGeneration)
     {
-        var moduleInitializerPlan = ModuleInitializerPlanner.Build(
-            hostGeneration.Discovery,
-            hostGeneration.EmitOptions,
-            hasPipelineContributions: HasPipelinePlans(hostGeneration.Contexts));
-
-        new ModuleInitializerEmitter().Emit(context, moduleInitializerPlan);
-
         EmitPipelineSources(context, hostGeneration);
         EmitPipelineMaps(context, hostGeneration);
     }
@@ -207,16 +199,4 @@ internal sealed class HostGenerationPhase
                pipeline.Policies.Count > 0;
     }
 
-    private static bool HasPipelinePlans(ImmutableArray<HostContextSourcePlan> contextPlans)
-    {
-        for (var i = 0; i < contextPlans.Length; i++)
-        {
-            if (contextPlans[i].PipelinePlan is not null)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
 }

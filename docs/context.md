@@ -39,6 +39,24 @@ services.UseTinyDispatcher<MyContext>(tiny =>
 
 If no factory exists, TinyDispatcher fails fast at startup.
 
+## Multiple contexts
+
+A host can configure more than one strongly typed context:
+
+```csharp
+services.UseTinyDispatcher<OrderContext>(tiny =>
+{
+    // order middleware, policies, features...
+});
+
+services.UseTinyDispatcher<BillingContext>(tiny =>
+{
+    // billing middleware, policies, features...
+});
+```
+
+Handlers, middleware, and generated pipelines stay scoped to their context type.
+
 ## No-op context
 
 If you do not need any context at runtime, you can bootstrap with a no-op context:

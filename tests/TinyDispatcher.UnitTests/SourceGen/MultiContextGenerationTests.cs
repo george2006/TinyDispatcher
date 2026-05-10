@@ -93,6 +93,70 @@ namespace ConsoleApp
     }
 
     [Fact]
+    public void Ignores_private_nested_handlers_that_generated_code_cannot_reference()
+    {
+        var source = @"
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using TinyDispatcher;
+
+namespace ConsoleApp
+{
+    public sealed class AppContext { }
+    public sealed record PublicCommand : ICommand;
+
+    public sealed class PublicHandler : ICommandHandler<PublicCommand, AppContext>
+    {
+        public Task HandleAsync(PublicCommand command, AppContext context, CancellationToken ct)
+            => Task.CompletedTask;
+    }
+
+    public static class HiddenFeature
+    {
+        private sealed record HiddenCommand : ICommand;
+        private sealed class HiddenContext { }
+
+        private sealed class HiddenHandler : ICommandHandler<HiddenCommand, HiddenContext>
+        {
+            public Task HandleAsync(HiddenCommand command, HiddenContext context, CancellationToken ct)
+                => Task.CompletedTask;
+        }
+    }
+
+    public static class Startup
+    {
+        public static void Configure(IServiceCollection services)
+        {
+            services.UseTinyDispatcher<AppContext>(tiny => { });
+        }
+    }
+}
+";
+
+        var compilation = CreateCompilation(source);
+
+        var generator = new Generator();
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(generator);
+
+        driver.RunGeneratorsAndUpdateCompilation(
+            compilation,
+            out var outputCompilation,
+            out var diagnostics);
+
+        var generatorErrors = diagnostics
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+        var compilationErrors = outputCompilation
+            .GetDiagnostics()
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+
+        Assert.True(generatorErrors.Length == 0, string.Join("\n", generatorErrors.Select(d => d.ToString())));
+        Assert.True(compilationErrors.Length == 0, string.Join("\n", compilationErrors.Select(d => d.ToString())));
+    }
+
+    [Fact]
     public void Reports_invalid_middleware_from_second_context()
     {
         var source = @"

@@ -32,10 +32,12 @@ using TinyDispatcher;
 
 ### Bootstrap detection (UseTinyDispatcher vs UseTinyNoOpContext)
 
-The generator discovers your bootstrap call from your composition root. Exactly one bootstrap call is expected:
+The generator discovers bootstrap calls from your composition root:
 
 - `UseTinyDispatcher<TContext>(...)`
 - `UseTinyNoOpContext(...)` (uses `NoOpContext`)
+
+Multiple strongly typed `UseTinyDispatcher<TContext>(...)` calls are supported. Each configured context gets its own host-effective pipeline plan.
 
 If `UseTinyNoOpContext` is used, the generator can emit a pipeline that avoids context-related work.
 
@@ -46,7 +48,7 @@ In a multi-project setup:
 - non-host assemblies analyze their own handlers and pipeline-relevant facts
 - they emit generated assembly contributions for runtime publication
 - they also emit assembly-level contribution attributes as compile-time metadata
-- the host generator reads those referenced contributions and composes final pipelines
+- the host generator reads those referenced contributions and composes final pipelines for each configured host context
 
 Important rules:
 

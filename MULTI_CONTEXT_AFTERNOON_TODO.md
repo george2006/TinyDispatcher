@@ -1,46 +1,35 @@
-# Multi-Context Afternoon TODO
+# Multi-Context RC Review Notes
 
 Current checkpoint:
 
-- Composition now coordinates two explicit use cases:
-  - `AssemblyContributionComposition`: what this assembly contributes outward.
-  - `HostGenerationComposition`: what the host generates from composed context inputs.
-- Generation now has separate flows:
-  - `EmitAssemblyContributionSources`
-  - `EmitHostGenerationSources`
-- `ContextGenerationInput` is now the composed context input only.
-- Validation keeps the this-assembly pipeline separately through `ContextValidationInput`.
+- Extraction separates this-assembly facts from referenced assembly facts.
+- Composition coordinates explicit use cases:
+  - `ThisAssemblyContributionDiscovery`: local contribution discovery for this assembly.
+  - `HostGenerationComposition`: host-effective generation facts.
+  - `HostContextValidationInput`: validation facts derived from host projections.
+- Host composition owns host context projection and referenced contribution merging.
+- Generation is split by use case:
+  - `AssemblyContributionGenerationPhase`
+  - `HostGenerationPhase`
+- Low-level emitters and writers are reused unchanged.
 
-Next cleanup candidates:
+RC verification:
 
-1. Review whether `GeneratorContextComposition` is still the right top-level name.
-   - It now coordinates more than contexts.
-   - Possible names: `GeneratorComposition`, `GeneratorCompositionResult`, or `GeneratorUseCases`.
+1. Source-generation multi-context compile coverage is present in `MultiContextGenerationTests`.
+2. Private nested handlers are ignored so generated contribution metadata does not emit inaccessible `typeof(...)` references.
+3. Public docs now describe multiple host contexts.
+4. Full test suite and whitespace checks are passing.
 
-2. Consider splitting generation into two small services.
-   - `AssemblyContributionGenerationPhase`
-   - `HostGenerationPhase`
-   - Keep `GeneratorGenerationPhase` as the coordinator, or remove it if it becomes thin enough.
+Remaining follow-up:
 
-3. Consider splitting composition internals by use case.
-   - `BuildAssemblyContribution`
-   - `BuildHostGeneration`
-   - `BuildValidationContexts`
-   - The current `BuildContext` still creates generation and validation inputs together.
-
-4. Revisit model names after the split settles.
-   - `ContextGenerationInput` might become `HostContextGenerationInput`.
-   - `ContextValidationInput` might become `HostContextValidationInput`.
-   - Only rename if it improves readability at call sites.
-
-5. Add focused tests for the architectural split if behavior starts moving.
-   - This slice is covered by existing tests.
-   - If services split further, add tests around composition shape rather than only generated output.
-
-Useful verification commands:
+1. Consider a dedicated runtime integration project that references the source generator as an analyzer.
+2. Keep stale single-context/composed naming searches clean before merge.
 
 ```powershell
 dotnet test --no-restore
 git diff --check
-rg -n "LocalDiscovery|ComposedDiscovery|LocalPipeline|ComposedPipeline|HostCompositionInput|ThisAssemblyContributionInput" src tests
 ```
+
+Final review question:
+
+> Does each phase read as one responsibility, or is it still carrying another phase's decision?

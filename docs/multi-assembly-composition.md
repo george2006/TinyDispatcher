@@ -36,10 +36,10 @@ It does **not** generate the final dispatcher graph for the whole app.
 
 The host assembly:
 
-- defines the final bootstrap through `UseTinyDispatcher<TContext>(...)`
+- defines the final bootstrap through one or more `UseTinyDispatcher<TContext>(...)` calls
 - owns global middleware configuration
 - consumes referenced assembly contribution metadata
-- composes the full command universe
+- composes the context-specific command universe
 - emits and registers final pipelines for local and referenced commands
 
 ## Publication and transport
@@ -91,6 +91,7 @@ This rule applies the same way for:
 
 - host-local commands
 - commands contributed from referenced assemblies
+- each configured host context
 
 ## Current supported scope
 
