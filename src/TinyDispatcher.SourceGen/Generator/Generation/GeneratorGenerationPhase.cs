@@ -106,7 +106,7 @@ internal sealed class GeneratorGenerationPhase
         var contexts = BuildPipelineGenerationPlans(options, hostBootstrap, composition.HostGeneration);
         var assemblyContribution = BuildAssemblyContributionPlan(
             options,
-            composition.AssemblyContributionDiscovery);
+            composition.ThisAssemblyContributionDiscovery);
         var hostGeneration = BuildHostGenerationPlan(options, composition.HostGeneration, contexts);
 
         return new SourceGenerationPlan(assemblyContribution, hostGeneration);
@@ -163,7 +163,7 @@ internal sealed class GeneratorGenerationPhase
 
         for (var i = 0; i < contextInputs.Length; i++)
         {
-            var contextInput = contextInputs[i];
+            var contextInput = contextInputs[i].GenerationInput;
 
             var contextPlan = BuildContextGenerationPlan(
                 BuildContextEmitOptions(options, contextInput.ContextTypeFqn),

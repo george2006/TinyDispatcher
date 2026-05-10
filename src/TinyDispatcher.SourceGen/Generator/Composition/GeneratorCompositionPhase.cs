@@ -6,7 +6,6 @@ namespace TinyDispatcher.SourceGen.Generator.Composition;
 
 internal sealed class GeneratorCompositionPhase
 {
-    private readonly ContextCompositionComposer _contextCompositionComposer = new();
     private readonly HostGenerationComposer _hostGenerationComposer = new();
     private readonly ValidationInputComposer _validationInputComposer = new();
 
@@ -14,18 +13,13 @@ internal sealed class GeneratorCompositionPhase
         HostBootstrapInfo hostBootstrap,
         GeneratorExtraction extraction)
     {
-        var contextCompositions = _contextCompositionComposer.Compose(
+        var hostGeneration = _hostGenerationComposer.Compose(
             hostBootstrap,
             extraction);
-        var hostGeneration = _hostGenerationComposer.Compose(
-            extraction,
-            contextCompositions);
-        var validationContexts = _validationInputComposer.Compose(
-            contextCompositions,
-            hostGeneration.Contexts);
+        var validationContexts = _validationInputComposer.Compose(hostGeneration.Contexts);
 
         return new GeneratorComposition(
-            AssemblyContributionDiscovery: extraction.Discovery,
+            ThisAssemblyContributionDiscovery: extraction.ThisAssembly.Discovery,
             HostGeneration: hostGeneration,
             ValidationContexts: validationContexts);
     }

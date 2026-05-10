@@ -205,11 +205,12 @@ public sealed class GeneratorValidationPhaseTests
         ReferencedAssemblyContributions? referencedContributions = null)
     {
         return new GeneratorExtraction(
-            discovery,
-            referencedContributions ?? ReferencedAssemblyContributions.Empty,
-            ImmutableArray.Create(new ContextPipelineConfig(
-                "global::MyApp.AppContext",
-                pipeline)));
+            new ThisAssemblyExtraction(
+                discovery,
+                ImmutableArray.Create(new ContextPipelineConfig(
+                    "global::MyApp.AppContext",
+                    pipeline))),
+            referencedContributions ?? ReferencedAssemblyContributions.Empty);
     }
 
     private static GeneratorComposition Composition(

@@ -340,11 +340,12 @@ public sealed class GeneratorGenerationPhaseTests
             ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
             ImmutableDictionary<string, PolicySpec>.Empty);
         var extraction = new GeneratorExtraction(
-            discovery,
-            ReferencedAssemblyContributions.Empty,
-            ImmutableArray.Create(
-                new ContextPipelineConfig("global::MyApp.CtxA", pipelineA),
-                new ContextPipelineConfig("global::MyApp.CtxB", pipelineB)));
+            new ThisAssemblyExtraction(
+                discovery,
+                ImmutableArray.Create(
+                    new ContextPipelineConfig("global::MyApp.CtxA", pipelineA),
+                    new ContextPipelineConfig("global::MyApp.CtxB", pipelineB))),
+            ReferencedAssemblyContributions.Empty);
         var hostBootstrap = HostBootstrap(
             "global::MyApp.CtxA",
             "global::MyApp.CtxA",
@@ -392,11 +393,12 @@ public sealed class GeneratorGenerationPhaseTests
             ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
             ImmutableDictionary<string, PolicySpec>.Empty);
         var extraction = new GeneratorExtraction(
-            discovery,
-            ReferencedAssemblyContributions.Empty,
-            ImmutableArray.Create(
-                new ContextPipelineConfig("global::MyApp.CtxA", emptyPipeline),
-                new ContextPipelineConfig("global::MyApp.CtxB", pipelineB)));
+            new ThisAssemblyExtraction(
+                discovery,
+                ImmutableArray.Create(
+                    new ContextPipelineConfig("global::MyApp.CtxA", emptyPipeline),
+                    new ContextPipelineConfig("global::MyApp.CtxB", pipelineB))),
+            ReferencedAssemblyContributions.Empty);
         var hostBootstrap = HostBootstrap(
             "global::MyApp.CtxA",
             "global::MyApp.CtxA",
@@ -498,11 +500,12 @@ public sealed class GeneratorGenerationPhaseTests
         ReferencedAssemblyContributions? referencedContributions = null)
     {
         return new GeneratorExtraction(
-            discovery,
-            referencedContributions ?? ReferencedAssemblyContributions.Empty,
-            ImmutableArray.Create(new ContextPipelineConfig(
-                "global::MyApp.AppContext",
-                pipeline)));
+            new ThisAssemblyExtraction(
+                discovery,
+                ImmutableArray.Create(new ContextPipelineConfig(
+                    "global::MyApp.AppContext",
+                    pipeline))),
+            referencedContributions ?? ReferencedAssemblyContributions.Empty);
     }
 
     private static GeneratorComposition Composition(

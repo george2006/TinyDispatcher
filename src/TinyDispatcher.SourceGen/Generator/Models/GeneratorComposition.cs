@@ -3,6 +3,6 @@ using System.Collections.Immutable;
 namespace TinyDispatcher.SourceGen.Generator.Models;
 
 internal sealed record GeneratorComposition(
-    DiscoveryResult AssemblyContributionDiscovery,
+    DiscoveryResult ThisAssemblyContributionDiscovery,
     HostGenerationComposition HostGeneration,
     ImmutableArray<ContextValidationInput> ValidationContexts);
