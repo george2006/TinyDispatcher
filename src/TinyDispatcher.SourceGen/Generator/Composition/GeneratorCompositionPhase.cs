@@ -15,13 +15,11 @@ internal sealed class GeneratorCompositionPhase
         var composedContexts = BuildContexts(hostBootstrap, extraction);
         var generationContexts = SelectGenerationInputs(composedContexts);
         var validationContexts = SelectValidationInputs(composedContexts);
-        var hostComposition = BuildHostComposition(extraction, generationContexts);
+        var hostGeneration = BuildHostGeneration(extraction, generationContexts);
 
         return new GeneratorContextComposition(
-            ThisAssemblyContribution: new ThisAssemblyContributionInput(extraction.Discovery),
-            HostComposition: hostComposition,
-            ReferencedContributions: extraction.ReferencedContributions,
-            GenerationContexts: generationContexts,
+            AssemblyContribution: new AssemblyContributionComposition(extraction.Discovery),
+            HostGeneration: hostGeneration,
             ValidationContexts: validationContexts);
     }
 
@@ -105,13 +103,16 @@ internal sealed class GeneratorCompositionPhase
         return validationInputs.ToImmutable();
     }
 
-    private static HostCompositionInput BuildHostComposition(
+    private static HostGenerationComposition BuildHostGeneration(
         GeneratorExtraction extraction,
         ImmutableArray<ContextGenerationInput> contexts)
     {
         if (contexts.IsDefaultOrEmpty)
         {
-            return new HostCompositionInput(extraction.Discovery);
+            return new HostGenerationComposition(
+                extraction.Discovery,
+                extraction.ReferencedContributions,
+                ImmutableArray<ContextGenerationInput>.Empty);
         }
 
         var commands = ImmutableArray.CreateBuilder<HandlerContract>();
@@ -121,9 +122,12 @@ internal sealed class GeneratorCompositionPhase
             commands.AddRange(contexts[i].Discovery.Commands);
         }
 
-        return new HostCompositionInput(new DiscoveryResult(
-            commands.ToImmutable(),
-            extraction.Discovery.Queries));
+        return new HostGenerationComposition(
+            new DiscoveryResult(
+                commands.ToImmutable(),
+                extraction.Discovery.Queries),
+            extraction.ReferencedContributions,
+            contexts);
     }
 
     private static ImmutableArray<HostContextInfo> GetHostContexts(HostBootstrapInfo hostBootstrap)

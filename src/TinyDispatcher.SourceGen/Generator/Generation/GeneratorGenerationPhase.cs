@@ -21,44 +21,53 @@ internal sealed class GeneratorGenerationPhase
     {
         var generationPlan = BuildGenerationPlan(options, hostBootstrap, contextComposition);
 
-        EmitSharedSources(context, generationPlan);
-        EmitPipelineSources(context, generationPlan);
-        EmitPipelineMaps(context, generationPlan);
+        EmitAssemblyContributionSources(context, generationPlan);
+        EmitHostGenerationSources(context, generationPlan);
     }
 
-    private static void EmitSharedSources(
+    private static void EmitAssemblyContributionSources(
         IGeneratorContext context,
         SourceGenerationPlan generationPlan)
     {
-        var contextPlan = generationPlan.SharedSources;
-        var moduleInitializerPlan = ModuleInitializerPlanner.Build(
-            contextPlan.HostComposition.Discovery,
-            contextPlan.EmitOptions,
-            hasPipelineContributions: HasPipelinePlans(generationPlan.Contexts));
-
-        new ModuleInitializerEmitter().Emit(context, moduleInitializerPlan);
+        var assemblyContribution = generationPlan.AssemblyContribution;
         new EmptyPipelineContributionEmitter().Emit(
             context,
-            contextPlan.ThisAssemblyContribution.Discovery,
-            contextPlan.PipelineContributions,
-            contextPlan.EmitOptions,
-            GetPipelineRegistrationMethodNames(generationPlan.Contexts),
-            GetPipelineContributionSources(generationPlan.Contexts));
+            assemblyContribution.Discovery,
+            assemblyContribution.PipelineContributions,
+            assemblyContribution.EmitOptions,
+            GetPipelineRegistrationMethodNames(generationPlan.HostGeneration.Contexts),
+            GetPipelineContributionSources(generationPlan.HostGeneration.Contexts));
 
         var handlerRegistrationsPlan = HandlerRegistrationsPlanner.Build(
-            contextPlan.ThisAssemblyContribution.Discovery,
-            contextPlan.EmitOptions);
+            assemblyContribution.Discovery,
+            assemblyContribution.EmitOptions);
 
         new HandlerRegistrationsEmitter().Emit(context, handlerRegistrationsPlan);
     }
 
-    private static void EmitPipelineSources(
+    private static void EmitHostGenerationSources(
         IGeneratorContext context,
         SourceGenerationPlan generationPlan)
     {
-        for (var i = 0; i < generationPlan.Contexts.Length; i++)
+        var hostGeneration = generationPlan.HostGeneration;
+        var moduleInitializerPlan = ModuleInitializerPlanner.Build(
+            hostGeneration.Discovery,
+            hostGeneration.EmitOptions,
+            hasPipelineContributions: HasPipelinePlans(hostGeneration.Contexts));
+
+        new ModuleInitializerEmitter().Emit(context, moduleInitializerPlan);
+
+        EmitPipelineSources(context, hostGeneration);
+        EmitPipelineMaps(context, hostGeneration);
+    }
+
+    private static void EmitPipelineSources(
+        IGeneratorContext context,
+        HostGenerationSourcePlan hostGeneration)
+    {
+        for (var i = 0; i < hostGeneration.Contexts.Length; i++)
         {
-            var pipelinePlan = generationPlan.Contexts[i].PipelinePlan;
+            var pipelinePlan = hostGeneration.Contexts[i].PipelinePlan;
             if (pipelinePlan is null)
             {
                 continue;
@@ -70,11 +79,11 @@ internal sealed class GeneratorGenerationPhase
 
     private static void EmitPipelineMaps(
         IGeneratorContext context,
-        SourceGenerationPlan generationPlan)
+        HostGenerationSourcePlan hostGeneration)
     {
-        for (var i = 0; i < generationPlan.Contexts.Length; i++)
+        for (var i = 0; i < hostGeneration.Contexts.Length; i++)
         {
-            var contextPlan = generationPlan.Contexts[i];
+            var contextPlan = hostGeneration.Contexts[i];
             if (!contextPlan.ShouldEmitPipelineMaps)
             {
                 continue;
@@ -94,10 +103,11 @@ internal sealed class GeneratorGenerationPhase
         HostBootstrapInfo hostBootstrap,
         GeneratorContextComposition contextComposition)
     {
-        var sharedSources = BuildSharedGenerationPlan(options, contextComposition);
-        var contexts = BuildPipelineGenerationPlans(options, hostBootstrap, contextComposition);
+        var contexts = BuildPipelineGenerationPlans(options, hostBootstrap, contextComposition.HostGeneration);
+        var assemblyContribution = BuildAssemblyContributionPlan(options, contextComposition.AssemblyContribution);
+        var hostGeneration = BuildHostGenerationPlan(options, contextComposition.HostGeneration, contexts);
 
-        return new SourceGenerationPlan(sharedSources, contexts);
+        return new SourceGenerationPlan(assemblyContribution, hostGeneration);
     }
 
     private static PipelinePlan? BuildPipelinePlan(ContextSourcePlan contextPlan)
@@ -120,23 +130,33 @@ internal sealed class GeneratorGenerationPhase
         return pipelinePlan;
     }
 
-    private static SharedSourcePlan BuildSharedGenerationPlan(
+    private static AssemblyContributionSourcePlan BuildAssemblyContributionPlan(
         GeneratorOptions options,
-        GeneratorContextComposition contextComposition)
+        AssemblyContributionComposition assemblyContribution)
     {
-        return new SharedSourcePlan(
-            ThisAssemblyContribution: contextComposition.ThisAssemblyContribution,
-            HostComposition: contextComposition.HostComposition,
+        return new AssemblyContributionSourcePlan(
+            Discovery: assemblyContribution.Discovery,
             EmitOptions: BuildSharedEmitOptions(options),
             PipelineContributions: PipelineContributions.Create(PipelineConfig.Empty));
+    }
+
+    private static HostGenerationSourcePlan BuildHostGenerationPlan(
+        GeneratorOptions options,
+        HostGenerationComposition hostGeneration,
+        ImmutableArray<ContextSourcePlan> contexts)
+    {
+        return new HostGenerationSourcePlan(
+            Discovery: hostGeneration.Discovery,
+            EmitOptions: BuildSharedEmitOptions(options),
+            Contexts: contexts);
     }
 
     private static ImmutableArray<ContextSourcePlan> BuildPipelineGenerationPlans(
         GeneratorOptions options,
         HostBootstrapInfo hostBootstrap,
-        GeneratorContextComposition contextComposition)
+        HostGenerationComposition hostGeneration)
     {
-        var contextInputs = contextComposition.GenerationContexts;
+        var contextInputs = hostGeneration.Contexts;
         var contextPlans = ImmutableArray.CreateBuilder<ContextSourcePlan>(contextInputs.Length);
 
         for (var i = 0; i < contextInputs.Length; i++)
@@ -304,14 +324,18 @@ internal sealed class GeneratorGenerationPhase
     }
 
     private readonly record struct SourceGenerationPlan(
-        SharedSourcePlan SharedSources,
-        ImmutableArray<ContextSourcePlan> Contexts);
+        AssemblyContributionSourcePlan AssemblyContribution,
+        HostGenerationSourcePlan HostGeneration);
 
-    private readonly record struct SharedSourcePlan(
-        ThisAssemblyContributionInput ThisAssemblyContribution,
-        HostCompositionInput HostComposition,
+    private readonly record struct AssemblyContributionSourcePlan(
+        DiscoveryResult Discovery,
         GeneratorOptions EmitOptions,
         PipelineContributions PipelineContributions);
+
+    private readonly record struct HostGenerationSourcePlan(
+        DiscoveryResult Discovery,
+        GeneratorOptions EmitOptions,
+        ImmutableArray<ContextSourcePlan> Contexts);
 
     private readonly record struct ContextSourcePlan(
         DiscoveryResult Discovery,

@@ -67,7 +67,7 @@ internal sealed class GeneratorValidationPhase
             .WithHostGate(isHost: hostBootstrap.IsHostProject)
             .WithUseTinyDispatcherCalls(contextInput.BootstrapCalls)
             .WithContext(contextInput.ContextTypeFqn)
-            .WithReferencedContributions(contextComposition.ReferencedContributions)
+            .WithReferencedContributions(contextComposition.HostGeneration.ReferencedContributions)
             .WithThisAssemblyPipelineConfig(contextInput.ThisAssemblyPipeline)
             .WithPipelineConfig(generationInput.Pipeline)
             .Build();
