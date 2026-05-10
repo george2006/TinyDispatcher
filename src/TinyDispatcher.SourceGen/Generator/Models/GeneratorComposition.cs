@@ -5,4 +5,4 @@ namespace TinyDispatcher.SourceGen.Generator.Models;
 internal sealed record GeneratorComposition(
     DiscoveryResult ThisAssemblyContributionDiscovery,
     HostGenerationComposition HostGeneration,
-    ImmutableArray<ContextValidationInput> ValidationContexts);
+    ImmutableArray<HostContextValidationInput> ValidationContexts);

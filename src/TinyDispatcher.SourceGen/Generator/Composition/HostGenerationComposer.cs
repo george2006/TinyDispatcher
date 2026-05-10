@@ -66,7 +66,7 @@ internal sealed class HostGenerationComposer
                 contextFqn);
         }
 
-        var generationInput = new ContextGenerationInput(
+        var generationInput = new HostContextGenerationInput(
             ContextTypeFqn: contextFqn,
             Discovery: hostDiscovery,
             Pipeline: hostPipeline);

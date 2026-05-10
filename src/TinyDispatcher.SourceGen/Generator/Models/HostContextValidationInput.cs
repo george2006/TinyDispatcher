@@ -2,10 +2,10 @@ using System.Collections.Immutable;
 
 namespace TinyDispatcher.SourceGen.Generator.Models;
 
-internal sealed record ContextValidationInput(
+internal sealed record HostContextValidationInput(
     ImmutableArray<UseTinyDispatcherCall> BootstrapCalls,
     PipelineConfig ThisAssemblyPipeline,
-    ContextGenerationInput GenerationInput)
+    HostContextGenerationInput GenerationInput)
 {
     public string ContextTypeFqn => GenerationInput.ContextTypeFqn;
 }

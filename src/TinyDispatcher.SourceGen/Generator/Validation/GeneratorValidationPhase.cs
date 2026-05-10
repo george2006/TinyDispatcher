@@ -57,7 +57,7 @@ internal sealed class GeneratorValidationPhase
         HostBootstrapInfo hostBootstrap,
         GeneratorComposition composition,
         DiagnosticsCatalog diagnosticsCatalog,
-        ContextValidationInput contextInput)
+        HostContextValidationInput contextInput)
     {
         var generationInput = contextInput.GenerationInput;
 

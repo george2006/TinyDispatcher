@@ -5,10 +5,10 @@ namespace TinyDispatcher.SourceGen.Generator.Composition;
 
 internal sealed class ValidationInputComposer
 {
-    public ImmutableArray<ContextValidationInput> Compose(
+    public ImmutableArray<HostContextValidationInput> Compose(
         ImmutableArray<HostContextProjection> contexts)
     {
-        var validationInputs = ImmutableArray.CreateBuilder<ContextValidationInput>(contexts.Length);
+        var validationInputs = ImmutableArray.CreateBuilder<HostContextValidationInput>(contexts.Length);
 
         for (var i = 0; i < contexts.Length; i++)
         {
@@ -18,10 +18,10 @@ internal sealed class ValidationInputComposer
         return validationInputs.ToImmutable();
     }
 
-    private static ContextValidationInput BuildValidationContext(
+    private static HostContextValidationInput BuildValidationContext(
         HostContextProjection context)
     {
-        return new ContextValidationInput(
+        return new HostContextValidationInput(
             BootstrapCalls: context.HostContext.UseTinyDispatcherCalls,
             ThisAssemblyPipeline: context.ThisAssemblyPipeline,
             GenerationInput: context.GenerationInput);
