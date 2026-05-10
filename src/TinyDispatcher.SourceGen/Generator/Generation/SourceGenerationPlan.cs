@@ -5,10 +5,6 @@ using TinyDispatcher.SourceGen.Generator.Options;
 
 namespace TinyDispatcher.SourceGen.Generator.Generation;
 
-internal readonly record struct SourceGenerationPlan(
-    AssemblyContributionSourcePlan AssemblyContribution,
-    HostGenerationSourcePlan HostGeneration);
-
 internal readonly record struct AssemblyContributionSourcePlan(
     DiscoveryResult Discovery,
     GeneratorOptions EmitOptions,

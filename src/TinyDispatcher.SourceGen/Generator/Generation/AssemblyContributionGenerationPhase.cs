@@ -2,11 +2,23 @@ using System.Collections.Immutable;
 using TinyDispatcher.SourceGen.Generator.Generation.Emitters;
 using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Handlers;
 using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Pipelines;
+using TinyDispatcher.SourceGen.Generator.Models;
+using TinyDispatcher.SourceGen.Generator.Options;
 
 namespace TinyDispatcher.SourceGen.Generator.Generation;
 
 internal sealed class AssemblyContributionGenerationPhase
 {
+    public AssemblyContributionSourcePlan Plan(
+        GeneratorOptions options,
+        DiscoveryResult thisAssemblyContributionDiscovery)
+    {
+        return new AssemblyContributionSourcePlan(
+            Discovery: thisAssemblyContributionDiscovery,
+            EmitOptions: BuildEmitOptions(options),
+            PipelineContributions: PipelineContributions.Create(PipelineConfig.Empty));
+    }
+
     public void Generate(
         IGeneratorContext context,
         AssemblyContributionSourcePlan assemblyContribution,
@@ -71,5 +83,17 @@ internal sealed class AssemblyContributionGenerationPhase
         }
 
         return sources.ToImmutable();
+    }
+
+    private static GeneratorOptions BuildEmitOptions(GeneratorOptions options)
+    {
+        return new GeneratorOptions(
+            GeneratedNamespace: options.GeneratedNamespace,
+            EmitDiExtensions: options.EmitDiExtensions,
+            EmitHandlerRegistrations: options.EmitHandlerRegistrations,
+            IncludeNamespacePrefix: options.IncludeNamespacePrefix,
+            CommandContextType: null,
+            EmitPipelineMap: options.EmitPipelineMap,
+            PipelineMapFormat: options.PipelineMapFormat);
     }
 }

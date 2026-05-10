@@ -2,11 +2,26 @@ using System.Collections.Immutable;
 using TinyDispatcher.SourceGen.Generator.Generation.Emitters.ModuleInitializer;
 using TinyDispatcher.SourceGen.Generator.Generation.Emitters.PipelineMaps;
 using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Pipelines;
+using TinyDispatcher.SourceGen.Generator.Models;
+using TinyDispatcher.SourceGen.Generator.Options;
 
 namespace TinyDispatcher.SourceGen.Generator.Generation;
 
 internal sealed class HostGenerationPhase
 {
+    public HostGenerationSourcePlan Plan(
+        GeneratorOptions options,
+        HostBootstrapInfo hostBootstrap,
+        HostGenerationComposition hostGeneration)
+    {
+        var contexts = BuildContextPlans(options, hostBootstrap, hostGeneration);
+
+        return new HostGenerationSourcePlan(
+            Discovery: hostGeneration.Discovery,
+            EmitOptions: BuildEmitOptions(options),
+            Contexts: contexts);
+    }
+
     public void Generate(
         IGeneratorContext context,
         HostGenerationSourcePlan hostGeneration)
@@ -57,6 +72,139 @@ internal sealed class HostGenerationPhase
 
             new PipelineMapsEmitter().Emit(context, pipelineMapsPlan);
         }
+    }
+
+    private static ImmutableArray<HostContextSourcePlan> BuildContextPlans(
+        GeneratorOptions options,
+        HostBootstrapInfo hostBootstrap,
+        HostGenerationComposition hostGeneration)
+    {
+        var contextInputs = hostGeneration.Contexts;
+        var contextPlans = ImmutableArray.CreateBuilder<HostContextSourcePlan>(contextInputs.Length);
+
+        for (var i = 0; i < contextInputs.Length; i++)
+        {
+            var contextInput = contextInputs[i].GenerationInput;
+
+            var contextPlan = BuildContextPlan(
+                BuildContextEmitOptions(options, contextInput.ContextTypeFqn),
+                shouldEmitPipelines: ShouldEmitPipelines(
+                    hostBootstrap,
+                    contextInput.ContextTypeFqn,
+                    contextInput.Pipeline),
+                shouldEmitPipelineMaps: ShouldEmitPipelineMaps(hostBootstrap, contextInput.ContextTypeFqn),
+                contextInput.Discovery,
+                contextInput.Pipeline);
+
+            contextPlans.Add(contextPlan with
+            {
+                PipelinePlan = BuildPipelinePlan(contextPlan)
+            });
+        }
+
+        return contextPlans.ToImmutable();
+    }
+
+    private static HostContextSourcePlan BuildContextPlan(
+        GeneratorOptions options,
+        bool shouldEmitPipelines,
+        bool shouldEmitPipelineMaps,
+        DiscoveryResult discovery,
+        PipelineConfig pipelineConfig)
+    {
+        var pipelineContributions = PipelineContributions.Create(pipelineConfig);
+
+        return new HostContextSourcePlan(
+            Discovery: discovery,
+            EmitOptions: options,
+            ShouldEmitPipelines: shouldEmitPipelines,
+            ShouldEmitPipelineMaps: shouldEmitPipelineMaps,
+            PipelineContributions: pipelineContributions,
+            PipelinePlan: null);
+    }
+
+    private static PipelinePlan? BuildPipelinePlan(HostContextSourcePlan contextPlan)
+    {
+        if (!contextPlan.ShouldEmitPipelines)
+        {
+            return null;
+        }
+
+        var pipelinePlan = PipelinePlanner.Build(
+            contextPlan.PipelineContributions,
+            contextPlan.Discovery,
+            contextPlan.EmitOptions);
+
+        if (!pipelinePlan.ShouldEmit)
+        {
+            return null;
+        }
+
+        return pipelinePlan;
+    }
+
+    private static GeneratorOptions BuildEmitOptions(GeneratorOptions options)
+    {
+        return new GeneratorOptions(
+            GeneratedNamespace: options.GeneratedNamespace,
+            EmitDiExtensions: options.EmitDiExtensions,
+            EmitHandlerRegistrations: options.EmitHandlerRegistrations,
+            IncludeNamespacePrefix: options.IncludeNamespacePrefix,
+            CommandContextType: null,
+            EmitPipelineMap: options.EmitPipelineMap,
+            PipelineMapFormat: options.PipelineMapFormat);
+    }
+
+    private static GeneratorOptions BuildContextEmitOptions(
+        GeneratorOptions options,
+        string contextFqn)
+    {
+        if (string.IsNullOrWhiteSpace(contextFqn))
+        {
+            return options;
+        }
+
+        return new GeneratorOptions(
+            GeneratedNamespace: options.GeneratedNamespace,
+            EmitDiExtensions: options.EmitDiExtensions,
+            EmitHandlerRegistrations: options.EmitHandlerRegistrations,
+            IncludeNamespacePrefix: options.IncludeNamespacePrefix,
+            CommandContextType: contextFqn,
+            EmitPipelineMap: options.EmitPipelineMap,
+            PipelineMapFormat: options.PipelineMapFormat);
+    }
+
+    private static bool ShouldEmitPipelines(
+        HostBootstrapInfo hostBootstrap,
+        string contextFqn,
+        PipelineConfig pipeline)
+    {
+        if (!hostBootstrap.IsHostProject)
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(contextFqn))
+        {
+            return false;
+        }
+
+        return HasAnyPipelineContributions(pipeline);
+    }
+
+    private static bool ShouldEmitPipelineMaps(
+        HostBootstrapInfo hostBootstrap,
+        string contextFqn)
+    {
+        return hostBootstrap.IsHostProject &&
+               !string.IsNullOrWhiteSpace(contextFqn);
+    }
+
+    private static bool HasAnyPipelineContributions(PipelineConfig pipeline)
+    {
+        return pipeline.Globals.Length > 0 ||
+               pipeline.PerCommand.Count > 0 ||
+               pipeline.Policies.Count > 0;
     }
 
     private static bool HasPipelinePlans(ImmutableArray<HostContextSourcePlan> contextPlans)
