@@ -25,10 +25,10 @@ public sealed class ReferencedContributionConflictValidatorTests
                     "OrdersContrib",
                     "global::MyApp.AppContext",
                     ImmutableArray<MiddlewareRef>.Empty,
-                    ImmutableArray.Create(new PerCommandMiddlewareFinding(
+                    ImmutableArray.Create(new ReferencedPerCommandMiddlewareContribution(
                         "global::MyApp.CreateOrder",
                         ImmutableArray.Create(new MiddlewareRef("global::Orders.SharedMiddleware", 2)))),
-                    ImmutableArray<PolicyFinding>.Empty)));
+                    ImmutableArray<ReferencedPolicyContribution>.Empty)));
 
         var diagnostics = new DiagnosticBag();
 
@@ -48,18 +48,18 @@ public sealed class ReferencedContributionConflictValidatorTests
                     "OrdersContrib",
                     "global::MyApp.AppContext",
                     ImmutableArray<MiddlewareRef>.Empty,
-                    ImmutableArray.Create(new PerCommandMiddlewareFinding(
+                    ImmutableArray.Create(new ReferencedPerCommandMiddlewareContribution(
                         "global::MyApp.CreateOrder",
                         ImmutableArray.Create(new MiddlewareRef("global::Orders.SharedMiddleware", 2)))),
-                    ImmutableArray<PolicyFinding>.Empty),
+                    ImmutableArray<ReferencedPolicyContribution>.Empty),
                 new ReferencedAssemblyContribution(
                     "BillingContrib",
                     "global::MyApp.AppContext",
                     ImmutableArray<MiddlewareRef>.Empty,
-                    ImmutableArray.Create(new PerCommandMiddlewareFinding(
+                    ImmutableArray.Create(new ReferencedPerCommandMiddlewareContribution(
                         "global::MyApp.CreateOrder",
                         ImmutableArray.Create(new MiddlewareRef("global::Billing.SharedMiddleware", 2)))),
-                    ImmutableArray<PolicyFinding>.Empty)));
+                    ImmutableArray<ReferencedPolicyContribution>.Empty)));
 
         var diagnostics = new DiagnosticBag();
 
@@ -80,13 +80,13 @@ public sealed class ReferencedContributionConflictValidatorTests
                     "global::MyApp.AppContext",
                     ImmutableArray<MiddlewareRef>.Empty,
                     ImmutableArray.Create(
-                        new PerCommandMiddlewareFinding(
+                        new ReferencedPerCommandMiddlewareContribution(
                             "global::MyApp.CreateOrder",
                             ImmutableArray.Create(new MiddlewareRef("global::Orders.FirstMiddleware", 2))),
-                        new PerCommandMiddlewareFinding(
+                        new ReferencedPerCommandMiddlewareContribution(
                             "global::MyApp.CreateOrder",
                             ImmutableArray.Create(new MiddlewareRef("global::Orders.SecondMiddleware", 2)))),
-                    ImmutableArray<PolicyFinding>.Empty)));
+                    ImmutableArray<ReferencedPolicyContribution>.Empty)));
 
         var diagnostics = new DiagnosticBag();
 
@@ -111,11 +111,11 @@ public sealed class ReferencedContributionConflictValidatorTests
                     "MixedContrib",
                     null,
                     ImmutableArray<MiddlewareRef>.Empty,
-                    ImmutableArray.Create(new PerCommandMiddlewareFinding(
+                    ImmutableArray.Create(new ReferencedPerCommandMiddlewareContribution(
                         "global::MyApp.CreateOrder",
                         ImmutableArray.Create(new MiddlewareRef("global::Mixed.OtherMiddleware", 2)),
                         "global::OtherApp.OtherContext")),
-                    ImmutableArray<PolicyFinding>.Empty)));
+                    ImmutableArray<ReferencedPolicyContribution>.Empty)));
 
         var diagnostics = new DiagnosticBag();
 
@@ -142,8 +142,8 @@ public sealed class ReferencedContributionConflictValidatorTests
                     "OrdersContrib",
                     "global::MyApp.AppContext",
                     ImmutableArray<MiddlewareRef>.Empty,
-                    ImmutableArray<PerCommandMiddlewareFinding>.Empty,
-                    ImmutableArray.Create(new PolicyFinding(
+                    ImmutableArray<ReferencedPerCommandMiddlewareContribution>.Empty,
+                    ImmutableArray.Create(new ReferencedPolicyContribution(
                         "global::MyApp.SharedPolicy",
                         ImmutableArray<MiddlewareRef>.Empty,
                         ImmutableArray<string>.Empty)))));
@@ -166,13 +166,13 @@ public sealed class ReferencedContributionConflictValidatorTests
                     "OrdersContrib",
                     "global::MyApp.AppContext",
                     ImmutableArray<MiddlewareRef>.Empty,
-                    ImmutableArray<PerCommandMiddlewareFinding>.Empty,
+                    ImmutableArray<ReferencedPerCommandMiddlewareContribution>.Empty,
                     ImmutableArray.Create(
-                        new PolicyFinding(
+                        new ReferencedPolicyContribution(
                             "global::MyApp.SharedPolicy",
                             ImmutableArray<MiddlewareRef>.Empty,
                             ImmutableArray<string>.Empty),
-                        new PolicyFinding(
+                        new ReferencedPolicyContribution(
                             "global::MyApp.SharedPolicy",
                             ImmutableArray<MiddlewareRef>.Empty,
                             ImmutableArray<string>.Empty)))));
@@ -195,8 +195,8 @@ public sealed class ReferencedContributionConflictValidatorTests
                     "OrdersContrib",
                     "global::MyApp.AppContext",
                     ImmutableArray<MiddlewareRef>.Empty,
-                    ImmutableArray<PerCommandMiddlewareFinding>.Empty,
-                    ImmutableArray.Create(new PolicyFinding(
+                    ImmutableArray<ReferencedPerCommandMiddlewareContribution>.Empty,
+                    ImmutableArray.Create(new ReferencedPolicyContribution(
                         "global::MyApp.SharedPolicy",
                         ImmutableArray<MiddlewareRef>.Empty,
                         ImmutableArray<string>.Empty))),
@@ -204,8 +204,8 @@ public sealed class ReferencedContributionConflictValidatorTests
                     "BillingContrib",
                     "global::MyApp.AppContext",
                     ImmutableArray<MiddlewareRef>.Empty,
-                    ImmutableArray<PerCommandMiddlewareFinding>.Empty,
-                    ImmutableArray.Create(new PolicyFinding(
+                    ImmutableArray<ReferencedPerCommandMiddlewareContribution>.Empty,
+                    ImmutableArray.Create(new ReferencedPolicyContribution(
                         "global::MyApp.SharedPolicy",
                         ImmutableArray<MiddlewareRef>.Empty,
                         ImmutableArray<string>.Empty)))));
@@ -236,8 +236,8 @@ public sealed class ReferencedContributionConflictValidatorTests
                     "MixedContrib",
                     null,
                     ImmutableArray<MiddlewareRef>.Empty,
-                    ImmutableArray<PerCommandMiddlewareFinding>.Empty,
-                    ImmutableArray.Create(new PolicyFinding(
+                    ImmutableArray<ReferencedPerCommandMiddlewareContribution>.Empty,
+                    ImmutableArray.Create(new ReferencedPolicyContribution(
                         "global::MyApp.SharedPolicy",
                         ImmutableArray<MiddlewareRef>.Empty,
                         ImmutableArray.Create("global::MyApp.CreateOrder"),
@@ -264,10 +264,10 @@ public sealed class ReferencedContributionConflictValidatorTests
                     "OrdersContrib",
                     "global::MyApp.AppContext",
                     ImmutableArray<MiddlewareRef>.Empty,
-                    ImmutableArray.Create(new PerCommandMiddlewareFinding(
+                    ImmutableArray.Create(new ReferencedPerCommandMiddlewareContribution(
                         "global::MyApp.CreateOrder",
                         ImmutableArray.Create(new MiddlewareRef("global::Orders.SharedMiddleware", 2)))),
-                    ImmutableArray<PolicyFinding>.Empty)))
+                    ImmutableArray<ReferencedPolicyContribution>.Empty)))
             .WithPipelineConfig(PipelineConfig.Empty)
             .Build();
 

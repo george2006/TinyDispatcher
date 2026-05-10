@@ -109,9 +109,9 @@ internal sealed class MiddlewareRefShapeValidator : IGeneratorValidator
             // -----------------------------------------------------------------
             // Arity 1: context-closed middleware
             // Must implement exactly one:
-            // ICommandMiddleware<TCommand, ExpectedContext>
+            // ICommandMiddleware<TCommand, CurrentContext>
             // where TCommand = type param 0
-            //       TContext = CLOSED and matches expected context
+            //       TContext = CLOSED and matches the current context
             // -----------------------------------------------------------------
             var matches = 0;
 

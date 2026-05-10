@@ -10,15 +10,15 @@ namespace TinyDispatcher.UnitTests.SourceGen;
 public sealed class ReferencedAssemblyContributionsTests
 {
     [Fact]
-    public void EnumerateCommands_filters_handlers_by_expected_context()
+    public void EnumerateCommands_filters_handlers_by_context()
     {
         var contributions = new ReferencedAssemblyContributions(
             ImmutableArray.Create(new ReferencedAssemblyContribution(
                     AssemblyName: "ExternalApp",
                     ContextTypeFqn: null,
                     Globals: ImmutableArray<MiddlewareRef>.Empty,
-                    PerCommandMiddlewareFindings: ImmutableArray<PerCommandMiddlewareFinding>.Empty,
-                    PolicyFindings: ImmutableArray<PolicyFinding>.Empty,
+                    PerCommandMiddlewareContributions: ImmutableArray<ReferencedPerCommandMiddlewareContribution>.Empty,
+                    PolicyContributions: ImmutableArray<ReferencedPolicyContribution>.Empty,
                     Handlers: ImmutableArray.Create(
                         new ReferencedHandlerContribution(
                             ContextTypeFqn: null,

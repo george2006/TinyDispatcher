@@ -2,8 +2,7 @@ using System.Collections.Immutable;
 
 namespace TinyDispatcher.SourceGen.Generator.Models;
 
-internal sealed record PolicyFinding(
-    string PolicyTypeFqn,
+internal sealed record ReferencedPerCommandMiddlewareContribution(
+    string CommandTypeFqn,
     ImmutableArray<MiddlewareRef> Middlewares,
-    ImmutableArray<string> Commands,
     string? ContextTypeFqn = null);

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using TinyDispatcher.SourceGen.Generator.Models;
 
-namespace TinyDispatcher.SourceGen.Generator.Generation;
+namespace TinyDispatcher.SourceGen.Generator.Composition;
 
 internal static class ReferencedAssemblyContributionComposer
 {
@@ -106,9 +106,9 @@ internal static class ReferencedAssemblyContributionComposer
         ReferencedAssemblyContribution assembly,
         string contextFqn)
     {
-        for (var i = 0; i < assembly.PerCommandMiddlewareFindings.Length; i++)
+        for (var i = 0; i < assembly.PerCommandMiddlewareContributions.Length; i++)
         {
-            var finding = assembly.PerCommandMiddlewareFindings[i];
+            var finding = assembly.PerCommandMiddlewareContributions[i];
 
             var contributionBelongsToAnotherContext = ContributionBelongsToAnotherContext(
                 finding.ContextTypeFqn,
@@ -131,9 +131,9 @@ internal static class ReferencedAssemblyContributionComposer
         ReferencedAssemblyContribution assembly,
         string contextFqn)
     {
-        for (var i = 0; i < assembly.PolicyFindings.Length; i++)
+        for (var i = 0; i < assembly.PolicyContributions.Length; i++)
         {
-            var finding = assembly.PolicyFindings[i];
+            var finding = assembly.PolicyContributions[i];
 
             var contributionBelongsToAnotherContext = ContributionBelongsToAnotherContext(
                 finding.ContextTypeFqn,
@@ -173,7 +173,7 @@ internal static class ReferencedAssemblyContributionComposer
             System.StringComparison.Ordinal);
     }
 
-    private static PolicySpec ToPolicySpec(PolicyFinding finding)
+    private static PolicySpec ToPolicySpec(ReferencedPolicyContribution finding)
     {
         return new PolicySpec(
             finding.PolicyTypeFqn,

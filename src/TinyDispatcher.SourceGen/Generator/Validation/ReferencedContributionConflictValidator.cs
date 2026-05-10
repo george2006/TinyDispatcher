@@ -60,9 +60,9 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
     {
         var reportedCommands = new HashSet<string>(StringComparer.Ordinal);
 
-        for (var i = 0; i < assembly.PerCommandMiddlewareFindings.Length; i++)
+        for (var i = 0; i < assembly.PerCommandMiddlewareContributions.Length; i++)
         {
-            var finding = assembly.PerCommandMiddlewareFindings[i];
+            var finding = assembly.PerCommandMiddlewareContributions[i];
             if (ContributionBelongsToAnotherContext(
                 finding.ContextTypeFqn,
                 context.ContextTypeFqn))
@@ -130,9 +130,9 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
     {
         var reportedPolicies = new HashSet<string>(StringComparer.Ordinal);
 
-        for (var i = 0; i < assembly.PolicyFindings.Length; i++)
+        for (var i = 0; i < assembly.PolicyContributions.Length; i++)
         {
-            var finding = assembly.PolicyFindings[i];
+            var finding = assembly.PolicyContributions[i];
             if (ContributionBelongsToAnotherContext(
                 finding.ContextTypeFqn,
                 context.ContextTypeFqn))

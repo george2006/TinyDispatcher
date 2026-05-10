@@ -4,7 +4,7 @@ using System;
 using System.Collections.Immutable;
 using TinyDispatcher.SourceGen.Generator.Models;
 
-namespace TinyDispatcher.SourceGen.Generator.Generation;
+namespace TinyDispatcher.SourceGen.Generator.Composition;
 
 internal static class ContextInputComposer
 {
@@ -144,8 +144,8 @@ internal static class ContextInputComposer
         GeneratorExtraction extraction,
         string contextFqn)
     {
-        var hasExpectedContext = !string.IsNullOrWhiteSpace(contextFqn);
-        if (!hasExpectedContext)
+        var hasContext = !string.IsNullOrWhiteSpace(contextFqn);
+        if (!hasContext)
         {
             return PipelineConfig.Empty;
         }
@@ -159,12 +159,12 @@ internal static class ContextInputComposer
         for (var i = 0; i < extraction.ContextPipelines.Length; i++)
         {
             var contextPipeline = extraction.ContextPipelines[i];
-            var isExpectedContext = string.Equals(
+            var isContextPipeline = string.Equals(
                 contextPipeline.ContextTypeFqn,
                 contextFqn,
                 StringComparison.Ordinal);
 
-            if (isExpectedContext)
+            if (isContextPipeline)
             {
                 return contextPipeline.Pipeline;
             }
@@ -187,12 +187,12 @@ internal static class ContextInputComposer
         for (var i = 0; i < discovery.Commands.Length; i++)
         {
             var command = discovery.Commands[i];
-            var isExpectedContext = string.Equals(
+            var isContextCommand = string.Equals(
                 command.ContextTypeFqn,
                 contextFqn,
                 StringComparison.Ordinal);
 
-            if (isExpectedContext)
+            if (isContextCommand)
             {
                 commands.Add(command);
             }

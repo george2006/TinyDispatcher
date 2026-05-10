@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using TinyDispatcher.SourceGen;
+using TinyDispatcher.SourceGen.Generator.Composition;
 using TinyDispatcher.SourceGen.Generator.Generation;
 using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Generator.Options;
@@ -51,7 +52,7 @@ public sealed class GeneratorGenerationPhaseTests
     }
 
     [Fact]
-    public void Generate_uses_validated_expected_context_for_handler_registrations()
+    public void Generate_uses_context_input_for_handler_registrations()
     {
         var context = new CapturingGeneratorContext();
         var compilation = CreateCompilation();
@@ -101,8 +102,8 @@ public sealed class GeneratorGenerationPhaseTests
                     "ExternalApp",
                     "global::MyApp.AppContext",
                     ImmutableArray<MiddlewareRef>.Empty,
-                    ImmutableArray<PerCommandMiddlewareFinding>.Empty,
-                    ImmutableArray<PolicyFinding>.Empty,
+                    ImmutableArray<ReferencedPerCommandMiddlewareContribution>.Empty,
+                    ImmutableArray<ReferencedPolicyContribution>.Empty,
                     ImmutableArray.Create(ReferencedHandler(
                         "global::MyApp.AppContext",
                         "global::ExternalApp.CreateOrder",
@@ -146,10 +147,10 @@ public sealed class GeneratorGenerationPhaseTests
                     "ExternalApp",
                     "global::MyApp.AppContext",
                     ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.GlobalMiddleware", 2)),
-                    ImmutableArray.Create(new PerCommandMiddlewareFinding(
+                    ImmutableArray.Create(new ReferencedPerCommandMiddlewareContribution(
                         "global::ExternalApp.CreateOrder",
                         ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.OrderMiddleware", 2)))),
-                    ImmutableArray.Create(new PolicyFinding(
+                    ImmutableArray.Create(new ReferencedPolicyContribution(
                         "global::ExternalApp.OrderPolicy",
                         ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.PolicyMiddleware", 2)),
                         ImmutableArray.Create("global::ExternalApp.CreateOrder"))),
@@ -202,10 +203,10 @@ public sealed class GeneratorGenerationPhaseTests
                     "Matching",
                     "global::MyApp.AppContext",
                     ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.GlobalMiddleware", 2)),
-                    ImmutableArray.Create(new PerCommandMiddlewareFinding(
+                    ImmutableArray.Create(new ReferencedPerCommandMiddlewareContribution(
                         "global::ExternalApp.CreateOrder",
                         ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.OrderMiddleware", 2)))),
-                    ImmutableArray<PolicyFinding>.Empty,
+                    ImmutableArray<ReferencedPolicyContribution>.Empty,
                     ImmutableArray.Create(ReferencedHandler(
                         "global::MyApp.AppContext",
                         "global::ExternalApp.CreateOrder",
@@ -215,10 +216,10 @@ public sealed class GeneratorGenerationPhaseTests
                     "Mismatched",
                     "global::OtherApp.OtherContext",
                     ImmutableArray.Create(new MiddlewareRef("global::OtherApp.GlobalMiddleware", 2)),
-                    ImmutableArray.Create(new PerCommandMiddlewareFinding(
+                    ImmutableArray.Create(new ReferencedPerCommandMiddlewareContribution(
                         "global::OtherApp.CancelOrder",
                         ImmutableArray.Create(new MiddlewareRef("global::OtherApp.CancelMiddleware", 2)))),
-                    ImmutableArray.Create(new PolicyFinding(
+                    ImmutableArray.Create(new ReferencedPolicyContribution(
                         "global::OtherApp.CancelPolicy",
                         ImmutableArray.Create(new MiddlewareRef("global::OtherApp.CancelPolicyMiddleware", 2)),
                         ImmutableArray.Create("global::OtherApp.CancelOrder"))),
@@ -266,21 +267,21 @@ public sealed class GeneratorGenerationPhaseTests
                     null,
                     ImmutableArray<MiddlewareRef>.Empty,
                     ImmutableArray.Create(
-                        new PerCommandMiddlewareFinding(
+                        new ReferencedPerCommandMiddlewareContribution(
                             "global::ExternalApp.CreateOrder",
                             ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.OrderMiddleware", 2)),
                             "global::MyApp.AppContext"),
-                        new PerCommandMiddlewareFinding(
+                        new ReferencedPerCommandMiddlewareContribution(
                             "global::ExternalApp.CancelOrder",
                             ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.CancelMiddleware", 2)),
                             "global::OtherApp.OtherContext")),
                     ImmutableArray.Create(
-                        new PolicyFinding(
+                        new ReferencedPolicyContribution(
                             "global::ExternalApp.MixedPolicy",
                             ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.PolicyMiddleware", 2)),
                             ImmutableArray.Create("global::ExternalApp.CreateOrder"),
                             "global::MyApp.AppContext"),
-                        new PolicyFinding(
+                        new ReferencedPolicyContribution(
                             "global::ExternalApp.CancelPolicy",
                             ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.CancelPolicyMiddleware", 2)),
                             ImmutableArray.Create("global::ExternalApp.CancelOrder"),

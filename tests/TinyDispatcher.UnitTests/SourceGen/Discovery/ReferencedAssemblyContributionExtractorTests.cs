@@ -112,12 +112,12 @@ namespace ExternalApp
 
         Assert.Equal("global::ExternalApp.AppContext", assembly.ContextTypeFqn);
         Assert.Equal("global::ExternalApp.GlobalMiddleware", Assert.Single(assembly.Globals).OpenTypeFqn);
-        var perCommand = Assert.Single(assembly.PerCommandMiddlewareFindings);
+        var perCommand = Assert.Single(assembly.PerCommandMiddlewareContributions);
         Assert.Equal("global::ExternalApp.CreateOrder", perCommand.CommandTypeFqn);
         Assert.Equal("global::ExternalApp.AppContext", perCommand.ContextTypeFqn);
         Assert.Equal("global::ExternalApp.OrderMiddleware", Assert.Single(perCommand.Middlewares).OpenTypeFqn);
 
-        var policy = Assert.Single(assembly.PolicyFindings);
+        var policy = Assert.Single(assembly.PolicyContributions);
         Assert.Equal("global::ExternalApp.OrderPolicy", policy.PolicyTypeFqn);
         Assert.Equal("global::ExternalApp.AppContext", policy.ContextTypeFqn);
         Assert.Equal("global::ExternalApp.PolicyMiddleware", Assert.Single(policy.Middlewares).OpenTypeFqn);
@@ -289,12 +289,12 @@ namespace ExternalApp
             contributions.Assemblies,
             candidate => candidate.AssemblyName == "ExternalContrib");
 
-        Assert.Equal(2, assembly.PerCommandMiddlewareFindings.Length);
-        Assert.All(assembly.PerCommandMiddlewareFindings, finding =>
+        Assert.Equal(2, assembly.PerCommandMiddlewareContributions.Length);
+        Assert.All(assembly.PerCommandMiddlewareContributions, finding =>
             Assert.Equal("global::ExternalApp.CreateOrder", finding.CommandTypeFqn));
 
-        Assert.Equal(2, assembly.PolicyFindings.Length);
-        Assert.All(assembly.PolicyFindings, finding =>
+        Assert.Equal(2, assembly.PolicyContributions.Length);
+        Assert.All(assembly.PolicyContributions, finding =>
             Assert.Equal("global::ExternalApp.OrderPolicy", finding.PolicyTypeFqn));
     }
 

@@ -2,6 +2,7 @@
 
 using TinyDispatcher.SourceGen.Diagnostics;
 using TinyDispatcher.SourceGen.Generator.Analysis;
+using TinyDispatcher.SourceGen.Generator.Composition;
 using TinyDispatcher.SourceGen.Generator.Generation;
 using TinyDispatcher.SourceGen.Generator.Extraction;
 using TinyDispatcher.SourceGen.Generator.Models;

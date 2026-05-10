@@ -179,7 +179,7 @@ namespace ConsoleApp
     [Fact]
     public void DISP304_when_context_closed_middleware_context_does_not_match_expected()
     {
-        // Expected context is MyCtx (from UseTinyDispatcher<MyCtx>)
+        // Current context is MyCtx (from UseTinyDispatcher<MyCtx>)
         // Middleware implements ICommandMiddleware<TCommand, OtherCtx> => DISP304
         var source = @"
 using System;

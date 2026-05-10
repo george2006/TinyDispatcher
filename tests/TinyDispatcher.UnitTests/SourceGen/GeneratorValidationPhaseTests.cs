@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using TinyDispatcher.SourceGen;
 using TinyDispatcher.SourceGen.Diagnostics;
+using TinyDispatcher.SourceGen.Generator.Composition;
 using TinyDispatcher.SourceGen.Generator.Generation;
 using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Generator.Validation;
@@ -67,10 +68,10 @@ public sealed class GeneratorValidationPhaseTests
                 "ExternalApp",
                 "global::MyApp.AppContext",
                 ImmutableArray<MiddlewareRef>.Empty,
-                ImmutableArray.Create(new PerCommandMiddlewareFinding(
+                ImmutableArray.Create(new ReferencedPerCommandMiddlewareContribution(
                     "global::ExternalApp.MissingCommand",
                     ImmutableArray<MiddlewareRef>.Empty)),
-                ImmutableArray.Create(new PolicyFinding(
+                ImmutableArray.Create(new ReferencedPolicyContribution(
                     "global::ExternalApp.OrderPolicy",
                     ImmutableArray<MiddlewareRef>.Empty,
                     ImmutableArray.Create("global::ExternalApp.OtherMissingCommand"))))));
@@ -102,8 +103,8 @@ public sealed class GeneratorValidationPhaseTests
                 "ExternalApp",
                 "global::MyApp.AppContext",
                 ImmutableArray<MiddlewareRef>.Empty,
-                ImmutableArray<PerCommandMiddlewareFinding>.Empty,
-                ImmutableArray<PolicyFinding>.Empty,
+                ImmutableArray<ReferencedPerCommandMiddlewareContribution>.Empty,
+                ImmutableArray<ReferencedPolicyContribution>.Empty,
                 ImmutableArray.Create(new ReferencedHandlerContribution(
                     "global::MyApp.AppContext",
                     new HandlerContract(
@@ -133,10 +134,10 @@ public sealed class GeneratorValidationPhaseTests
                 "ExternalApp",
                 "global::MyApp.AppContext",
                 ImmutableArray<MiddlewareRef>.Empty,
-                ImmutableArray.Create(new PerCommandMiddlewareFinding(
+                ImmutableArray.Create(new ReferencedPerCommandMiddlewareContribution(
                     "global::ExternalApp.MissingCommand",
                     ImmutableArray<MiddlewareRef>.Empty)),
-                ImmutableArray.Create(new PolicyFinding(
+                ImmutableArray.Create(new ReferencedPolicyContribution(
                     "global::ExternalApp.OrderPolicy",
                     ImmutableArray<MiddlewareRef>.Empty,
                     ImmutableArray.Create("global::ExternalApp.OtherMissingCommand"))))));
