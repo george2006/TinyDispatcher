@@ -15,6 +15,7 @@ internal sealed class GeneratorPipeline
 {
     private readonly DiagnosticsCatalog _diagnosticsCatalog = new();
     private readonly GeneratorExtractionPhase _extractionPhase = new();
+    private readonly GeneratorCompositionPhase _compositionPhase = new();
     private readonly GeneratorValidationPhase _validationPhase = new();
     private readonly GeneratorGenerationPhase _generationPhase = new();
 
@@ -32,7 +33,7 @@ internal sealed class GeneratorPipeline
             input.HandlerSymbols,
             analysisResult.ConfirmedBootstrapLambdas,
             analysis.EffectiveOptions);
-        var contextComposition = ContextInputComposer.Compose(
+        var contextComposition = _compositionPhase.Compose(
             analysis.HostBootstrap,
             extraction);
         var diagnostics = _validationPhase.Validate(

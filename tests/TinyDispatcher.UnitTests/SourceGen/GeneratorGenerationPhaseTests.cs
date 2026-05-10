@@ -511,7 +511,7 @@ public sealed class GeneratorGenerationPhaseTests
         HostBootstrapInfo hostBootstrap,
         GeneratorExtraction extraction)
     {
-        return ContextInputComposer.Compose(hostBootstrap, extraction);
+        return new GeneratorCompositionPhase().Compose(hostBootstrap, extraction);
     }
 
     private static bool IsPipelineSource(string hintName)

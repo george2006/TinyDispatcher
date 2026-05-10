@@ -218,6 +218,6 @@ public sealed class GeneratorValidationPhaseTests
         HostBootstrapInfo hostBootstrap,
         GeneratorExtraction extraction)
     {
-        return ContextInputComposer.Compose(hostBootstrap, extraction);
+        return new GeneratorCompositionPhase().Compose(hostBootstrap, extraction);
     }
 }

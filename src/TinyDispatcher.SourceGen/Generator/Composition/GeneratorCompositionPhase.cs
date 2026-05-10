@@ -6,9 +6,9 @@ using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen.Generator.Composition;
 
-internal static class ContextInputComposer
+internal sealed class GeneratorCompositionPhase
 {
-    public static GeneratorContextComposition Compose(
+    public GeneratorContextComposition Compose(
         HostBootstrapInfo hostBootstrap,
         GeneratorExtraction extraction)
     {
@@ -74,7 +74,6 @@ internal static class ContextInputComposer
             Pipeline: pipeline);
 
         var validationInput = new ContextValidationInput(
-            ContextTypeFqn: contextFqn,
             BootstrapCalls: hostContext.UseTinyDispatcherCalls,
             GenerationInput: generationInput);
 

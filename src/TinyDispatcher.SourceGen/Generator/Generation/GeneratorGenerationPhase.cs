@@ -28,7 +28,7 @@ internal sealed class GeneratorGenerationPhase
 
     private static void EmitSharedSources(
         IGeneratorContext context,
-        GenerationPlan generationPlan)
+        SourceGenerationPlan generationPlan)
     {
         var contextPlan = generationPlan.SharedSources;
         var moduleInitializerPlan = ModuleInitializerPlanner.Build(
@@ -54,7 +54,7 @@ internal sealed class GeneratorGenerationPhase
 
     private static void EmitPipelineSources(
         IGeneratorContext context,
-        GenerationPlan generationPlan)
+        SourceGenerationPlan generationPlan)
     {
         for (var i = 0; i < generationPlan.Contexts.Length; i++)
         {
@@ -70,7 +70,7 @@ internal sealed class GeneratorGenerationPhase
 
     private static void EmitPipelineMaps(
         IGeneratorContext context,
-        GenerationPlan generationPlan)
+        SourceGenerationPlan generationPlan)
     {
         for (var i = 0; i < generationPlan.Contexts.Length; i++)
         {
@@ -89,7 +89,7 @@ internal sealed class GeneratorGenerationPhase
         }
     }
 
-    private static GenerationPlan BuildGenerationPlan(
+    private static SourceGenerationPlan BuildGenerationPlan(
         GeneratorOptions options,
         HostBootstrapInfo hostBootstrap,
         GeneratorContextComposition contextComposition)
@@ -97,10 +97,10 @@ internal sealed class GeneratorGenerationPhase
         var sharedSources = BuildSharedGenerationPlan(options, contextComposition);
         var contexts = BuildPipelineGenerationPlans(options, hostBootstrap, contextComposition);
 
-        return new GenerationPlan(sharedSources, contexts);
+        return new SourceGenerationPlan(sharedSources, contexts);
     }
 
-    private static PipelinePlan? BuildPipelinePlan(ContextGenerationPlan contextPlan)
+    private static PipelinePlan? BuildPipelinePlan(ContextSourcePlan contextPlan)
     {
         if (!contextPlan.ShouldEmitPipelines)
         {
@@ -120,7 +120,7 @@ internal sealed class GeneratorGenerationPhase
         return pipelinePlan;
     }
 
-    private static ContextGenerationPlan BuildSharedGenerationPlan(
+    private static ContextSourcePlan BuildSharedGenerationPlan(
         GeneratorOptions options,
         GeneratorContextComposition contextComposition)
     {
@@ -130,17 +130,16 @@ internal sealed class GeneratorGenerationPhase
             shouldEmitPipelineMaps: false,
             contextComposition.LocalDiscovery,
             contextComposition.Discovery,
-            contextFqn: string.Empty,
             PipelineConfig.Empty);
     }
 
-    private static ImmutableArray<ContextGenerationPlan> BuildPipelineGenerationPlans(
+    private static ImmutableArray<ContextSourcePlan> BuildPipelineGenerationPlans(
         GeneratorOptions options,
         HostBootstrapInfo hostBootstrap,
         GeneratorContextComposition contextComposition)
     {
         var contextInputs = contextComposition.GenerationContexts;
-        var contextPlans = ImmutableArray.CreateBuilder<ContextGenerationPlan>(contextInputs.Length);
+        var contextPlans = ImmutableArray.CreateBuilder<ContextSourcePlan>(contextInputs.Length);
 
         for (var i = 0; i < contextInputs.Length; i++)
         {
@@ -155,7 +154,6 @@ internal sealed class GeneratorGenerationPhase
                 shouldEmitPipelineMaps: ShouldEmitPipelineMaps(hostBootstrap, contextInput.ContextTypeFqn),
                 contextInput.LocalDiscovery,
                 contextInput.Discovery,
-                contextInput.ContextTypeFqn,
                 contextInput.Pipeline);
 
             contextPlans.Add(contextPlan with
@@ -167,18 +165,17 @@ internal sealed class GeneratorGenerationPhase
         return contextPlans.ToImmutable();
     }
 
-    private static ContextGenerationPlan BuildContextGenerationPlan(
+    private static ContextSourcePlan BuildContextGenerationPlan(
         GeneratorOptions options,
         bool shouldEmitPipelines,
         bool shouldEmitPipelineMaps,
         DiscoveryResult localDiscovery,
         DiscoveryResult discovery,
-        string contextFqn,
         PipelineConfig pipelineConfig)
     {
         var pipelineContributions = PipelineContributions.Create(pipelineConfig);
 
-        return new ContextGenerationPlan(
+        return new ContextSourcePlan(
             LocalDiscovery: localDiscovery,
             Discovery: discovery,
             EmitOptions: options,
@@ -253,7 +250,7 @@ internal sealed class GeneratorGenerationPhase
     }
 
     private static ImmutableArray<string> GetPipelineRegistrationMethodNames(
-        ImmutableArray<ContextGenerationPlan> contextPlans)
+        ImmutableArray<ContextSourcePlan> contextPlans)
     {
         if (contextPlans.IsDefaultOrEmpty)
         {
@@ -278,7 +275,7 @@ internal sealed class GeneratorGenerationPhase
     }
 
     private static ImmutableArray<EmptyPipelineContributionEmitter.PipelineContributionSource> GetPipelineContributionSources(
-        ImmutableArray<ContextGenerationPlan> contextPlans)
+        ImmutableArray<ContextSourcePlan> contextPlans)
     {
         if (contextPlans.IsDefaultOrEmpty)
         {
@@ -298,7 +295,7 @@ internal sealed class GeneratorGenerationPhase
         return sources.ToImmutable();
     }
 
-    private static bool HasPipelinePlans(ImmutableArray<ContextGenerationPlan> contextPlans)
+    private static bool HasPipelinePlans(ImmutableArray<ContextSourcePlan> contextPlans)
     {
         for (var i = 0; i < contextPlans.Length; i++)
         {
@@ -311,11 +308,11 @@ internal sealed class GeneratorGenerationPhase
         return false;
     }
 
-    private readonly record struct GenerationPlan(
-        ContextGenerationPlan SharedSources,
-        ImmutableArray<ContextGenerationPlan> Contexts);
+    private readonly record struct SourceGenerationPlan(
+        ContextSourcePlan SharedSources,
+        ImmutableArray<ContextSourcePlan> Contexts);
 
-    private readonly record struct ContextGenerationPlan(
+    private readonly record struct ContextSourcePlan(
         DiscoveryResult LocalDiscovery,
         DiscoveryResult Discovery,
         GeneratorOptions EmitOptions,
