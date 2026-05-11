@@ -17,7 +17,7 @@ It provides a predictable, explicit, and performant command/query dispatch core 
 - **Explicit context (`TContext`)** for command handlers
 - **Context lanes** for independent, typed dispatcher pipelines in one app
 - **Multi-assembly composition** with host-owned final pipeline generation
-- **Pluggable context factory** (pass a delegate or register `IContextFactory<TContext>`)
+- **Pluggable context factory** (`tiny.UseFactory<TFactory>()`, delegate factory, or DI registration)
 - **Feature-friendly `AppContext`** (optional `IFeatureInitializer`-based composition)
 - **Source-generator diagnostics** for invalid shapes/config (fail fast, no guessing)
 
@@ -51,6 +51,15 @@ Register:
 services.UseTinyDispatcher<AppContext>(tiny =>
 {
     // optional: middleware, policies, features
+});
+```
+
+For a custom context, select its factory in the same bootstrap call:
+
+```csharp
+services.UseTinyDispatcher<MyContext>(tiny =>
+{
+    tiny.UseFactory<MyContextFactory>();
 });
 ```
 

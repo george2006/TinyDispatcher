@@ -16,7 +16,26 @@ This enables a pattern where your handlers depend on context features rather tha
 
 ## Custom contexts
 
-For ASP.NET, Azure Functions, or any environment where context depends on the current request/trigger, provide a context factory:
+For ASP.NET, Azure Functions, or any environment where context depends on the current request/trigger, provide a context factory.
+
+The usual registration style is to select the factory in the TinyDispatcher bootstrap:
+
+```csharp
+public sealed class MyContextFactory : IContextFactory<MyContext>
+{
+    public ValueTask<MyContext> CreateAsync(CancellationToken ct = default)
+    {
+        return ValueTask.FromResult(new MyContext());
+    }
+}
+
+services.UseTinyDispatcher<MyContext>(tiny =>
+{
+    tiny.UseFactory<MyContextFactory>();
+});
+```
+
+You can also pass a delegate factory directly:
 
 ```csharp
 services.UseTinyDispatcher<MyContext>(
@@ -28,7 +47,7 @@ services.UseTinyDispatcher<MyContext>(
     });
 ```
 
-Alternatively, register a factory in DI (useful when you want a dedicated type and unit tests):
+Or register a factory in DI yourself:
 
 ```csharp
 services.AddScoped<IContextFactory<MyContext>, MyContextFactory>();
