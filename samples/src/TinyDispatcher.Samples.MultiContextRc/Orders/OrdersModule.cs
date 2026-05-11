@@ -8,15 +8,15 @@ namespace TinyDispatcher.Samples.MultiContextRc.Orders;
 
 public static class OrdersModule
 {
-    public static IServiceCollection AddOrdersContext(this IServiceCollection services)
+    public static IServiceCollection AddOrdersLane(this IServiceCollection services)
     {
-        services.AddScoped<IContextFactory<OrdersContext>, OrdersContextFactory>();
         services.AddTransient(typeof(ConsoleLogMiddleware<,>));
         services.AddTransient(typeof(OrderValidationMiddleware<,>));
         services.AddTransient(typeof(OrderPolicyMiddleware<,>));
 
         services.UseTinyDispatcher<OrdersContext>(tiny =>
         {
+            tiny.UseFactory<OrdersContextFactory>();
             tiny.UseGlobalMiddleware(typeof(ConsoleLogMiddleware<,>));
             tiny.UseMiddlewareFor<SubmitOrder>(typeof(OrderValidationMiddleware<,>));
             tiny.UsePolicy<OrderApprovalPolicy>();

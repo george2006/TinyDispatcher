@@ -8,15 +8,15 @@ namespace TinyDispatcher.Samples.MultiContextRc.Payments;
 
 public static class PaymentsModule
 {
-    public static IServiceCollection AddPaymentsContext(this IServiceCollection services)
+    public static IServiceCollection AddPaymentsLane(this IServiceCollection services)
     {
-        services.AddScoped<IContextFactory<PaymentsContext>, PaymentsContextFactory>();
         services.AddTransient(typeof(ConsoleLogMiddleware<,>));
         services.AddTransient(typeof(PaymentAuditMiddleware<,>));
         services.AddTransient(typeof(PaymentPolicyMiddleware<,>));
 
         services.UseTinyDispatcher<PaymentsContext>(tiny =>
         {
+            tiny.UseFactory<PaymentsContextFactory>();
             tiny.UseGlobalMiddleware(typeof(ConsoleLogMiddleware<,>));
             tiny.UseMiddlewareFor<CapturePayment>(typeof(PaymentAuditMiddleware<,>));
             tiny.UsePolicy<PaymentRiskPolicy>();

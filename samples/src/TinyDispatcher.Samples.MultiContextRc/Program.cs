@@ -17,14 +17,14 @@ internal static class Program
         var services = new ServiceCollection();
 
         services.AddSingleton(new SampleClock("2026-05-10T18:30:00Z"));
-        services.AddOrdersContext();
-        services.AddPaymentsContext();
+        services.AddOrdersLane();
+        services.AddPaymentsLane();
         services.AddDefaultAppContextLane();
         services.AddNoOpLane();
 
         using var provider = services.BuildServiceProvider();
 
-        Console.WriteLine("=== TinyDispatcher multi-context RC sample ===");
+        Console.WriteLine("=== TinyDispatcher multi-lane sample ===");
         Console.WriteLine();
 
         await DispatchOrders(provider);
