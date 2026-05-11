@@ -12,10 +12,10 @@ internal sealed class AssemblyContributionGenerationPhase
 {
     public AssemblyContributionSourcePlan Plan(
         GeneratorOptions options,
-        DiscoveryResult thisAssemblyContributionDiscovery)
+        AssemblyContributionComposition assemblyContribution)
     {
         return new AssemblyContributionSourcePlan(
-            Discovery: thisAssemblyContributionDiscovery,
+            Discovery: assemblyContribution.Discovery,
             EmitOptions: BuildEmitOptions(options),
             PipelineContributions: PipelineContributions.Create(PipelineConfig.Empty));
     }

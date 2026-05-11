@@ -20,7 +20,7 @@ internal sealed class GeneratorGenerationPhase
             composition.HostGeneration);
         var assemblyContributionPlan = _assemblyContributionGenerationPhase.Plan(
             options,
-            composition.AssemblyContribution.Discovery);
+            composition.AssemblyContribution);
 
         _assemblyContributionGenerationPhase.Generate(
             context,
