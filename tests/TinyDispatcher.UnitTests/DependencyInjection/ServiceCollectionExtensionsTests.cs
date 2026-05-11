@@ -37,6 +37,16 @@ public sealed class ServiceCollectionExtensionsTests
             => new(_context);
     }
 
+    private sealed class SelectedContextFactory : IContextFactory<DummyContext>
+    {
+        public ValueTask<DummyContext> CreateAsync(CancellationToken ct = default)
+            => new(new DummyContext("selected_factory"));
+    }
+
+    private sealed class WrongContextFactory
+    {
+    }
+
     [Fact]
     public void Add_dispatcher_when_services_is_null_throws_argument_null_exception()
     {
@@ -130,5 +140,95 @@ public sealed class ServiceCollectionExtensionsTests
         var context = await factory.CreateAsync();
 
         Assert.Equal("new_factory", context.Value);
+    }
+
+    [Fact]
+    public async Task Use_tiny_dispatcher_when_factory_type_is_selected_registers_factory()
+    {
+        var services = new ServiceCollection();
+
+        services.UseTinyDispatcher<DummyContext>(tiny =>
+        {
+            tiny.UseFactory<SelectedContextFactory>();
+        });
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+
+        var factory = scope.ServiceProvider.GetRequiredService<IContextFactory<DummyContext>>();
+        var context = await factory.CreateAsync();
+
+        Assert.Equal("selected_factory", context.Value);
+    }
+
+    [Fact]
+    public async Task Use_tiny_dispatcher_when_delegate_factory_is_provided_replaces_selected_factory()
+    {
+        var services = new ServiceCollection();
+
+        services.UseTinyDispatcher<DummyContext>(
+            tiny =>
+            {
+                tiny.UseFactory<SelectedContextFactory>();
+            },
+            (_, _) => new ValueTask<DummyContext>(new DummyContext("delegate_factory")));
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+
+        var factory = scope.ServiceProvider.GetRequiredService<IContextFactory<DummyContext>>();
+        var context = await factory.CreateAsync();
+
+        Assert.Equal("delegate_factory", context.Value);
+    }
+
+    [Fact]
+    public async Task Use_tiny_dispatcher_when_default_factory_is_selected_for_app_context_registers_default_factory()
+    {
+        var services = new ServiceCollection();
+
+        services.UseTinyDispatcher<AppContext>(tiny =>
+        {
+            tiny.UseDefaultFactory();
+        });
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+
+        var factory = scope.ServiceProvider.GetRequiredService<IContextFactory<AppContext>>();
+        var context = await factory.CreateAsync();
+
+        Assert.NotNull(context);
+    }
+
+    [Fact]
+    public void Use_tiny_dispatcher_when_default_factory_is_selected_for_custom_context_throws()
+    {
+        var services = new ServiceCollection();
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            services.UseTinyDispatcher<DummyContext>(tiny =>
+            {
+                tiny.UseDefaultFactory();
+            }));
+
+        Assert.Equal(
+            "TinyDispatcher: UseDefaultFactory() is only available for TinyDispatcher.AppContext.",
+            exception.Message);
+    }
+
+    [Fact]
+    public void Use_tiny_dispatcher_when_selected_factory_does_not_match_context_throws()
+    {
+        var services = new ServiceCollection();
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            services.UseTinyDispatcher<DummyContext>(tiny =>
+            {
+                tiny.UseFactory<WrongContextFactory>();
+            }));
+
+        Assert.Contains("must implement", exception.Message);
+        Assert.Contains(nameof(WrongContextFactory), exception.Message);
     }
 }
