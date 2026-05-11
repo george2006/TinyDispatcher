@@ -18,7 +18,8 @@ internal sealed class GeneratorCompositionPhase
             extraction);
         var assemblyContribution = new AssemblyContributionComposition(
             extraction.ThisAssembly.Discovery,
-            hostGeneration.Contexts);
+            hostGeneration.Contexts,
+            hostBootstrap.IsHostProject);
         var validationContexts = _validationInputComposer.Compose(hostGeneration.Contexts);
 
         return new GeneratorComposition(

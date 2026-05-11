@@ -24,8 +24,7 @@ internal sealed class GeneratorGenerationPhase
 
         _assemblyContributionGenerationPhase.Generate(
             context,
-            assemblyContributionPlan,
-            hostGenerationPlan);
+            assemblyContributionPlan);
 
         _hostGenerationPhase.Generate(
             context,

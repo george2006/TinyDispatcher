@@ -14,31 +14,51 @@ internal sealed class AssemblyContributionGenerationPhase
         GeneratorOptions options,
         AssemblyContributionComposition assemblyContribution)
     {
+        var emitOptions = BuildEmitOptions(options);
+        var pipelineContributions = PipelineContributions.Create(PipelineConfig.Empty);
+
+        var moduleInitializer = new ModuleInitializerContributionSourcePlan(
+            Discovery: BuildModuleInitializerDiscovery(assemblyContribution),
+            HasPipelineContributions: HasPipelineContributions(
+                assemblyContribution.IsHostProject,
+                options,
+                assemblyContribution.Contexts));
+
+        var pipelineContribution = new AssemblyPipelineContributionSourcePlan(
+            Contributions: pipelineContributions,
+            RegistrationMethodNames: GetPipelineRegistrationMethodNames(
+                assemblyContribution.IsHostProject,
+                options,
+                assemblyContribution.Contexts),
+            ContributionSources: GetPipelineContributionSources(
+                options,
+                assemblyContribution.Contexts));
+
         return new AssemblyContributionSourcePlan(
             Discovery: assemblyContribution.Discovery,
-            EmitOptions: BuildEmitOptions(options),
-            PipelineContributions: PipelineContributions.Create(PipelineConfig.Empty));
+            EmitOptions: emitOptions,
+            ModuleInitializer: moduleInitializer,
+            PipelineContribution: pipelineContribution);
     }
 
     public void Generate(
         IGeneratorContext context,
-        AssemblyContributionSourcePlan assemblyContribution,
-        HostGenerationSourcePlan hostGeneration)
+        AssemblyContributionSourcePlan assemblyContribution)
     {
         var moduleInitializerPlan = ModuleInitializerPlanner.Build(
-            hostGeneration.Discovery,
-            hostGeneration.EmitOptions,
-            hasPipelineContributions: HasPipelinePlans(hostGeneration.Contexts));
+            assemblyContribution.ModuleInitializer.Discovery,
+            assemblyContribution.EmitOptions,
+            assemblyContribution.ModuleInitializer.HasPipelineContributions);
 
         new ModuleInitializerEmitter().Emit(context, moduleInitializerPlan);
 
         new EmptyPipelineContributionEmitter().Emit(
             context,
             assemblyContribution.Discovery,
-            assemblyContribution.PipelineContributions,
+            assemblyContribution.PipelineContribution.Contributions,
             assemblyContribution.EmitOptions,
-            GetPipelineRegistrationMethodNames(hostGeneration.Contexts),
-            GetPipelineContributionSources(hostGeneration.Contexts));
+            assemblyContribution.PipelineContribution.RegistrationMethodNames,
+            assemblyContribution.PipelineContribution.ContributionSources);
 
         var handlerRegistrationsPlan = HandlerRegistrationsPlanner.Build(
             assemblyContribution.Discovery,
@@ -48,18 +68,23 @@ internal sealed class AssemblyContributionGenerationPhase
     }
 
     private static ImmutableArray<string> GetPipelineRegistrationMethodNames(
-        ImmutableArray<HostContextSourcePlan> contextPlans)
+        bool isHostProject,
+        GeneratorOptions options,
+        ImmutableArray<HostContextProjection> contexts)
     {
-        if (contextPlans.IsDefaultOrEmpty)
+        if (contexts.IsDefaultOrEmpty)
         {
             return ImmutableArray<string>.Empty;
         }
 
-        var methodNames = ImmutableArray.CreateBuilder<string>(contextPlans.Length);
+        var methodNames = ImmutableArray.CreateBuilder<string>(contexts.Length);
 
-        for (var i = 0; i < contextPlans.Length; i++)
+        for (var i = 0; i < contexts.Length; i++)
         {
-            var pipelinePlan = contextPlans[i].PipelinePlan;
+            var pipelinePlan = BuildPipelinePlan(
+                isHostProject,
+                options,
+                contexts[i]);
             if (pipelinePlan is null)
             {
                 continue;
@@ -73,37 +98,132 @@ internal sealed class AssemblyContributionGenerationPhase
     }
 
     private static ImmutableArray<EmptyPipelineContributionEmitter.PipelineContributionSource> GetPipelineContributionSources(
-        ImmutableArray<HostContextSourcePlan> contextPlans)
+        GeneratorOptions options,
+        ImmutableArray<HostContextProjection> contexts)
     {
-        if (contextPlans.IsDefaultOrEmpty)
+        if (contexts.IsDefaultOrEmpty)
         {
             return ImmutableArray<EmptyPipelineContributionEmitter.PipelineContributionSource>.Empty;
         }
 
-        var sources = ImmutableArray.CreateBuilder<EmptyPipelineContributionEmitter.PipelineContributionSource>(contextPlans.Length);
+        var sources = ImmutableArray.CreateBuilder<EmptyPipelineContributionEmitter.PipelineContributionSource>(contexts.Length);
 
-        for (var i = 0; i < contextPlans.Length; i++)
+        for (var i = 0; i < contexts.Length; i++)
         {
-            var contextPlan = contextPlans[i];
+            var contextInput = contexts[i].GenerationInput;
             sources.Add(new EmptyPipelineContributionEmitter.PipelineContributionSource(
-                contextPlan.EmitOptions,
-                contextPlan.PipelineContributions));
+                BuildContextEmitOptions(options, contextInput.ContextTypeFqn),
+                PipelineContributions.Create(contextInput.Pipeline)));
         }
 
         return sources.ToImmutable();
     }
 
-    private static bool HasPipelinePlans(ImmutableArray<HostContextSourcePlan> contextPlans)
+    private static bool HasPipelineContributions(
+        bool isHostProject,
+        GeneratorOptions options,
+        ImmutableArray<HostContextProjection> contexts)
     {
-        for (var i = 0; i < contextPlans.Length; i++)
+        for (var i = 0; i < contexts.Length; i++)
         {
-            if (contextPlans[i].PipelinePlan is not null)
+            if (BuildPipelinePlan(isHostProject, options, contexts[i]) is not null)
             {
                 return true;
             }
         }
 
         return false;
+    }
+
+    private static DiscoveryResult BuildModuleInitializerDiscovery(
+        AssemblyContributionComposition assemblyContribution)
+    {
+        if (assemblyContribution.Contexts.IsDefaultOrEmpty)
+        {
+            return assemblyContribution.Discovery;
+        }
+
+        var commands = ImmutableArray.CreateBuilder<HandlerContract>();
+
+        for (var i = 0; i < assemblyContribution.Contexts.Length; i++)
+        {
+            commands.AddRange(assemblyContribution.Contexts[i].GenerationInput.Discovery.Commands);
+        }
+
+        return new DiscoveryResult(
+            commands.ToImmutable(),
+            assemblyContribution.Discovery.Queries);
+    }
+
+    private static PipelinePlan? BuildPipelinePlan(
+        bool isHostProject,
+        GeneratorOptions options,
+        HostContextProjection context)
+    {
+        var contextInput = context.GenerationInput;
+        if (!ShouldEmitPipelines(
+                isHostProject,
+                contextInput.ContextTypeFqn,
+                contextInput.Pipeline))
+        {
+            return null;
+        }
+
+        var pipelinePlan = PipelinePlanner.Build(
+            PipelineContributions.Create(contextInput.Pipeline),
+            contextInput.Discovery,
+            BuildContextEmitOptions(options, contextInput.ContextTypeFqn));
+
+        if (!pipelinePlan.ShouldEmit)
+        {
+            return null;
+        }
+
+        return pipelinePlan;
+    }
+
+    private static GeneratorOptions BuildContextEmitOptions(
+        GeneratorOptions options,
+        string contextFqn)
+    {
+        if (string.IsNullOrWhiteSpace(contextFqn))
+        {
+            return options;
+        }
+
+        return new GeneratorOptions(
+            GeneratedNamespace: options.GeneratedNamespace,
+            EmitDiExtensions: options.EmitDiExtensions,
+            EmitHandlerRegistrations: options.EmitHandlerRegistrations,
+            IncludeNamespacePrefix: options.IncludeNamespacePrefix,
+            CommandContextType: contextFqn,
+            EmitPipelineMap: options.EmitPipelineMap,
+            PipelineMapFormat: options.PipelineMapFormat);
+    }
+
+    private static bool ShouldEmitPipelines(
+        bool isHostProject,
+        string contextFqn,
+        PipelineConfig pipeline)
+    {
+        if (!isHostProject)
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(contextFqn))
+        {
+            return false;
+        }
+
+        return HasAnyPipelineContributions(pipeline);
+    }
+
+    private static bool HasAnyPipelineContributions(PipelineConfig pipeline)
+    {
+        return pipeline.Globals.Length > 0 ||
+               pipeline.PerCommand.Count > 0 ||
+               pipeline.Policies.Count > 0;
     }
 
     private static GeneratorOptions BuildEmitOptions(GeneratorOptions options)
