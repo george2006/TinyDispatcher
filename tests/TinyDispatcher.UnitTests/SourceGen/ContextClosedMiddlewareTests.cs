@@ -236,7 +236,13 @@ namespace ConsoleApp
     {
         var refs =
             AppDomain.CurrentDomain.GetAssemblies()
-                .Where(a => !a.IsDynamic && !string.IsNullOrWhiteSpace(a.Location))
+                .Where(a =>
+                    !a.IsDynamic &&
+                    !string.IsNullOrWhiteSpace(a.Location) &&
+                    !string.Equals(
+                        a.GetName().Name,
+                        typeof(ContextClosedMiddlewareTests).Assembly.GetName().Name,
+                        StringComparison.Ordinal))
                 .Select(a => MetadataReference.CreateFromFile(a.Location))
                 .Cast<MetadataReference>()
                 .ToList();
