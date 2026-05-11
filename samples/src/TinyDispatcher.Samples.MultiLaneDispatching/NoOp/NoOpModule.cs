@@ -3,7 +3,7 @@ using TinyDispatcher;
 using TinyDispatcher.Context;
 using TinyDispatcher.Pipeline;
 
-namespace TinyDispatcher.Samples.MultiContextRc.NoOp;
+namespace TinyDispatcher.Samples.MultiLaneDispatching.NoOp;
 
 public static class NoOpModule
 {

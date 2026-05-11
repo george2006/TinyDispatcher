@@ -106,8 +106,8 @@ Tomorrow review question:
 Commands run:
 
 ```powershell
-dotnet build samples\src\TinyDispatcher.Samples.MultiContextRc\TinyDispatcher.Samples.MultiContextRc.csproj --no-restore
-dotnet run --project samples\src\TinyDispatcher.Samples.MultiContextRc\TinyDispatcher.Samples.MultiContextRc.csproj --no-build
+dotnet build samples\src\TinyDispatcher.Samples.MultiLaneDispatching\TinyDispatcher.Samples.MultiLaneDispatching.csproj --no-restore
+dotnet run --project samples\src\TinyDispatcher.Samples.MultiLaneDispatching\TinyDispatcher.Samples.MultiLaneDispatching.csproj --no-build
 dotnet test --no-restore
 git diff --check
 ```

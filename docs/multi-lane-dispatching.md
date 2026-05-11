@@ -6,11 +6,9 @@ A lane is a typed dispatcher pipeline for a specific execution context. In a mod
 
 For a runnable version of this idea, see:
 
-- [Program.cs](../samples/src/TinyDispatcher.Samples.MultiContextRc/Program.cs)
-- [OrdersModule.cs](../samples/src/TinyDispatcher.Samples.MultiContextRc/Orders/OrdersModule.cs)
-- [PaymentsModule.cs](../samples/src/TinyDispatcher.Samples.MultiContextRc/Payments/PaymentsModule.cs)
-
-The sample project still carries its original `MultiContextRc` project name. That is a code identifier, so the docs keep it as-is when pointing to the sample.
+- [Program.cs](../samples/src/TinyDispatcher.Samples.MultiLaneDispatching/Program.cs)
+- [OrdersModule.cs](../samples/src/TinyDispatcher.Samples.MultiLaneDispatching/Orders/OrdersModule.cs)
+- [PaymentsModule.cs](../samples/src/TinyDispatcher.Samples.MultiLaneDispatching/Payments/PaymentsModule.cs)
 
 ## The idea
 
@@ -132,10 +130,10 @@ This is not an argument against mediator-style tools. A flat pipeline can be exa
 
 ## Running the sample
 
-The runnable sample is under `samples/src/TinyDispatcher.Samples.MultiContextRc`.
+The runnable sample is under `samples/src/TinyDispatcher.Samples.MultiLaneDispatching`.
 
 ```powershell
-dotnet run --project samples\src\TinyDispatcher.Samples.MultiContextRc\TinyDispatcher.Samples.MultiContextRc.csproj
+dotnet run --project samples\src\TinyDispatcher.Samples.MultiLaneDispatching\TinyDispatcher.Samples.MultiLaneDispatching.csproj
 ```
 
 It shows four lanes in one process:

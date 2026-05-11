@@ -2,9 +2,9 @@ using Microsoft.Extensions.DependencyInjection;
 using TinyDispatcher;
 using TinyDispatcher.Context;
 using TinyDispatcher.Pipeline;
-using TinyDispatcher.Samples.MultiContextRc.Shared;
+using TinyDispatcher.Samples.MultiLaneDispatching.Shared;
 
-namespace TinyDispatcher.Samples.MultiContextRc.Payments;
+namespace TinyDispatcher.Samples.MultiLaneDispatching.Payments;
 
 public static class PaymentsModule
 {

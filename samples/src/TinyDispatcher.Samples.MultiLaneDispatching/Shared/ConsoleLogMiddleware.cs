@@ -1,7 +1,7 @@
 using TinyDispatcher;
 using TinyDispatcher.Pipeline;
 
-namespace TinyDispatcher.Samples.MultiContextRc.Shared;
+namespace TinyDispatcher.Samples.MultiLaneDispatching.Shared;
 
 public sealed class ConsoleLogMiddleware<TCommand, TContext> : ICommandMiddleware<TCommand, TContext>
     where TCommand : ICommand

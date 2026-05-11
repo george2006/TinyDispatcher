@@ -2,10 +2,10 @@ using Microsoft.Extensions.DependencyInjection;
 using TinyDispatcher;
 using TinyDispatcher.Context;
 using TinyDispatcher.Pipeline;
-using TinyDispatcher.Samples.MultiContextRc.Shared;
+using TinyDispatcher.Samples.MultiLaneDispatching.Shared;
 using TinyAppContext = TinyDispatcher.AppContext;
 
-namespace TinyDispatcher.Samples.MultiContextRc.DefaultAppContext;
+namespace TinyDispatcher.Samples.MultiLaneDispatching.DefaultAppContext;
 
 public static class DefaultAppContextModule
 {

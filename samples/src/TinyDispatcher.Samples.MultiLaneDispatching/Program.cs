@@ -1,14 +1,14 @@
 using Microsoft.Extensions.DependencyInjection;
 using TinyDispatcher.Context;
 using TinyDispatcher.Dispatching;
-using TinyDispatcher.Samples.MultiContextRc.DefaultAppContext;
-using TinyDispatcher.Samples.MultiContextRc.NoOp;
-using TinyDispatcher.Samples.MultiContextRc.Orders;
-using TinyDispatcher.Samples.MultiContextRc.Payments;
-using TinyDispatcher.Samples.MultiContextRc.Shared;
+using TinyDispatcher.Samples.MultiLaneDispatching.DefaultAppContext;
+using TinyDispatcher.Samples.MultiLaneDispatching.NoOp;
+using TinyDispatcher.Samples.MultiLaneDispatching.Orders;
+using TinyDispatcher.Samples.MultiLaneDispatching.Payments;
+using TinyDispatcher.Samples.MultiLaneDispatching.Shared;
 using TinyAppContext = TinyDispatcher.AppContext;
 
-namespace TinyDispatcher.Samples.MultiContextRc;
+namespace TinyDispatcher.Samples.MultiLaneDispatching;
 
 internal static class Program
 {
