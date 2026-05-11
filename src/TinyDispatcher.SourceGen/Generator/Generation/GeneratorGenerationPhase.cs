@@ -14,10 +14,6 @@ internal sealed class GeneratorGenerationPhase
         GeneratorComposition composition,
         HostBootstrapInfo hostBootstrap)
     {
-        var hostGenerationPlan = _hostGenerationPhase.Plan(
-            options,
-            hostBootstrap,
-            composition.HostGeneration);
         var assemblyContributionPlan = _assemblyContributionGenerationPhase.Plan(
             options,
             composition.AssemblyContribution);
@@ -25,6 +21,11 @@ internal sealed class GeneratorGenerationPhase
         _assemblyContributionGenerationPhase.Generate(
             context,
             assemblyContributionPlan);
+
+        var hostGenerationPlan = _hostGenerationPhase.Plan(
+            options,
+            hostBootstrap,
+            composition.HostGeneration);
 
         _hostGenerationPhase.Generate(
             context,
