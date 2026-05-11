@@ -7,6 +7,8 @@ namespace TinyDispatcher.Bootstrap;
 public sealed class TinyBootstrap
 {
     internal IServiceCollection Services { get; }
+    internal TinyBootstrapContextFactorySelection ContextFactorySelection { get; private set; } =
+        TinyBootstrapContextFactorySelection.None;
 
     public TinyBootstrap(IServiceCollection services)
         => Services = services ?? throw new ArgumentNullException(nameof(services));
@@ -41,6 +43,19 @@ public sealed class TinyBootstrap
         where TInitializer : class, IFeatureInitializer
     {
         Services.AddScoped<IFeatureInitializer, TInitializer>();
+        return this;
+    }
+
+    public TinyBootstrap UseFactory<TFactory>()
+        where TFactory : class
+    {
+        ContextFactorySelection = TinyBootstrapContextFactorySelection.FromFactoryType(typeof(TFactory));
+        return this;
+    }
+
+    public TinyBootstrap UseDefaultFactory()
+    {
+        ContextFactorySelection = TinyBootstrapContextFactorySelection.DefaultFactory;
         return this;
     }
 }

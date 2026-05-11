@@ -72,6 +72,42 @@ public sealed class TinyBootstrapTests
         AssertContainsScopedRegistration<IFeatureInitializer, TestFeatureInitializer>(services);
     }
 
+    [Fact]
+    public void Use_factory_records_factory_type()
+    {
+        var services = CreateServices();
+        var sut = CreateSut(services);
+
+        var result = sut.UseFactory<TestContextFactory>();
+
+        Assert.Same(sut, result);
+        Assert.Equal(TinyBootstrapContextFactoryKind.FactoryType, sut.ContextFactorySelection.Kind);
+        Assert.Equal(typeof(TestContextFactory), sut.ContextFactorySelection.FactoryType);
+    }
+
+    [Fact]
+    public void Use_default_factory_records_default_factory_intent()
+    {
+        var services = CreateServices();
+        var sut = CreateSut(services);
+
+        var result = sut.UseDefaultFactory();
+
+        Assert.Same(sut, result);
+        Assert.Equal(TinyBootstrapContextFactoryKind.DefaultFactory, sut.ContextFactorySelection.Kind);
+        Assert.Null(sut.ContextFactorySelection.FactoryType);
+    }
+
+    [Fact]
+    public void Context_factory_selection_is_empty_by_default()
+    {
+        var services = CreateServices();
+        var sut = CreateSut(services);
+
+        Assert.Equal(TinyBootstrapContextFactoryKind.None, sut.ContextFactorySelection.Kind);
+        Assert.Null(sut.ContextFactorySelection.FactoryType);
+    }
+
     private static ServiceCollection CreateServices()
         => new();
 
@@ -100,5 +136,9 @@ public sealed class TinyBootstrapTests
         {
             throw new NotImplementedException();
         }
+    }
+
+    private sealed class TestContextFactory
+    {
     }
 }
