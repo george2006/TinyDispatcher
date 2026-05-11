@@ -1,9 +1,11 @@
-# Context and features
+# Context, features, and lanes
 
 TinyDispatcher makes context explicit (`TContext`) for commands.
 
 At runtime, a context instance is created **once per dispatch** using an `IContextFactory<TContext>`.
 This keeps handlers clean (they receive an already-built context) and avoids "ambient" static state.
+
+Use one lane by default. Add more lanes only when the application has real execution-context or pipeline differences.
 
 ## Shipped AppContext
 
@@ -39,23 +41,18 @@ services.UseTinyDispatcher<MyContext>(tiny =>
 
 If no factory exists, TinyDispatcher fails fast at startup.
 
-## Multiple contexts
+## Context lanes
 
-A host can configure more than one strongly typed context:
+TinyDispatcher supports context lanes: independent, typed dispatcher pipelines inside the same application. Each lane has its own context, handlers, middleware and policies.
 
-```csharp
-services.UseTinyDispatcher<OrderContext>(tiny =>
-{
-    // order middleware, policies, features...
-});
+A lane is a typed dispatcher pipeline for a specific execution context:
 
-services.UseTinyDispatcher<BillingContext>(tiny =>
-{
-    // billing middleware, policies, features...
-});
-```
+- an Orders lane can use `OrdersContext`
+- a Payments lane can use `PaymentsContext`
+- an application-wide lane can use `TinyDispatcher.AppContext`
+- a no-context lane can use `NoOpContext`
 
-Handlers, middleware, and generated pipelines stay scoped to their context type.
+Each lane can have its own context factory, command handlers, global middleware, per-command middleware, policies, and generated pipeline. For the full Orders/Payments walkthrough, see [Multi-Lane Dispatching](multi-lane-dispatching.md).
 
 ## No-op context
 

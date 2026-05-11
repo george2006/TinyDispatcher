@@ -15,6 +15,7 @@ It provides a predictable, explicit, and performant command/query dispatch core 
 - **Generated pipelines** (global middleware -> policy middleware -> per-command middleware -> handler)
 - **Deterministic ordering** and precedence rules (predictable output)
 - **Explicit context (`TContext`)** for command handlers
+- **Context lanes** for independent, typed dispatcher pipelines in one app
 - **Multi-assembly composition** with host-owned final pipeline generation
 - **Pluggable context factory** (pass a delegate or register `IContextFactory<TContext>`)
 - **Feature-friendly `AppContext`** (optional `IFeatureInitializer`-based composition)
@@ -70,11 +71,20 @@ TinyDispatcher supports a modular setup where:
 
 This keeps the runtime simple while letting the generator build final pipelines for the full command universe visible to the host.
 
+## Context lanes
+
+TinyDispatcher supports context lanes: independent, typed dispatcher pipelines inside the same application. Each lane has its own context, handlers, middleware and policies.
+
+Use one lane by default. Add more lanes only when the application has real execution-context or pipeline differences.
+
+See [Multi-Lane Dispatching](docs/multi-lane-dispatching.md) for the full explanation and Orders/Payments sample pointers.
+
 ## Documentation
 
 - [Getting Started](docs/getting-started.md)
 - [Architecture](docs/architecture.md)
 - [Multi-Assembly Composition](docs/multi-assembly-composition.md)
+- [Multi-Lane Dispatching](docs/multi-lane-dispatching.md)
 - [Middleware](docs/middleware.md)
 - [Pipelines & Layering](docs/pipelines.md)
 - [Context & Features](docs/context.md)

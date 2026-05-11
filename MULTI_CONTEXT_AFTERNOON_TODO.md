@@ -1,4 +1,4 @@
-# Multi-Context RC Review Notes
+# Multi-Lane RC Review Notes
 
 Current checkpoint:
 
@@ -15,15 +15,15 @@ Current checkpoint:
 
 RC verification:
 
-1. Source-generation multi-context compile coverage is present in `MultiContextGenerationTests`.
+1. Source-generation context-lane compile coverage is present in `MultiContextGenerationTests`.
 2. Private nested handlers are ignored so generated contribution metadata does not emit inaccessible `typeof(...)` references.
-3. Public docs now describe multiple host contexts.
+3. Public docs now describe context lanes.
 4. Full test suite and whitespace checks are passing.
 
 Remaining follow-up:
 
 1. Consider a dedicated runtime integration project that references the source generator as an analyzer.
-2. Keep stale single-context/composed naming searches clean before merge.
+2. Keep stale single-lane/composed naming searches clean before merge.
 
 ```powershell
 dotnet test --no-restore

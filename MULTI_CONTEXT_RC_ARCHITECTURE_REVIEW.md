@@ -1,4 +1,4 @@
-# Multi-Context RC Architecture Review
+# Multi-Lane RC Architecture Review
 
 Date: 2026-05-10
 
@@ -30,7 +30,7 @@ The feature now reads as a product shape rather than an experimental branch:
   - `HostContextProjection`
   - `HostContextGenerationInput`
   - `HostContextValidationInput`
-- The multi-context RC sample demonstrates vertical-slice usage clearly:
+- The context-lane RC sample demonstrates vertical-slice usage clearly:
   - `Orders`
   - `Payments`
   - `DefaultAppContext`

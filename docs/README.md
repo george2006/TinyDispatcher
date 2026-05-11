@@ -8,6 +8,7 @@ Key capabilities (high level):
 - generated, deterministic middleware pipelines
 - host-owned multi-assembly composition
 - explicit `TContext` with **pluggable context factories**
+- **context lanes** for independent dispatcher pipelines in modular monoliths
 - optional **no-op context** mode (`UseTinyNoOpContext`) when you don't need context
 - optional feature composition via `AppContext` + `IFeatureInitializer`
 
@@ -16,6 +17,7 @@ Core docs:
 - [Getting Started](getting-started.md)
 - [Architecture](architecture.md)
 - [Multi-Assembly Composition](multi-assembly-composition.md)
+- [Multi-Lane Dispatching](multi-lane-dispatching.md)
 - [Source Generator](source-generator.md)
 - [Middleware](middleware.md)
 - [Pipelines & Layering](pipelines.md)
