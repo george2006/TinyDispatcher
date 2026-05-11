@@ -9,10 +9,10 @@ namespace TinyDispatcher.SourceGen.Generator.Generation;
 internal readonly record struct AssemblyContributionSourcePlan(
     DiscoveryResult Discovery,
     GeneratorOptions EmitOptions,
-    ModuleInitializerContributionSourcePlan ModuleInitializer,
+    ModuleInitializerSourcePlan ModuleInitializer,
     AssemblyPipelineContributionSourcePlan PipelineContribution);
 
-internal readonly record struct ModuleInitializerContributionSourcePlan(
+internal readonly record struct ModuleInitializerSourcePlan(
     DiscoveryResult Discovery,
     bool HasPipelineContributions);
 

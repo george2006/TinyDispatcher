@@ -17,7 +17,7 @@ internal sealed class AssemblyContributionGenerationPhase
         var emitOptions = BuildEmitOptions(options);
         var pipelineContributions = PipelineContributions.Create(PipelineConfig.Empty);
 
-        var moduleInitializer = new ModuleInitializerContributionSourcePlan(
+        var moduleInitializer = new ModuleInitializerSourcePlan(
             Discovery: BuildModuleInitializerDiscovery(assemblyContribution),
             HasPipelineContributions: HasPipelineContributions(
                 assemblyContribution.IsHostProject,
