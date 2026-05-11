@@ -213,23 +213,10 @@ namespace ConsoleApp
 
     private static CSharpCompilation CreateCompilation(string source)
     {
-        var references =
-            AppDomain.CurrentDomain.GetAssemblies()
-                .Where(assembly =>
-                    !assembly.IsDynamic &&
-                    !string.IsNullOrWhiteSpace(assembly.Location) &&
-                    !string.Equals(
-                        assembly.GetName().Name,
-                        typeof(MultiContextGenerationTests).Assembly.GetName().Name,
-                        StringComparison.Ordinal))
-                .Select(assembly => MetadataReference.CreateFromFile(assembly.Location))
-                .Cast<MetadataReference>()
-                .ToArray();
-
         return CSharpCompilation.Create(
             assemblyName: "Tests",
             syntaxTrees: new[] { CSharpSyntaxTree.ParseText(source) },
-            references: references,
+            references: SourceGenCompilationReferences.CurrentDomainWithoutUnitTests(),
             options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
     }
 }

@@ -114,25 +114,10 @@ namespace Microsoft.Extensions.DependencyInjection
 
     private static CSharpCompilation CreateCompilation(string source)
     {
-        var refs =
-            AppDomain.CurrentDomain.GetAssemblies()
-                .Where(a =>
-                    !a.IsDynamic &&
-                    !string.IsNullOrWhiteSpace(a.Location) &&
-                    !string.Equals(
-                        a.GetName().Name,
-                        typeof(BootstrapLambdaSelectionTests).Assembly.GetName().Name,
-                        StringComparison.Ordinal))
-                .Select(a => MetadataReference.CreateFromFile(a.Location))
-                .Cast<MetadataReference>()
-                .ToList();
-
-        refs.Add(MetadataReference.CreateFromFile(typeof(Generator).Assembly.Location));
-
         return CSharpCompilation.Create(
             assemblyName: "Tests",
             syntaxTrees: new[] { CSharpSyntaxTree.ParseText(source) },
-            references: refs,
+            references: SourceGenCompilationReferences.CurrentDomainWithoutUnitTests(),
             options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
     }
 }

@@ -24,6 +24,34 @@ public sealed class ServiceCollectionExtensionsTests
     {
     }
 
+    private sealed class SelectedFactoryContext
+    {
+        public string Value { get; }
+
+        public SelectedFactoryContext(string value)
+        {
+            Value = value;
+        }
+    }
+
+    private sealed class DelegateFactoryContext
+    {
+        public string Value { get; }
+
+        public DelegateFactoryContext(string value)
+        {
+            Value = value;
+        }
+    }
+
+    private sealed class InvalidDefaultFactoryContext
+    {
+    }
+
+    private sealed class WrongFactoryContext
+    {
+    }
+
     private sealed class FakeContextFactory : IContextFactory<DummyContext>
     {
         private readonly DummyContext _context;
@@ -37,10 +65,16 @@ public sealed class ServiceCollectionExtensionsTests
             => new(_context);
     }
 
-    private sealed class SelectedContextFactory : IContextFactory<DummyContext>
+    private sealed class SelectedContextFactory : IContextFactory<SelectedFactoryContext>
     {
-        public ValueTask<DummyContext> CreateAsync(CancellationToken ct = default)
-            => new(new DummyContext("selected_factory"));
+        public ValueTask<SelectedFactoryContext> CreateAsync(CancellationToken ct = default)
+            => new(new SelectedFactoryContext("selected_factory"));
+    }
+
+    private sealed class ReplacedContextFactory : IContextFactory<DelegateFactoryContext>
+    {
+        public ValueTask<DelegateFactoryContext> CreateAsync(CancellationToken ct = default)
+            => new(new DelegateFactoryContext("selected_factory"));
     }
 
     private sealed class WrongContextFactory
@@ -147,7 +181,7 @@ public sealed class ServiceCollectionExtensionsTests
     {
         var services = new ServiceCollection();
 
-        services.UseTinyDispatcher<DummyContext>(tiny =>
+        services.UseTinyDispatcher<SelectedFactoryContext>(tiny =>
         {
             tiny.UseFactory<SelectedContextFactory>();
         });
@@ -155,7 +189,7 @@ public sealed class ServiceCollectionExtensionsTests
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
 
-        var factory = scope.ServiceProvider.GetRequiredService<IContextFactory<DummyContext>>();
+        var factory = scope.ServiceProvider.GetRequiredService<IContextFactory<SelectedFactoryContext>>();
         var context = await factory.CreateAsync();
 
         Assert.Equal("selected_factory", context.Value);
@@ -166,17 +200,17 @@ public sealed class ServiceCollectionExtensionsTests
     {
         var services = new ServiceCollection();
 
-        services.UseTinyDispatcher<DummyContext>(
+        services.UseTinyDispatcher<DelegateFactoryContext>(
             tiny =>
             {
-                tiny.UseFactory<SelectedContextFactory>();
+                tiny.UseFactory<ReplacedContextFactory>();
             },
-            (_, _) => new ValueTask<DummyContext>(new DummyContext("delegate_factory")));
+            (_, _) => new ValueTask<DelegateFactoryContext>(new DelegateFactoryContext("delegate_factory")));
 
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
 
-        var factory = scope.ServiceProvider.GetRequiredService<IContextFactory<DummyContext>>();
+        var factory = scope.ServiceProvider.GetRequiredService<IContextFactory<DelegateFactoryContext>>();
         var context = await factory.CreateAsync();
 
         Assert.Equal("delegate_factory", context.Value);
@@ -207,7 +241,7 @@ public sealed class ServiceCollectionExtensionsTests
         var services = new ServiceCollection();
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            services.UseTinyDispatcher<DummyContext>(tiny =>
+            services.UseTinyDispatcher<InvalidDefaultFactoryContext>(tiny =>
             {
                 tiny.UseDefaultFactory();
             }));
@@ -223,7 +257,7 @@ public sealed class ServiceCollectionExtensionsTests
         var services = new ServiceCollection();
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            services.UseTinyDispatcher<DummyContext>(tiny =>
+            services.UseTinyDispatcher<WrongFactoryContext>(tiny =>
             {
                 tiny.UseFactory<WrongContextFactory>();
             }));
