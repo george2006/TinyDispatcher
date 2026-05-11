@@ -16,10 +16,13 @@ internal sealed class GeneratorCompositionPhase
         var hostGeneration = _hostGenerationComposer.Compose(
             hostBootstrap,
             extraction);
+        var assemblyContribution = new AssemblyContributionComposition(
+            extraction.ThisAssembly.Discovery,
+            hostGeneration.Contexts);
         var validationContexts = _validationInputComposer.Compose(hostGeneration.Contexts);
 
         return new GeneratorComposition(
-            ThisAssemblyContributionDiscovery: extraction.ThisAssembly.Discovery,
+            AssemblyContribution: assemblyContribution,
             HostGeneration: hostGeneration,
             ValidationContexts: validationContexts);
     }
