@@ -16,7 +16,7 @@ public static class PaymentsModule
 
         services.UseTinyDispatcher<PaymentsContext>(tiny =>
         {
-            tiny.UseFactory<PaymentsContextFactory>();
+            tiny.UseContextFactory<PaymentsContextFactory>();
             tiny.UseGlobalMiddleware(typeof(ConsoleLogMiddleware<,>));
             tiny.UseMiddlewareFor<CapturePayment>(typeof(PaymentAuditMiddleware<,>));
             tiny.UsePolicy<PaymentRiskPolicy>();

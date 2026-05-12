@@ -58,7 +58,7 @@ public sealed class MyContextFactory : IContextFactory<MyContext>
 
 services.UseTinyDispatcher<MyContext>(tiny =>
 {
-    tiny.UseFactory<MyContextFactory>();
+    tiny.UseContextFactory<MyContextFactory>();
 });
 ```
 

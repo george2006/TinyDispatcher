@@ -46,7 +46,7 @@ public sealed class TinyBootstrap
         return this;
     }
 
-    public TinyBootstrap UseFactory<TFactory>()
+    public TinyBootstrap UseContextFactory<TFactory>()
         where TFactory : class
     {
         ContextFactorySelection = TinyBootstrapContextFactorySelection.FromFactoryType(typeof(TFactory));

@@ -78,7 +78,7 @@ public sealed class TinyBootstrapTests
         var services = CreateServices();
         var sut = CreateSut(services);
 
-        var result = sut.UseFactory<TestContextFactory>();
+        var result = sut.UseContextFactory<TestContextFactory>();
 
         Assert.Same(sut, result);
         Assert.Equal(TinyBootstrapContextFactoryKind.FactoryType, sut.ContextFactorySelection.Kind);

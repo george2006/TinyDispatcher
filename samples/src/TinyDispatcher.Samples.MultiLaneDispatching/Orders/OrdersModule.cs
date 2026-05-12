@@ -16,7 +16,7 @@ public static class OrdersModule
 
         services.UseTinyDispatcher<OrdersContext>(tiny =>
         {
-            tiny.UseFactory<OrdersContextFactory>();
+            tiny.UseContextFactory<OrdersContextFactory>();
             tiny.UseGlobalMiddleware(typeof(ConsoleLogMiddleware<,>));
             tiny.UseMiddlewareFor<SubmitOrder>(typeof(OrderValidationMiddleware<,>));
             tiny.UsePolicy<OrderApprovalPolicy>();

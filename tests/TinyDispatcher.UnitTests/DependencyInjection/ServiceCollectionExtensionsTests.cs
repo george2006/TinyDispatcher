@@ -192,7 +192,7 @@ public sealed class ServiceCollectionExtensionsTests
 
         services.UseTinyDispatcher<SelectedFactoryContext>(tiny =>
         {
-            tiny.UseFactory<SelectedContextFactory>();
+            tiny.UseContextFactory<SelectedContextFactory>();
         });
 
         using var provider = services.BuildServiceProvider();
@@ -212,7 +212,7 @@ public sealed class ServiceCollectionExtensionsTests
         services.UseTinyDispatcher<DelegateFactoryContext>(
             tiny =>
             {
-                tiny.UseFactory<ReplacedContextFactory>();
+                tiny.UseContextFactory<ReplacedContextFactory>();
             },
             (_, _) => new ValueTask<DelegateFactoryContext>(new DelegateFactoryContext("delegate_factory")));
 
@@ -268,7 +268,7 @@ public sealed class ServiceCollectionExtensionsTests
         var exception = Assert.Throws<InvalidOperationException>(() =>
             services.UseTinyDispatcher<WrongFactoryContext>(tiny =>
             {
-                tiny.UseFactory<WrongContextFactory>();
+                tiny.UseContextFactory<WrongContextFactory>();
             }));
 
         Assert.Contains("must implement", exception.Message);

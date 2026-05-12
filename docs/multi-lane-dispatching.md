@@ -49,7 +49,7 @@ Each module then owns the setup for its lane. Conceptually, the Orders lane migh
 ```csharp
 services.UseTinyDispatcher<OrdersContext>(tiny =>
 {
-    tiny.UseFactory<OrdersContextFactory>();
+    tiny.UseContextFactory<OrdersContextFactory>();
     tiny.UseGlobalMiddleware(typeof(ConsoleLogMiddleware<,>));
     tiny.UseMiddlewareFor<SubmitOrder>(typeof(OrderValidationMiddleware<,>));
     tiny.UsePolicy<OrderApprovalPolicy>();
@@ -61,7 +61,7 @@ And the Payments lane can make different choices:
 ```csharp
 services.UseTinyDispatcher<PaymentsContext>(tiny =>
 {
-    tiny.UseFactory<PaymentsContextFactory>();
+    tiny.UseContextFactory<PaymentsContextFactory>();
     tiny.UseGlobalMiddleware(typeof(ConsoleLogMiddleware<,>));
     tiny.UseMiddlewareFor<CapturePayment>(typeof(PaymentAuditMiddleware<,>));
     tiny.UsePolicy<PaymentRiskPolicy>();
