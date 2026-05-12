@@ -64,6 +64,8 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         Action<TinyBootstrap> configure)
     {
+        if (services is null) throw new ArgumentNullException(nameof(services));
+
         configure?.Invoke(new TinyBootstrap(services));
         RegisterNoOpContextFactory(services);
         RegisterDispatcherAndApplyPipelineBootstrap<NoOpContext>(services);
