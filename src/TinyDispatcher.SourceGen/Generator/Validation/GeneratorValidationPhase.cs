@@ -38,16 +38,16 @@ internal sealed class GeneratorValidationPhase
         GeneratorModel composition,
         DiagnosticsCatalog diagnosticsCatalog)
     {
-        var contexts = composition.ValidationContexts;
-        var validationContexts = ImmutableArray.CreateBuilder<GeneratorValidationContext>(contexts.Length);
+        var lanes = composition.Host.Lanes;
+        var validationContexts = ImmutableArray.CreateBuilder<GeneratorValidationContext>(lanes.Length);
 
-        for (var i = 0; i < contexts.Length; i++)
+        for (var i = 0; i < lanes.Length; i++)
         {
             validationContexts.Add(BuildValidationContext(
                 hostBootstrap,
                 composition,
                 diagnosticsCatalog,
-                contexts[i]));
+                lanes[i]));
         }
 
         return validationContexts.ToImmutable();
@@ -57,18 +57,18 @@ internal sealed class GeneratorValidationPhase
         HostBootstrapInfo hostBootstrap,
         GeneratorModel composition,
         DiagnosticsCatalog diagnosticsCatalog,
-        HostContextValidationInput contextInput)
+        HostLane lane)
     {
-        var generationInput = contextInput.GenerationInput;
+        var generationInput = lane.GenerationInput;
 
         return new GeneratorValidationContext.Builder(
                 generationInput.Discovery,
                 diagnosticsCatalog)
             .WithHostGate(isHost: hostBootstrap.IsHostProject)
-            .WithUseTinyDispatcherCalls(contextInput.BootstrapCalls)
-            .WithContext(contextInput.ContextTypeFqn)
+            .WithUseTinyDispatcherCalls(lane.Declaration.UseTinyDispatcherCalls)
+            .WithContext(generationInput.ContextTypeFqn)
             .WithReferencedContributions(composition.Host.ReferencedContributions)
-            .WithThisAssemblyPipelineConfig(contextInput.ThisAssemblyPipeline)
+            .WithThisAssemblyPipelineConfig(lane.ThisAssemblyPipeline)
             .WithPipelineConfig(generationInput.Pipeline)
             .Build();
     }
