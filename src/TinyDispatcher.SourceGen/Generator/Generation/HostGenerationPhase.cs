@@ -13,12 +13,12 @@ internal sealed class HostGenerationPhase
         HostBootstrapInfo hostBootstrap,
         HostModel hostGeneration)
     {
-        var contexts = BuildContextPlans(options, hostBootstrap, hostGeneration);
+        var lanes = BuildLanePlans(options, hostBootstrap, hostGeneration);
 
         return new HostGenerationSourcePlan(
             Discovery: hostGeneration.Discovery,
             EmitOptions: BuildEmitOptions(options),
-            Lanes: contexts);
+            Lanes: lanes);
     }
 
     public void Generate(
@@ -51,53 +51,53 @@ internal sealed class HostGenerationPhase
     {
         for (var i = 0; i < hostGeneration.Lanes.Length; i++)
         {
-            var contextPlan = hostGeneration.Lanes[i];
-            if (!contextPlan.ShouldEmitPipelineMaps)
+            var lanePlan = hostGeneration.Lanes[i];
+            if (!lanePlan.ShouldEmitPipelineMaps)
             {
                 continue;
             }
 
             var pipelineMapsPlan = PipelineMapsPlanner.Build(
-                contextPlan.Discovery,
-                contextPlan.PipelineContributions,
-                contextPlan.EmitOptions);
+                lanePlan.Discovery,
+                lanePlan.PipelineContributions,
+                lanePlan.EmitOptions);
 
             new PipelineMapsEmitter().Emit(context, pipelineMapsPlan);
         }
     }
 
-    private static ImmutableArray<HostLaneSourcePlan> BuildContextPlans(
+    private static ImmutableArray<HostLaneSourcePlan> BuildLanePlans(
         GeneratorOptions options,
         HostBootstrapInfo hostBootstrap,
         HostModel hostGeneration)
     {
-        var contextInputs = hostGeneration.Lanes;
-        var contextPlans = ImmutableArray.CreateBuilder<HostLaneSourcePlan>(contextInputs.Length);
+        var lanes = hostGeneration.Lanes;
+        var lanePlans = ImmutableArray.CreateBuilder<HostLaneSourcePlan>(lanes.Length);
 
-        for (var i = 0; i < contextInputs.Length; i++)
+        for (var i = 0; i < lanes.Length; i++)
         {
-            var contextInput = contextInputs[i].GenerationInput;
+            var lane = lanes[i];
 
-            var contextPlan = BuildContextPlan(
-                BuildContextEmitOptions(options, contextInput.ContextTypeFqn),
+            var lanePlan = BuildLanePlan(
+                BuildContextEmitOptions(options, lane.ContextTypeFqn),
                 shouldEmitPipelines: ShouldEmitPipelines(
                     hostBootstrap,
-                    contextInput.ContextTypeFqn,
-                    contextInput.Pipeline),
-                shouldEmitPipelineMaps: ShouldEmitPipelineMaps(hostBootstrap, contextInput.ContextTypeFqn),
-                contextInput.Discovery,
-                contextInput.Pipeline);
+                    lane.ContextTypeFqn,
+                    lane.Pipeline),
+                shouldEmitPipelineMaps: ShouldEmitPipelineMaps(hostBootstrap, lane.ContextTypeFqn),
+                lane.Discovery,
+                lane.Pipeline);
 
-            contextPlans.Add(contextPlan with
+            lanePlans.Add(lanePlan with
             {
-                PipelinePlan = BuildPipelinePlan(contextPlan)
+                PipelinePlan = BuildPipelinePlan(lanePlan)
             });
         }
 
-        return contextPlans.ToImmutable();
+        return lanePlans.ToImmutable();
     }
 
-    private static HostLaneSourcePlan BuildContextPlan(
+    private static HostLaneSourcePlan BuildLanePlan(
         GeneratorOptions options,
         bool shouldEmitPipelines,
         bool shouldEmitPipelineMaps,
@@ -115,17 +115,17 @@ internal sealed class HostGenerationPhase
             PipelinePlan: null);
     }
 
-    private static PipelinePlan? BuildPipelinePlan(HostLaneSourcePlan contextPlan)
+    private static PipelinePlan? BuildPipelinePlan(HostLaneSourcePlan lanePlan)
     {
-        if (!contextPlan.ShouldEmitPipelines)
+        if (!lanePlan.ShouldEmitPipelines)
         {
             return null;
         }
 
         var pipelinePlan = PipelinePlanner.Build(
-            contextPlan.PipelineContributions,
-            contextPlan.Discovery,
-            contextPlan.EmitOptions);
+            lanePlan.PipelineContributions,
+            lanePlan.Discovery,
+            lanePlan.EmitOptions);
 
         if (!pipelinePlan.ShouldEmit)
         {

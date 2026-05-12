@@ -12,31 +12,31 @@ internal sealed class HostGenerationComposer
         HostBootstrapInfo hostBootstrap,
         GeneratorExtraction extraction)
     {
-        var contexts = BuildHostContexts(hostBootstrap, extraction);
-        var discovery = BuildHostDiscovery(extraction.ThisAssembly, contexts);
+        var lanes = BuildHostLanes(hostBootstrap, extraction);
+        var discovery = BuildHostDiscovery(extraction.ThisAssembly, lanes);
 
         return new HostModel(
             discovery,
             extraction.ReferencedContributions,
-            contexts);
+            lanes);
     }
 
-    private static ImmutableArray<HostLane> BuildHostContexts(
+    private static ImmutableArray<HostLane> BuildHostLanes(
         HostBootstrapInfo hostBootstrap,
         GeneratorExtraction extraction)
     {
         var hostContexts = GetHostContexts(hostBootstrap);
-        var contexts = ImmutableArray.CreateBuilder<HostLane>(hostContexts.Length);
+        var lanes = ImmutableArray.CreateBuilder<HostLane>(hostContexts.Length);
 
         for (var i = 0; i < hostContexts.Length; i++)
         {
-            contexts.Add(BuildHostContext(hostBootstrap, extraction, hostContexts[i]));
+            lanes.Add(BuildHostLane(hostBootstrap, extraction, hostContexts[i]));
         }
 
-        return contexts.ToImmutable();
+        return lanes.ToImmutable();
     }
 
-    private static HostLane BuildHostContext(
+    private static HostLane BuildHostLane(
         HostBootstrapInfo hostBootstrap,
         GeneratorExtraction extraction,
         HostLaneDeclaration hostContext)
@@ -66,31 +66,27 @@ internal sealed class HostGenerationComposer
                 contextFqn);
         }
 
-        var generationInput = new HostContextGenerationInput(
-            ContextTypeFqn: contextFqn,
-            Discovery: hostDiscovery,
-            Pipeline: hostPipeline);
-
         return new HostLane(
             Declaration: hostContext,
             ThisAssemblyPipeline: thisAssemblyPipeline,
-            GenerationInput: generationInput);
+            Discovery: hostDiscovery,
+            Pipeline: hostPipeline);
     }
 
     private static DiscoveryResult BuildHostDiscovery(
         ThisAssemblyExtraction thisAssembly,
-        ImmutableArray<HostLane> contexts)
+        ImmutableArray<HostLane> lanes)
     {
-        if (contexts.IsDefaultOrEmpty)
+        if (lanes.IsDefaultOrEmpty)
         {
             return thisAssembly.Discovery;
         }
 
         var commands = ImmutableArray.CreateBuilder<HandlerContract>();
 
-        for (var i = 0; i < contexts.Length; i++)
+        for (var i = 0; i < lanes.Length; i++)
         {
-            commands.AddRange(contexts[i].GenerationInput.Discovery.Commands);
+            commands.AddRange(lanes[i].Discovery.Commands);
         }
 
         return new DiscoveryResult(

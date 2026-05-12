@@ -59,17 +59,11 @@ internal sealed class GeneratorValidationPhase
         DiagnosticsCatalog diagnosticsCatalog,
         HostLane lane)
     {
-        var generationInput = lane.GenerationInput;
-
         return new GeneratorValidationContext.Builder(
-                generationInput.Discovery,
+                lane,
                 diagnosticsCatalog)
             .WithHostGate(isHost: hostBootstrap.IsHostProject)
-            .WithUseTinyDispatcherCalls(lane.Declaration.UseTinyDispatcherCalls)
-            .WithContext(generationInput.ContextTypeFqn)
             .WithReferencedContributions(composition.Host.ReferencedContributions)
-            .WithThisAssemblyPipelineConfig(lane.ThisAssemblyPipeline)
-            .WithPipelineConfig(generationInput.Pipeline)
             .Build();
     }
 }

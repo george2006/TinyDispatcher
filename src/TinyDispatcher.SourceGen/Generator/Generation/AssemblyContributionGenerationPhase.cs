@@ -70,21 +70,21 @@ internal sealed class AssemblyContributionGenerationPhase
     private static ImmutableArray<string> GetPipelineRegistrationMethodNames(
         bool isHostProject,
         GeneratorOptions options,
-        ImmutableArray<HostLane> contexts)
+        ImmutableArray<HostLane> lanes)
     {
-        if (contexts.IsDefaultOrEmpty)
+        if (lanes.IsDefaultOrEmpty)
         {
             return ImmutableArray<string>.Empty;
         }
 
-        var methodNames = ImmutableArray.CreateBuilder<string>(contexts.Length);
+        var methodNames = ImmutableArray.CreateBuilder<string>(lanes.Length);
 
-        for (var i = 0; i < contexts.Length; i++)
+        for (var i = 0; i < lanes.Length; i++)
         {
             var pipelinePlan = BuildPipelinePlan(
                 isHostProject,
                 options,
-                contexts[i]);
+                lanes[i]);
             if (pipelinePlan is null)
             {
                 continue;
@@ -99,21 +99,21 @@ internal sealed class AssemblyContributionGenerationPhase
 
     private static ImmutableArray<EmptyPipelineContributionEmitter.PipelineContributionSource> GetPipelineContributionSources(
         GeneratorOptions options,
-        ImmutableArray<HostLane> contexts)
+        ImmutableArray<HostLane> lanes)
     {
-        if (contexts.IsDefaultOrEmpty)
+        if (lanes.IsDefaultOrEmpty)
         {
             return ImmutableArray<EmptyPipelineContributionEmitter.PipelineContributionSource>.Empty;
         }
 
-        var sources = ImmutableArray.CreateBuilder<EmptyPipelineContributionEmitter.PipelineContributionSource>(contexts.Length);
+        var sources = ImmutableArray.CreateBuilder<EmptyPipelineContributionEmitter.PipelineContributionSource>(lanes.Length);
 
-        for (var i = 0; i < contexts.Length; i++)
+        for (var i = 0; i < lanes.Length; i++)
         {
-            var contextInput = contexts[i].GenerationInput;
+            var lane = lanes[i];
             sources.Add(new EmptyPipelineContributionEmitter.PipelineContributionSource(
-                BuildContextEmitOptions(options, contextInput.ContextTypeFqn),
-                PipelineContributions.Create(contextInput.Pipeline)));
+                BuildContextEmitOptions(options, lane.ContextTypeFqn),
+                PipelineContributions.Create(lane.Pipeline)));
         }
 
         return sources.ToImmutable();
@@ -122,11 +122,11 @@ internal sealed class AssemblyContributionGenerationPhase
     private static bool HasPipelineContributions(
         bool isHostProject,
         GeneratorOptions options,
-        ImmutableArray<HostLane> contexts)
+        ImmutableArray<HostLane> lanes)
     {
-        for (var i = 0; i < contexts.Length; i++)
+        for (var i = 0; i < lanes.Length; i++)
         {
-            if (BuildPipelinePlan(isHostProject, options, contexts[i]) is not null)
+            if (BuildPipelinePlan(isHostProject, options, lanes[i]) is not null)
             {
                 return true;
             }
@@ -147,7 +147,7 @@ internal sealed class AssemblyContributionGenerationPhase
 
         for (var i = 0; i < assemblyContribution.Lanes.Length; i++)
         {
-            commands.AddRange(assemblyContribution.Lanes[i].GenerationInput.Discovery.Commands);
+            commands.AddRange(assemblyContribution.Lanes[i].Discovery.Commands);
         }
 
         return new DiscoveryResult(
@@ -158,21 +158,20 @@ internal sealed class AssemblyContributionGenerationPhase
     private static PipelinePlan? BuildPipelinePlan(
         bool isHostProject,
         GeneratorOptions options,
-        HostLane context)
+        HostLane lane)
     {
-        var contextInput = context.GenerationInput;
         if (!ShouldEmitPipelines(
                 isHostProject,
-                contextInput.ContextTypeFqn,
-                contextInput.Pipeline))
+                lane.ContextTypeFqn,
+                lane.Pipeline))
         {
             return null;
         }
 
         var pipelinePlan = PipelinePlanner.Build(
-            PipelineContributions.Create(contextInput.Pipeline),
-            contextInput.Discovery,
-            BuildContextEmitOptions(options, contextInput.ContextTypeFqn));
+            PipelineContributions.Create(lane.Pipeline),
+            lane.Discovery,
+            BuildContextEmitOptions(options, lane.ContextTypeFqn));
 
         if (!pipelinePlan.ShouldEmit)
         {

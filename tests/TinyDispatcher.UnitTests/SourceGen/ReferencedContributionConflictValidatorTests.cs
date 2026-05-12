@@ -254,11 +254,12 @@ public sealed class ReferencedContributionConflictValidatorTests
     public void Validate_skips_conflict_checks_for_non_host_projects()
     {
         var context = new GeneratorValidationContext.Builder(
-                EmptyDiscovery(),
+                CreateLane(
+                    contextTypeFqn: string.Empty,
+                    thisAssemblyPipeline: PipelineConfig.Empty,
+                    pipeline: PipelineConfig.Empty),
                 new DiagnosticsCatalog())
             .WithHostGate(isHost: false)
-            .WithContext(string.Empty)
-            .WithThisAssemblyPipelineConfig(PipelineConfig.Empty)
             .WithReferencedContributions(Referenced(
                 new ReferencedAssemblyContribution(
                     "OrdersContrib",
@@ -268,7 +269,6 @@ public sealed class ReferencedContributionConflictValidatorTests
                         "global::MyApp.CreateOrder",
                         ImmutableArray.Create(new MiddlewareRef("global::Orders.SharedMiddleware", 2)))),
                     ImmutableArray<ReferencedPolicyContribution>.Empty)))
-            .WithPipelineConfig(PipelineConfig.Empty)
             .Build();
 
         var diagnostics = new DiagnosticBag();
@@ -282,15 +282,33 @@ public sealed class ReferencedContributionConflictValidatorTests
         PipelineConfig thisAssemblyPipeline,
         ReferencedAssemblyContributions referencedContributions)
     {
+        var lane = CreateLane(
+            contextTypeFqn: "global::MyApp.AppContext",
+            thisAssemblyPipeline: thisAssemblyPipeline,
+            pipeline: PipelineConfig.Empty);
+
         return new GeneratorValidationContext.Builder(
-                EmptyDiscovery(),
+                lane,
                 new DiagnosticsCatalog())
             .WithHostGate(isHost: true)
-            .WithContext("global::MyApp.AppContext")
-            .WithThisAssemblyPipelineConfig(thisAssemblyPipeline)
             .WithReferencedContributions(referencedContributions)
-            .WithPipelineConfig(PipelineConfig.Empty)
             .Build();
+    }
+
+    private static HostLane CreateLane(
+        string contextTypeFqn,
+        PipelineConfig thisAssemblyPipeline,
+        PipelineConfig pipeline)
+    {
+        var declaration = new HostLaneDeclaration(
+            contextTypeFqn,
+            ImmutableArray<UseTinyDispatcherCall>.Empty);
+
+        return new HostLane(
+            declaration,
+            thisAssemblyPipeline,
+            EmptyDiscovery(),
+            pipeline);
     }
 
     private static DiscoveryResult EmptyDiscovery()
