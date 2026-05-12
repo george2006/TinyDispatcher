@@ -180,7 +180,7 @@ public sealed class GeneratorValidationPhaseTests
         return new HostBootstrapInfo(
             IsHostProject: true,
             ConfiguredContextFqn: contextFqn,
-            Contexts: ImmutableArray.Create(new HostLaneDeclaration(
+            LaneDeclarations: ImmutableArray.Create(new HostLaneDeclaration(
                 contextFqn,
                 ImmutableArray.Create(call))));
     }

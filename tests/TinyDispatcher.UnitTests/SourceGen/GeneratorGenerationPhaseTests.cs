@@ -452,7 +452,7 @@ public sealed class GeneratorGenerationPhaseTests
             ? new[] { contextFqn }
             : contextFqns;
         var calls = ImmutableArray.CreateBuilder<UseTinyDispatcherCall>(effectiveContexts.Length);
-        var contexts = ImmutableArray.CreateBuilder<HostLaneDeclaration>(effectiveContexts.Length);
+        var declarations = ImmutableArray.CreateBuilder<HostLaneDeclaration>(effectiveContexts.Length);
 
         for (var i = 0; i < effectiveContexts.Length; i++)
         {
@@ -460,7 +460,7 @@ public sealed class GeneratorGenerationPhaseTests
             var call = new UseTinyDispatcherCall(currentContextFqn, Location.None);
 
             calls.Add(call);
-            contexts.Add(new HostLaneDeclaration(
+            declarations.Add(new HostLaneDeclaration(
                 currentContextFqn,
                 ImmutableArray.Create(call)));
         }
@@ -468,7 +468,7 @@ public sealed class GeneratorGenerationPhaseTests
         return new HostBootstrapInfo(
             IsHostProject: true,
             ConfiguredContextFqn: contextFqn,
-            Contexts: contexts.ToImmutable());
+            LaneDeclarations: declarations.ToImmutable());
     }
 
     private static ReferencedAssemblyContributions Referenced(params ReferencedAssemblyContribution[] assemblies)

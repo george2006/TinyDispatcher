@@ -5,4 +5,4 @@ namespace TinyDispatcher.SourceGen.Generator.Models;
 internal sealed record HostBootstrapInfo(
     bool IsHostProject,
     string ConfiguredContextFqn,
-    ImmutableArray<HostLaneDeclaration> Contexts = default);
+    ImmutableArray<HostLaneDeclaration> LaneDeclarations = default);

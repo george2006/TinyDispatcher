@@ -24,12 +24,12 @@ internal sealed class HostGenerationComposer
         HostBootstrapInfo hostBootstrap,
         GeneratorExtraction extraction)
     {
-        var hostContexts = GetHostContexts(hostBootstrap);
-        var lanes = ImmutableArray.CreateBuilder<HostLane>(hostContexts.Length);
+        var laneDeclarations = GetHostLaneDeclarations(hostBootstrap);
+        var lanes = ImmutableArray.CreateBuilder<HostLane>(laneDeclarations.Length);
 
-        for (var i = 0; i < hostContexts.Length; i++)
+        for (var i = 0; i < laneDeclarations.Length; i++)
         {
-            lanes.Add(BuildHostLane(hostBootstrap, extraction, hostContexts[i]));
+            lanes.Add(BuildHostLane(hostBootstrap, extraction, laneDeclarations[i]));
         }
 
         return lanes.ToImmutable();
@@ -38,9 +38,9 @@ internal sealed class HostGenerationComposer
     private static HostLane BuildHostLane(
         HostBootstrapInfo hostBootstrap,
         GeneratorExtraction extraction,
-        HostLaneDeclaration hostContext)
+        HostLaneDeclaration declaration)
     {
-        var contextFqn = hostContext.ContextTypeFqn;
+        var contextFqn = declaration.ContextTypeFqn;
         var thisAssemblyDiscovery = FilterDiscoveryByContext(
             extraction.ThisAssembly.Discovery,
             contextFqn);
@@ -66,7 +66,7 @@ internal sealed class HostGenerationComposer
         }
 
         return new HostLane(
-            Declaration: hostContext,
+            Declaration: declaration,
             ThisAssemblyPipeline: thisAssemblyPipeline,
             Discovery: hostDiscovery,
             Pipeline: hostPipeline);
@@ -93,11 +93,11 @@ internal sealed class HostGenerationComposer
             thisAssembly.Discovery.Queries);
     }
 
-    private static ImmutableArray<HostLaneDeclaration> GetHostContexts(HostBootstrapInfo hostBootstrap)
+    private static ImmutableArray<HostLaneDeclaration> GetHostLaneDeclarations(HostBootstrapInfo hostBootstrap)
     {
-        if (!hostBootstrap.Contexts.IsDefaultOrEmpty)
+        if (!hostBootstrap.LaneDeclarations.IsDefaultOrEmpty)
         {
-            return hostBootstrap.Contexts;
+            return hostBootstrap.LaneDeclarations;
         }
 
         return ImmutableArray.Create(new HostLaneDeclaration(

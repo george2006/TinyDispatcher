@@ -86,7 +86,7 @@ internal static class GeneratorAnalysisPhase
         return new HostBootstrapInfo(
             IsHostProject: useTinyCallsSyntax.Length > 0,
             ConfiguredContextFqn: GetConfiguredContextFqn(effectiveOptions),
-            Contexts: BuildHostContexts(useTinyDispatcherCalls));
+            LaneDeclarations: BuildHostLaneDeclarations(useTinyDispatcherCalls));
     }
 
     private static string GetConfiguredContextFqn(GeneratorOptions options)
@@ -99,7 +99,7 @@ internal static class GeneratorAnalysisPhase
         return Fqn.EnsureGlobal(options.CommandContextType!);
     }
 
-    private static ImmutableArray<HostLaneDeclaration> BuildHostContexts(
+    private static ImmutableArray<HostLaneDeclaration> BuildHostLaneDeclarations(
         ImmutableArray<UseTinyDispatcherCall> useTinyDispatcherCalls)
     {
         if (useTinyDispatcherCalls.IsDefaultOrEmpty)
@@ -109,7 +109,7 @@ internal static class GeneratorAnalysisPhase
 
         var contextOrder = new List<string>();
         var callsByContext = GroupCallsByContext(useTinyDispatcherCalls, contextOrder);
-        return BuildHostContexts(contextOrder, callsByContext);
+        return BuildHostLaneDeclarations(contextOrder, callsByContext);
     }
 
     private static Dictionary<string, ImmutableArray<UseTinyDispatcherCall>.Builder> GroupCallsByContext(
@@ -146,18 +146,18 @@ internal static class GeneratorAnalysisPhase
         return builder;
     }
 
-    private static ImmutableArray<HostLaneDeclaration> BuildHostContexts(
+    private static ImmutableArray<HostLaneDeclaration> BuildHostLaneDeclarations(
         List<string> contextOrder,
         Dictionary<string, ImmutableArray<UseTinyDispatcherCall>.Builder> callsByContext)
     {
-        var contexts = ImmutableArray.CreateBuilder<HostLaneDeclaration>(callsByContext.Count);
+        var declarations = ImmutableArray.CreateBuilder<HostLaneDeclaration>(callsByContext.Count);
 
         for (var i = 0; i < contextOrder.Count; i++)
         {
             var contextTypeFqn = contextOrder[i];
-            contexts.Add(new HostLaneDeclaration(contextTypeFqn, callsByContext[contextTypeFqn].ToImmutable()));
+            declarations.Add(new HostLaneDeclaration(contextTypeFqn, callsByContext[contextTypeFqn].ToImmutable()));
         }
 
-        return contexts.ToImmutable();
+        return declarations.ToImmutable();
     }
 }

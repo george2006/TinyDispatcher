@@ -61,7 +61,7 @@ namespace MyApp
             EmptyAnalyzerConfigOptionsProvider.Instance);
 
         Assert.Collection(
-            result.Analysis.HostBootstrap.Contexts,
+            result.Analysis.HostBootstrap.LaneDeclarations,
             context =>
             {
                 Assert.Equal("global::MyApp.AppContext", context.ContextTypeFqn);
