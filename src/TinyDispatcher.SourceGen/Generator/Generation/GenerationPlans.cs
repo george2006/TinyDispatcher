@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-using TinyDispatcher.SourceGen.Generator.Generation.Emitters;
 using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Generator.Options;
@@ -19,7 +18,11 @@ internal readonly record struct ModuleInitializerSourcePlan(
 internal readonly record struct AssemblyPipelineContributionSourcePlan(
     PipelineContributions Contributions,
     ImmutableArray<string> RegistrationMethodNames,
-    ImmutableArray<EmptyPipelineContributionEmitter.PipelineContributionSource> ContributionSources);
+    ImmutableArray<PipelineContributionSource> ContributionSources);
+
+internal readonly record struct PipelineContributionSource(
+    GeneratorOptions Options,
+    PipelineContributions Contributions);
 
 internal readonly record struct HostGenerationSourcePlan(
     DiscoveryResult Discovery,

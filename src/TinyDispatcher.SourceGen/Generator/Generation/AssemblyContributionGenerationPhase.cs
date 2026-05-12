@@ -52,7 +52,7 @@ internal sealed class AssemblyContributionGenerationPhase
 
         new ModuleInitializerEmitter().Emit(context, moduleInitializerPlan);
 
-        new EmptyPipelineContributionEmitter().Emit(
+        new ThisAssemblyContributionEmitter().Emit(
             context,
             assemblyContribution.Discovery,
             assemblyContribution.PipelineContribution.Contributions,
@@ -97,21 +97,21 @@ internal sealed class AssemblyContributionGenerationPhase
         return methodNames.ToImmutable();
     }
 
-    private static ImmutableArray<EmptyPipelineContributionEmitter.PipelineContributionSource> GetPipelineContributionSources(
+    private static ImmutableArray<PipelineContributionSource> GetPipelineContributionSources(
         GeneratorOptions options,
         ImmutableArray<HostLane> lanes)
     {
         if (lanes.IsDefaultOrEmpty)
         {
-            return ImmutableArray<EmptyPipelineContributionEmitter.PipelineContributionSource>.Empty;
+            return ImmutableArray<PipelineContributionSource>.Empty;
         }
 
-        var sources = ImmutableArray.CreateBuilder<EmptyPipelineContributionEmitter.PipelineContributionSource>(lanes.Length);
+        var sources = ImmutableArray.CreateBuilder<PipelineContributionSource>(lanes.Length);
 
         for (var i = 0; i < lanes.Length; i++)
         {
             var lane = lanes[i];
-            sources.Add(new EmptyPipelineContributionEmitter.PipelineContributionSource(
+            sources.Add(new PipelineContributionSource(
                 BuildContextEmitOptions(options, lane.ContextTypeFqn),
                 PipelineContributions.Create(lane.Pipeline)));
         }

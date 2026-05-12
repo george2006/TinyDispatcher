@@ -3,13 +3,14 @@ using System.Collections.Immutable;
 using System.Text;
 using Microsoft.CodeAnalysis.Text;
 using TinyDispatcher.SourceGen.Generator;
+using TinyDispatcher.SourceGen.Generator.Generation;
 using TinyDispatcher.SourceGen.Generator.Generation.Emitters.Pipelines;
 using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Generator.Options;
 
 namespace TinyDispatcher.SourceGen.Generator.Generation.Emitters;
 
-internal sealed class EmptyPipelineContributionEmitter
+internal sealed class ThisAssemblyContributionEmitter
 {
     public void Emit(
         IGeneratorContext context,
@@ -406,8 +407,4 @@ internal sealed class EmptyPipelineContributionEmitter
 
         return source.ToString();
     }
-
-    internal readonly record struct PipelineContributionSource(
-        GeneratorOptions Options,
-        PipelineContributions Contributions);
 }
