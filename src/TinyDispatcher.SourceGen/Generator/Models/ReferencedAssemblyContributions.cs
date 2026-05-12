@@ -27,17 +27,18 @@ internal sealed record ReferencedAssemblyContributions(
         for (var i = 0; i < Assemblies.Length; i++)
         {
             var assembly = Assemblies[i];
-            if (!assembly.MatchesContext(contextFqn))
+            if (!ContextMatching.Matches(assembly.ContextTypeFqn, contextFqn))
+            {
                 continue;
+            }
 
             for (var j = 0; j < assembly.Handlers.Length; j++)
             {
-                var handlerContribution = assembly.Handlers[j];
-                if (!handlerContribution.MatchesContext(contextFqn))
-                    continue;
-
-                if (HandlerContractMatchesContext(handlerContribution.Handler, contextFqn))
-                    yield return handlerContribution.Handler;
+                var handler = assembly.Handlers[j];
+                if (ContextMatching.Matches(handler.ContextTypeFqn, contextFqn))
+                {
+                    yield return handler;
+                }
             }
         }
     }
@@ -47,21 +48,11 @@ internal sealed record ReferencedAssemblyContributions(
         for (var i = 0; i < Assemblies.Length; i++)
         {
             var assembly = Assemblies[i];
-            if (assembly.MatchesContext(contextFqn))
+            if (ContextMatching.Matches(assembly.ContextTypeFqn, contextFqn))
+            {
                 yield return assembly;
+            }
         }
     }
 
-    private static bool HandlerContractMatchesContext(
-        HandlerContract handlerContract,
-        string contextFqn)
-    {
-        if (string.IsNullOrWhiteSpace(contextFqn))
-            return true;
-
-        return string.Equals(
-            handlerContract.ContextTypeFqn,
-            contextFqn,
-            System.StringComparison.Ordinal);
-    }
 }

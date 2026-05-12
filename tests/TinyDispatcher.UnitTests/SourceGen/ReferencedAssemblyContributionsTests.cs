@@ -20,18 +20,14 @@ public sealed class ReferencedAssemblyContributionsTests
                     PerCommandMiddlewareContributions: ImmutableArray<ReferencedPerCommandMiddlewareContribution>.Empty,
                     PolicyContributions: ImmutableArray<ReferencedPolicyContribution>.Empty,
                     Handlers: ImmutableArray.Create(
-                        new ReferencedHandlerContribution(
-                            ContextTypeFqn: null,
-                            Handler: new HandlerContract(
-                                MessageTypeFqn: "global::ExternalApp.CreateOrder",
-                                HandlerTypeFqn: "global::ExternalApp.CreateOrderHandler",
-                                ContextTypeFqn: "global::ExternalApp.OrderContext")),
-                        new ReferencedHandlerContribution(
-                            ContextTypeFqn: null,
-                            Handler: new HandlerContract(
-                                MessageTypeFqn: "global::ExternalApp.CapturePayment",
-                                HandlerTypeFqn: "global::ExternalApp.CapturePaymentHandler",
-                                ContextTypeFqn: "global::ExternalApp.BillingContext"))))));
+                        new HandlerContract(
+                            MessageTypeFqn: "global::ExternalApp.CreateOrder",
+                            HandlerTypeFqn: "global::ExternalApp.CreateOrderHandler",
+                            ContextTypeFqn: "global::ExternalApp.OrderContext"),
+                        new HandlerContract(
+                            MessageTypeFqn: "global::ExternalApp.CapturePayment",
+                            HandlerTypeFqn: "global::ExternalApp.CapturePaymentHandler",
+                            ContextTypeFqn: "global::ExternalApp.BillingContext")))));
 
         var commands = contributions
             .EnumerateCommands("global::ExternalApp.OrderContext")

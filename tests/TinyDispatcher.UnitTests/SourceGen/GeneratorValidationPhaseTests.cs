@@ -105,12 +105,10 @@ public sealed class GeneratorValidationPhaseTests
                 ImmutableArray<MiddlewareRef>.Empty,
                 ImmutableArray<ReferencedPerCommandMiddlewareContribution>.Empty,
                 ImmutableArray<ReferencedPolicyContribution>.Empty,
-                ImmutableArray.Create(new ReferencedHandlerContribution(
-                    "global::MyApp.AppContext",
-                    new HandlerContract(
-                        "global::MyApp.CreateOrder",
-                        "global::ExternalApp.CreateOrderHandler",
-                        "global::MyApp.AppContext"))))));
+                ImmutableArray.Create(new HandlerContract(
+                    "global::MyApp.CreateOrder",
+                    "global::ExternalApp.CreateOrderHandler",
+                    "global::MyApp.AppContext")))));
         var hostBootstrap = HostBootstrap("global::MyApp.AppContext");
 
         var diagnostics = new GeneratorValidationPhase().Validate(

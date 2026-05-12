@@ -517,21 +517,13 @@ internal sealed class ReferencedAssemblyContributionExtractor
 
         public ReferencedAssemblyContribution Build(string assemblyName)
         {
-            var handlers = ImmutableArray.CreateBuilder<ReferencedHandlerContribution>(HandlerContracts.Count);
-            for (var i = 0; i < HandlerContracts.Count; i++)
-            {
-                handlers.Add(new ReferencedHandlerContribution(
-                    ContextTypeFqn,
-                    HandlerContracts[i]));
-            }
-
             return new ReferencedAssemblyContribution(
                 assemblyName,
                 ContextTypeFqn,
                 Globals.ToImmutable(),
                 PerCommandMiddlewareContributions.ToImmutable(),
                 PolicyContributions.ToImmutable(),
-                handlers.ToImmutable());
+                HandlerContracts.ToImmutable());
         }
     }
 }

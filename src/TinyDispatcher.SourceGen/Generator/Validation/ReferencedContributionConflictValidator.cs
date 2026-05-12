@@ -63,7 +63,7 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
         for (var i = 0; i < assembly.PerCommandMiddlewareContributions.Length; i++)
         {
             var finding = assembly.PerCommandMiddlewareContributions[i];
-            if (ContributionBelongsToAnotherContext(
+            if (!ContextMatching.Matches(
                 finding.ContextTypeFqn,
                 context.ContextTypeFqn))
             {
@@ -133,7 +133,7 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
         for (var i = 0; i < assembly.PolicyContributions.Length; i++)
         {
             var finding = assembly.PolicyContributions[i];
-            if (ContributionBelongsToAnotherContext(
+            if (!ContextMatching.Matches(
                 finding.ContextTypeFqn,
                 context.ContextTypeFqn))
             {
@@ -174,22 +174,6 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
         out string owner)
     {
         return owners.TryGetValue(key, out owner!);
-    }
-
-    private static bool ContributionBelongsToAnotherContext(
-        string? contributionContextFqn,
-        string contextFqn)
-    {
-        if (string.IsNullOrWhiteSpace(contributionContextFqn) ||
-            string.IsNullOrWhiteSpace(contextFqn))
-        {
-            return false;
-        }
-
-        return !string.Equals(
-            contributionContextFqn,
-            contextFqn,
-            StringComparison.Ordinal);
     }
 
     private static void ReportPerCommandMiddlewareConflict(

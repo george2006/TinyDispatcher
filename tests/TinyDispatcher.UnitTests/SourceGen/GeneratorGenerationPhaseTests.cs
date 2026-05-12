@@ -104,7 +104,6 @@ public sealed class GeneratorGenerationPhaseTests
                     ImmutableArray<ReferencedPerCommandMiddlewareContribution>.Empty,
                     ImmutableArray<ReferencedPolicyContribution>.Empty,
                     ImmutableArray.Create(ReferencedHandler(
-                        "global::MyApp.AppContext",
                         "global::ExternalApp.CreateOrder",
                         "global::ExternalApp.CreateOrderHandler",
                         "global::MyApp.AppContext")))));
@@ -154,7 +153,6 @@ public sealed class GeneratorGenerationPhaseTests
                         ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.PolicyMiddleware", 2)),
                         ImmutableArray.Create("global::ExternalApp.CreateOrder"))),
                     ImmutableArray.Create(ReferencedHandler(
-                        "global::MyApp.AppContext",
                         "global::ExternalApp.CreateOrder",
                         "global::ExternalApp.CreateOrderHandler",
                         "global::MyApp.AppContext")))));
@@ -207,7 +205,6 @@ public sealed class GeneratorGenerationPhaseTests
                         ImmutableArray.Create(new MiddlewareRef("global::ExternalApp.OrderMiddleware", 2)))),
                     ImmutableArray<ReferencedPolicyContribution>.Empty,
                     ImmutableArray.Create(ReferencedHandler(
-                        "global::MyApp.AppContext",
                         "global::ExternalApp.CreateOrder",
                         "global::ExternalApp.CreateOrderHandler",
                         "global::MyApp.AppContext"))),
@@ -223,7 +220,6 @@ public sealed class GeneratorGenerationPhaseTests
                         ImmutableArray.Create(new MiddlewareRef("global::OtherApp.CancelPolicyMiddleware", 2)),
                         ImmutableArray.Create("global::OtherApp.CancelOrder"))),
                     ImmutableArray.Create(ReferencedHandler(
-                        "global::OtherApp.OtherContext",
                         "global::OtherApp.CancelOrder",
                         "global::OtherApp.CancelOrderHandler",
                         "global::OtherApp.OtherContext")))));
@@ -287,12 +283,10 @@ public sealed class GeneratorGenerationPhaseTests
                             "global::OtherApp.OtherContext")),
                     ImmutableArray.Create(
                         ReferencedHandler(
-                            null,
                             "global::ExternalApp.CreateOrder",
                             "global::ExternalApp.CreateOrderHandler",
                             "global::MyApp.AppContext"),
                         ReferencedHandler(
-                            null,
                             "global::ExternalApp.CancelOrder",
                             "global::ExternalApp.CancelOrderHandler",
                             "global::OtherApp.OtherContext")))));
@@ -480,18 +474,15 @@ public sealed class GeneratorGenerationPhaseTests
     private static ReferencedAssemblyContributions Referenced(params ReferencedAssemblyContribution[] assemblies)
         => new(ImmutableArray.Create(assemblies));
 
-    private static ReferencedHandlerContribution ReferencedHandler(
-        string? contributionContextTypeFqn,
+    private static HandlerContract ReferencedHandler(
         string messageTypeFqn,
         string handlerTypeFqn,
         string handlerContextTypeFqn)
     {
-        return new ReferencedHandlerContribution(
-            contributionContextTypeFqn,
-            new HandlerContract(
-                messageTypeFqn,
-                handlerTypeFqn,
-                handlerContextTypeFqn));
+        return new HandlerContract(
+            messageTypeFqn,
+            handlerTypeFqn,
+            handlerContextTypeFqn);
     }
 
     private static GeneratorExtraction Extraction(

@@ -110,7 +110,7 @@ internal static class ReferencedAssemblyContributionComposer
         {
             var finding = assembly.PerCommandMiddlewareContributions[i];
 
-            var contributionBelongsToAnotherContext = ContributionBelongsToAnotherContext(
+            var contributionBelongsToAnotherContext = !ContextMatching.Matches(
                 finding.ContextTypeFqn,
                 contextFqn);
             if (contributionBelongsToAnotherContext)
@@ -135,7 +135,7 @@ internal static class ReferencedAssemblyContributionComposer
         {
             var finding = assembly.PolicyContributions[i];
 
-            var contributionBelongsToAnotherContext = ContributionBelongsToAnotherContext(
+            var contributionBelongsToAnotherContext = !ContextMatching.Matches(
                 finding.ContextTypeFqn,
                 contextFqn);
             if (contributionBelongsToAnotherContext)
@@ -155,22 +155,6 @@ internal static class ReferencedAssemblyContributionComposer
                 target[finding.PolicyTypeFqn] = ToPolicySpec(finding);
             }
         }
-    }
-
-    private static bool ContributionBelongsToAnotherContext(
-        string? contributionContextFqn,
-        string contextFqn)
-    {
-        if (string.IsNullOrWhiteSpace(contributionContextFqn) ||
-            string.IsNullOrWhiteSpace(contextFqn))
-        {
-            return false;
-        }
-
-        return !string.Equals(
-            contributionContextFqn,
-            contextFqn,
-            System.StringComparison.Ordinal);
     }
 
     private static PolicySpec ToPolicySpec(ReferencedPolicyContribution finding)

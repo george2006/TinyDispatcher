@@ -8,16 +8,8 @@ internal sealed record ReferencedAssemblyContribution(
     ImmutableArray<MiddlewareRef> Globals,
     ImmutableArray<ReferencedPerCommandMiddlewareContribution> PerCommandMiddlewareContributions,
     ImmutableArray<ReferencedPolicyContribution> PolicyContributions,
-    ImmutableArray<ReferencedHandlerContribution> Handlers = default)
+    ImmutableArray<HandlerContract> Handlers = default)
 {
-    public bool MatchesContext(string contextFqn)
-    {
-        if (string.IsNullOrWhiteSpace(ContextTypeFqn) || string.IsNullOrWhiteSpace(contextFqn))
-            return true;
-
-        return string.Equals(ContextTypeFqn, contextFqn, System.StringComparison.Ordinal);
-    }
-
     public bool HasContributions()
         => !string.IsNullOrWhiteSpace(ContextTypeFqn) ||
            !Globals.IsDefaultOrEmpty ||

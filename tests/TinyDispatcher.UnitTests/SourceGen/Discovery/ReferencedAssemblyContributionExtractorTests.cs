@@ -50,10 +50,10 @@ namespace ExternalApp
             candidate => candidate.AssemblyName == "ExternalContrib");
         var handlerContract = Assert.Single(
             assembly.Handlers,
-            c => c.Handler.MessageTypeFqn == "global::ExternalApp.CreateOrder");
-        Assert.Equal("global::ExternalApp.CreateOrder", handlerContract.Handler.MessageTypeFqn);
-        Assert.Equal("global::ExternalApp.CreateOrderHandler", handlerContract.Handler.HandlerTypeFqn);
-        Assert.Equal("global::ExternalApp.AppContext", handlerContract.Handler.ContextTypeFqn);
+            c => c.MessageTypeFqn == "global::ExternalApp.CreateOrder");
+        Assert.Equal("global::ExternalApp.CreateOrder", handlerContract.MessageTypeFqn);
+        Assert.Equal("global::ExternalApp.CreateOrderHandler", handlerContract.HandlerTypeFqn);
+        Assert.Equal("global::ExternalApp.AppContext", handlerContract.ContextTypeFqn);
         Assert.Equal("ExternalContrib", assembly.AssemblyName);
     }
 
@@ -177,7 +177,7 @@ namespace Billing
                 Assert.Equal("global::Billing.BillingContext", orders.ContextTypeFqn);
                 Assert.Equal(
                     "global::Billing.CapturePayment",
-                    Assert.Single(orders.Handlers).Handler.MessageTypeFqn);
+                    Assert.Single(orders.Handlers).MessageTypeFqn);
             },
             billing =>
             {
@@ -185,7 +185,7 @@ namespace Billing
                 Assert.Equal("global::Orders.OrderContext", billing.ContextTypeFqn);
                 Assert.Equal(
                     "global::Orders.CreateOrder",
-                    Assert.Single(billing.Handlers).Handler.MessageTypeFqn);
+                    Assert.Single(billing.Handlers).MessageTypeFqn);
             });
     }
 
@@ -228,9 +228,9 @@ namespace ExternalApp
             candidate => candidate.AssemblyName == "ExternalContrib");
         var handler = Assert.Single(
             assembly.Handlers);
-        Assert.Equal("global::ExternalApp.CreateOrder", handler.Handler.MessageTypeFqn);
-        Assert.Equal("global::ExternalApp.CreateOrderHandler", handler.Handler.HandlerTypeFqn);
-        Assert.Equal("global::ExternalApp.AppContext", handler.Handler.ContextTypeFqn);
+        Assert.Equal("global::ExternalApp.CreateOrder", handler.MessageTypeFqn);
+        Assert.Equal("global::ExternalApp.CreateOrderHandler", handler.HandlerTypeFqn);
+        Assert.Equal("global::ExternalApp.AppContext", handler.ContextTypeFqn);
     }
 
     [Fact]
