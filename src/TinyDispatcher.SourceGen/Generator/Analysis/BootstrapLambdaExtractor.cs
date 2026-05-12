@@ -27,7 +27,7 @@ internal sealed class BootstrapLambdaExtractor
             var semanticModel = compilation.GetSemanticModel(useTinyCall.SyntaxTree);
             var lambda = SelectBootstrapLambda(useTinyCall, semanticModel);
             var hasBootstrapLambda = lambda is not null;
-            var hasResolvedContext = contextInference.TryResolveUseTinyDispatcherContext(
+            var hasResolvedContext = contextInference.TryResolveUseTinyDispatcherCall(
                 useTinyCall,
                 compilation,
                 out var resolvedCall);

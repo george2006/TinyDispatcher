@@ -33,20 +33,6 @@ internal sealed class ContextInference
         return builder.ToImmutable();
     }
 
-    /// <summary>
-    /// Best-effort inference of a concrete context from syntax-discovered UseTinyDispatcher calls.
-    /// Succeeds only when all resolved calls agree on one context.
-    /// </summary>
-    public bool TryInferSingleContextTypeFromUseTinyCalls(
-        ImmutableArray<InvocationExpressionSyntax> useTinyCallsSyntax,
-        Compilation compilation,
-        out string contextTypeFqn)
-    {
-        // We resolve using the same logic as the semantic resolver, but accept the syntax list.
-        var all = ResolveAllUseTinyDispatcherContexts(useTinyCallsSyntax, compilation);
-        return TryInferSingleContextTypeFromResolvedCalls(all, out contextTypeFqn);
-    }
-
     public bool TryInferSingleContextTypeFromResolvedCalls(
         ImmutableArray<UseTinyDispatcherCall> useTinyDispatcherCalls,
         out string contextTypeFqn)
@@ -77,15 +63,7 @@ internal sealed class ContextInference
         return true;
     }
 
-    public bool TryResolveUseTinyDispatcherContext(
-        InvocationExpressionSyntax invocation,
-        Compilation compilation,
-        out UseTinyDispatcherCall useTinyDispatcherCall)
-    {
-        return TryResolveUseTinyDispatcherCall(invocation, compilation, out useTinyDispatcherCall);
-    }
-
-    private static bool TryResolveUseTinyDispatcherCall(
+    public bool TryResolveUseTinyDispatcherCall(
         InvocationExpressionSyntax invocation,
         Compilation compilation,
         out UseTinyDispatcherCall useTinyDispatcherCall)
