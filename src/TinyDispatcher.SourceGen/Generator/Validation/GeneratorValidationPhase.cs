@@ -10,7 +10,7 @@ internal sealed class GeneratorValidationPhase
 {
     public DiagnosticBag Validate(
         HostBootstrapInfo hostBootstrap,
-        GeneratorComposition composition,
+        GeneratorModel composition,
         DiagnosticsCatalog diagnosticsCatalog,
         ValidationRoslynDependencies roslynDependencies)
     {
@@ -35,7 +35,7 @@ internal sealed class GeneratorValidationPhase
 
     private static ImmutableArray<GeneratorValidationContext> BuildValidationContexts(
         HostBootstrapInfo hostBootstrap,
-        GeneratorComposition composition,
+        GeneratorModel composition,
         DiagnosticsCatalog diagnosticsCatalog)
     {
         var contexts = composition.ValidationContexts;
@@ -55,7 +55,7 @@ internal sealed class GeneratorValidationPhase
 
     private static GeneratorValidationContext BuildValidationContext(
         HostBootstrapInfo hostBootstrap,
-        GeneratorComposition composition,
+        GeneratorModel composition,
         DiagnosticsCatalog diagnosticsCatalog,
         HostContextValidationInput contextInput)
     {
@@ -67,7 +67,7 @@ internal sealed class GeneratorValidationPhase
             .WithHostGate(isHost: hostBootstrap.IsHostProject)
             .WithUseTinyDispatcherCalls(contextInput.BootstrapCalls)
             .WithContext(contextInput.ContextTypeFqn)
-            .WithReferencedContributions(composition.HostGeneration.ReferencedContributions)
+            .WithReferencedContributions(composition.Host.ReferencedContributions)
             .WithThisAssemblyPipelineConfig(contextInput.ThisAssemblyPipeline)
             .WithPipelineConfig(generationInput.Pipeline)
             .Build();

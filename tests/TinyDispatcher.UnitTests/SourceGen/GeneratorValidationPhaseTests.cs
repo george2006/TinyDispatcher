@@ -182,7 +182,7 @@ public sealed class GeneratorValidationPhaseTests
         return new HostBootstrapInfo(
             IsHostProject: true,
             ConfiguredContextFqn: contextFqn,
-            Contexts: ImmutableArray.Create(new HostContextInfo(
+            Contexts: ImmutableArray.Create(new HostLaneDeclaration(
                 contextFqn,
                 ImmutableArray.Create(call))));
     }
@@ -207,13 +207,13 @@ public sealed class GeneratorValidationPhaseTests
         return new GeneratorExtraction(
             new ThisAssemblyExtraction(
                 discovery,
-                ImmutableArray.Create(new ContextPipelineConfig(
+                ImmutableArray.Create(new ContextPipeline(
                     "global::MyApp.AppContext",
                     pipeline))),
             referencedContributions ?? ReferencedAssemblyContributions.Empty);
     }
 
-    private static GeneratorComposition Composition(
+    private static GeneratorModel Composition(
         HostBootstrapInfo hostBootstrap,
         GeneratorExtraction extraction)
     {

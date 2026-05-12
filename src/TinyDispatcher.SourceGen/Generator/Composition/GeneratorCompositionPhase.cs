@@ -9,22 +9,22 @@ internal sealed class GeneratorCompositionPhase
     private readonly HostGenerationComposer _hostGenerationComposer = new();
     private readonly ValidationInputComposer _validationInputComposer = new();
 
-    public GeneratorComposition Compose(
+    public GeneratorModel Compose(
         HostBootstrapInfo hostBootstrap,
         GeneratorExtraction extraction)
     {
-        var hostGeneration = _hostGenerationComposer.Compose(
+        var host = _hostGenerationComposer.Compose(
             hostBootstrap,
             extraction);
-        var assemblyContribution = new AssemblyContributionComposition(
+        var assemblyContribution = new AssemblyContributionModel(
             extraction.ThisAssembly.Discovery,
-            hostGeneration.Contexts,
+            host.Lanes,
             hostBootstrap.IsHostProject);
-        var validationContexts = _validationInputComposer.Compose(hostGeneration.Contexts);
+        var validationContexts = _validationInputComposer.Compose(host.Lanes);
 
-        return new GeneratorComposition(
+        return new GeneratorModel(
             AssemblyContribution: assemblyContribution,
-            HostGeneration: hostGeneration,
+            Host: host,
             ValidationContexts: validationContexts);
     }
 }

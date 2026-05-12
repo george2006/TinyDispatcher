@@ -24,9 +24,9 @@ internal readonly record struct AssemblyPipelineContributionSourcePlan(
 internal readonly record struct HostGenerationSourcePlan(
     DiscoveryResult Discovery,
     GeneratorOptions EmitOptions,
-    ImmutableArray<HostContextSourcePlan> Contexts);
+    ImmutableArray<HostLaneSourcePlan> Lanes);
 
-internal readonly record struct HostContextSourcePlan(
+internal readonly record struct HostLaneSourcePlan(
     DiscoveryResult Discovery,
     GeneratorOptions EmitOptions,
     bool ShouldEmitPipelines,

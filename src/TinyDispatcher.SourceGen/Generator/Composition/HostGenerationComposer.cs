@@ -8,25 +8,25 @@ namespace TinyDispatcher.SourceGen.Generator.Composition;
 
 internal sealed class HostGenerationComposer
 {
-    public HostGenerationComposition Compose(
+    public HostModel Compose(
         HostBootstrapInfo hostBootstrap,
         GeneratorExtraction extraction)
     {
         var contexts = BuildHostContexts(hostBootstrap, extraction);
         var discovery = BuildHostDiscovery(extraction.ThisAssembly, contexts);
 
-        return new HostGenerationComposition(
+        return new HostModel(
             discovery,
             extraction.ReferencedContributions,
             contexts);
     }
 
-    private static ImmutableArray<HostContextProjection> BuildHostContexts(
+    private static ImmutableArray<HostLane> BuildHostContexts(
         HostBootstrapInfo hostBootstrap,
         GeneratorExtraction extraction)
     {
         var hostContexts = GetHostContexts(hostBootstrap);
-        var contexts = ImmutableArray.CreateBuilder<HostContextProjection>(hostContexts.Length);
+        var contexts = ImmutableArray.CreateBuilder<HostLane>(hostContexts.Length);
 
         for (var i = 0; i < hostContexts.Length; i++)
         {
@@ -36,10 +36,10 @@ internal sealed class HostGenerationComposer
         return contexts.ToImmutable();
     }
 
-    private static HostContextProjection BuildHostContext(
+    private static HostLane BuildHostContext(
         HostBootstrapInfo hostBootstrap,
         GeneratorExtraction extraction,
-        HostContextInfo hostContext)
+        HostLaneDeclaration hostContext)
     {
         var contextFqn = hostContext.ContextTypeFqn;
         var thisAssemblyDiscovery = FilterDiscoveryByContext(
@@ -71,15 +71,15 @@ internal sealed class HostGenerationComposer
             Discovery: hostDiscovery,
             Pipeline: hostPipeline);
 
-        return new HostContextProjection(
-            HostContext: hostContext,
+        return new HostLane(
+            Declaration: hostContext,
             ThisAssemblyPipeline: thisAssemblyPipeline,
             GenerationInput: generationInput);
     }
 
     private static DiscoveryResult BuildHostDiscovery(
         ThisAssemblyExtraction thisAssembly,
-        ImmutableArray<HostContextProjection> contexts)
+        ImmutableArray<HostLane> contexts)
     {
         if (contexts.IsDefaultOrEmpty)
         {
@@ -98,14 +98,14 @@ internal sealed class HostGenerationComposer
             thisAssembly.Discovery.Queries);
     }
 
-    private static ImmutableArray<HostContextInfo> GetHostContexts(HostBootstrapInfo hostBootstrap)
+    private static ImmutableArray<HostLaneDeclaration> GetHostContexts(HostBootstrapInfo hostBootstrap)
     {
         if (!hostBootstrap.Contexts.IsDefaultOrEmpty)
         {
             return hostBootstrap.Contexts;
         }
 
-        return ImmutableArray.Create(new HostContextInfo(
+        return ImmutableArray.Create(new HostLaneDeclaration(
             hostBootstrap.ConfiguredContextFqn,
             ImmutableArray<UseTinyDispatcherCall>.Empty));
     }

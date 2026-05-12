@@ -11,14 +11,14 @@ internal sealed class HostGenerationPhase
     public HostGenerationSourcePlan Plan(
         GeneratorOptions options,
         HostBootstrapInfo hostBootstrap,
-        HostGenerationComposition hostGeneration)
+        HostModel hostGeneration)
     {
         var contexts = BuildContextPlans(options, hostBootstrap, hostGeneration);
 
         return new HostGenerationSourcePlan(
             Discovery: hostGeneration.Discovery,
             EmitOptions: BuildEmitOptions(options),
-            Contexts: contexts);
+            Lanes: contexts);
     }
 
     public void Generate(
@@ -33,9 +33,9 @@ internal sealed class HostGenerationPhase
         IGeneratorContext context,
         HostGenerationSourcePlan hostGeneration)
     {
-        for (var i = 0; i < hostGeneration.Contexts.Length; i++)
+        for (var i = 0; i < hostGeneration.Lanes.Length; i++)
         {
-            var pipelinePlan = hostGeneration.Contexts[i].PipelinePlan;
+            var pipelinePlan = hostGeneration.Lanes[i].PipelinePlan;
             if (pipelinePlan is null)
             {
                 continue;
@@ -49,9 +49,9 @@ internal sealed class HostGenerationPhase
         IGeneratorContext context,
         HostGenerationSourcePlan hostGeneration)
     {
-        for (var i = 0; i < hostGeneration.Contexts.Length; i++)
+        for (var i = 0; i < hostGeneration.Lanes.Length; i++)
         {
-            var contextPlan = hostGeneration.Contexts[i];
+            var contextPlan = hostGeneration.Lanes[i];
             if (!contextPlan.ShouldEmitPipelineMaps)
             {
                 continue;
@@ -66,13 +66,13 @@ internal sealed class HostGenerationPhase
         }
     }
 
-    private static ImmutableArray<HostContextSourcePlan> BuildContextPlans(
+    private static ImmutableArray<HostLaneSourcePlan> BuildContextPlans(
         GeneratorOptions options,
         HostBootstrapInfo hostBootstrap,
-        HostGenerationComposition hostGeneration)
+        HostModel hostGeneration)
     {
-        var contextInputs = hostGeneration.Contexts;
-        var contextPlans = ImmutableArray.CreateBuilder<HostContextSourcePlan>(contextInputs.Length);
+        var contextInputs = hostGeneration.Lanes;
+        var contextPlans = ImmutableArray.CreateBuilder<HostLaneSourcePlan>(contextInputs.Length);
 
         for (var i = 0; i < contextInputs.Length; i++)
         {
@@ -97,7 +97,7 @@ internal sealed class HostGenerationPhase
         return contextPlans.ToImmutable();
     }
 
-    private static HostContextSourcePlan BuildContextPlan(
+    private static HostLaneSourcePlan BuildContextPlan(
         GeneratorOptions options,
         bool shouldEmitPipelines,
         bool shouldEmitPipelineMaps,
@@ -106,7 +106,7 @@ internal sealed class HostGenerationPhase
     {
         var pipelineContributions = PipelineContributions.Create(pipelineConfig);
 
-        return new HostContextSourcePlan(
+        return new HostLaneSourcePlan(
             Discovery: discovery,
             EmitOptions: options,
             ShouldEmitPipelines: shouldEmitPipelines,
@@ -115,7 +115,7 @@ internal sealed class HostGenerationPhase
             PipelinePlan: null);
     }
 
-    private static PipelinePlan? BuildPipelinePlan(HostContextSourcePlan contextPlan)
+    private static PipelinePlan? BuildPipelinePlan(HostLaneSourcePlan contextPlan)
     {
         if (!contextPlan.ShouldEmitPipelines)
         {

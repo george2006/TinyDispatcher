@@ -1,6 +1,6 @@
 namespace TinyDispatcher.SourceGen.Generator.Models;
 
-internal sealed record HostContextProjection(
-    HostContextInfo HostContext,
+internal sealed record HostLane(
+    HostLaneDeclaration Declaration,
     PipelineConfig ThisAssemblyPipeline,
     HostContextGenerationInput GenerationInput);

@@ -343,8 +343,8 @@ public sealed class GeneratorGenerationPhaseTests
             new ThisAssemblyExtraction(
                 discovery,
                 ImmutableArray.Create(
-                    new ContextPipelineConfig("global::MyApp.CtxA", pipelineA),
-                    new ContextPipelineConfig("global::MyApp.CtxB", pipelineB))),
+                    new ContextPipeline("global::MyApp.CtxA", pipelineA),
+                    new ContextPipeline("global::MyApp.CtxB", pipelineB))),
             ReferencedAssemblyContributions.Empty);
         var hostBootstrap = HostBootstrap(
             "global::MyApp.CtxA",
@@ -396,8 +396,8 @@ public sealed class GeneratorGenerationPhaseTests
             new ThisAssemblyExtraction(
                 discovery,
                 ImmutableArray.Create(
-                    new ContextPipelineConfig("global::MyApp.CtxA", emptyPipeline),
-                    new ContextPipelineConfig("global::MyApp.CtxB", pipelineB))),
+                    new ContextPipeline("global::MyApp.CtxA", emptyPipeline),
+                    new ContextPipeline("global::MyApp.CtxB", pipelineB))),
             ReferencedAssemblyContributions.Empty);
         var hostBootstrap = HostBootstrap(
             "global::MyApp.CtxA",
@@ -458,7 +458,7 @@ public sealed class GeneratorGenerationPhaseTests
             ? new[] { contextFqn }
             : contextFqns;
         var calls = ImmutableArray.CreateBuilder<UseTinyDispatcherCall>(effectiveContexts.Length);
-        var contexts = ImmutableArray.CreateBuilder<HostContextInfo>(effectiveContexts.Length);
+        var contexts = ImmutableArray.CreateBuilder<HostLaneDeclaration>(effectiveContexts.Length);
 
         for (var i = 0; i < effectiveContexts.Length; i++)
         {
@@ -466,7 +466,7 @@ public sealed class GeneratorGenerationPhaseTests
             var call = new UseTinyDispatcherCall(currentContextFqn, Location.None);
 
             calls.Add(call);
-            contexts.Add(new HostContextInfo(
+            contexts.Add(new HostLaneDeclaration(
                 currentContextFqn,
                 ImmutableArray.Create(call)));
         }
@@ -502,13 +502,13 @@ public sealed class GeneratorGenerationPhaseTests
         return new GeneratorExtraction(
             new ThisAssemblyExtraction(
                 discovery,
-                ImmutableArray.Create(new ContextPipelineConfig(
+                ImmutableArray.Create(new ContextPipeline(
                     "global::MyApp.AppContext",
                     pipeline))),
             referencedContributions ?? ReferencedAssemblyContributions.Empty);
     }
 
-    private static GeneratorComposition Composition(
+    private static GeneratorModel Composition(
         HostBootstrapInfo hostBootstrap,
         GeneratorExtraction extraction)
     {

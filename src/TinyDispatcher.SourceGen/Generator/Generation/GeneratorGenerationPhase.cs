@@ -11,7 +11,7 @@ internal sealed class GeneratorGenerationPhase
     public void Generate(
         IGeneratorContext context,
         GeneratorOptions options,
-        GeneratorComposition composition,
+        GeneratorModel composition,
         HostBootstrapInfo hostBootstrap)
     {
         var assemblyContributionPlan = _assemblyContributionGenerationPhase.Plan(
@@ -25,7 +25,7 @@ internal sealed class GeneratorGenerationPhase
         var hostGenerationPlan = _hostGenerationPhase.Plan(
             options,
             hostBootstrap,
-            composition.HostGeneration);
+            composition.Host);
 
         _hostGenerationPhase.Generate(
             context,

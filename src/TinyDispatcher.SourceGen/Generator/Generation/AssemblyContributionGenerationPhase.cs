@@ -12,7 +12,7 @@ internal sealed class AssemblyContributionGenerationPhase
 {
     public AssemblyContributionSourcePlan Plan(
         GeneratorOptions options,
-        AssemblyContributionComposition assemblyContribution)
+        AssemblyContributionModel assemblyContribution)
     {
         var emitOptions = BuildEmitOptions(options);
         var pipelineContributions = PipelineContributions.Create(PipelineConfig.Empty);
@@ -22,17 +22,17 @@ internal sealed class AssemblyContributionGenerationPhase
             HasPipelineContributions: HasPipelineContributions(
                 assemblyContribution.IsHostProject,
                 options,
-                assemblyContribution.Contexts));
+                assemblyContribution.Lanes));
 
         var pipelineContribution = new AssemblyPipelineContributionSourcePlan(
             Contributions: pipelineContributions,
             RegistrationMethodNames: GetPipelineRegistrationMethodNames(
                 assemblyContribution.IsHostProject,
                 options,
-                assemblyContribution.Contexts),
+                assemblyContribution.Lanes),
             ContributionSources: GetPipelineContributionSources(
                 options,
-                assemblyContribution.Contexts));
+                assemblyContribution.Lanes));
 
         return new AssemblyContributionSourcePlan(
             Discovery: assemblyContribution.Discovery,
@@ -70,7 +70,7 @@ internal sealed class AssemblyContributionGenerationPhase
     private static ImmutableArray<string> GetPipelineRegistrationMethodNames(
         bool isHostProject,
         GeneratorOptions options,
-        ImmutableArray<HostContextProjection> contexts)
+        ImmutableArray<HostLane> contexts)
     {
         if (contexts.IsDefaultOrEmpty)
         {
@@ -99,7 +99,7 @@ internal sealed class AssemblyContributionGenerationPhase
 
     private static ImmutableArray<EmptyPipelineContributionEmitter.PipelineContributionSource> GetPipelineContributionSources(
         GeneratorOptions options,
-        ImmutableArray<HostContextProjection> contexts)
+        ImmutableArray<HostLane> contexts)
     {
         if (contexts.IsDefaultOrEmpty)
         {
@@ -122,7 +122,7 @@ internal sealed class AssemblyContributionGenerationPhase
     private static bool HasPipelineContributions(
         bool isHostProject,
         GeneratorOptions options,
-        ImmutableArray<HostContextProjection> contexts)
+        ImmutableArray<HostLane> contexts)
     {
         for (var i = 0; i < contexts.Length; i++)
         {
@@ -136,18 +136,18 @@ internal sealed class AssemblyContributionGenerationPhase
     }
 
     private static DiscoveryResult BuildModuleInitializerDiscovery(
-        AssemblyContributionComposition assemblyContribution)
+        AssemblyContributionModel assemblyContribution)
     {
-        if (assemblyContribution.Contexts.IsDefaultOrEmpty)
+        if (assemblyContribution.Lanes.IsDefaultOrEmpty)
         {
             return assemblyContribution.Discovery;
         }
 
         var commands = ImmutableArray.CreateBuilder<HandlerContract>();
 
-        for (var i = 0; i < assemblyContribution.Contexts.Length; i++)
+        for (var i = 0; i < assemblyContribution.Lanes.Length; i++)
         {
-            commands.AddRange(assemblyContribution.Contexts[i].GenerationInput.Discovery.Commands);
+            commands.AddRange(assemblyContribution.Lanes[i].GenerationInput.Discovery.Commands);
         }
 
         return new DiscoveryResult(
@@ -158,7 +158,7 @@ internal sealed class AssemblyContributionGenerationPhase
     private static PipelinePlan? BuildPipelinePlan(
         bool isHostProject,
         GeneratorOptions options,
-        HostContextProjection context)
+        HostLane context)
     {
         var contextInput = context.GenerationInput;
         if (!ShouldEmitPipelines(

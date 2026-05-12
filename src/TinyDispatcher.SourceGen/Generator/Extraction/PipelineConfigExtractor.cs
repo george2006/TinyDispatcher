@@ -14,13 +14,13 @@ internal sealed class PipelineConfigExtractor
     private readonly PolicySpecBuilder _policyBuilder = new();
     private readonly MiddlewareOrdering _ordering = new();
 
-    public ImmutableArray<ContextPipelineConfig> ExtractByContext(
+    public ImmutableArray<ContextPipeline> ExtractByContext(
         ImmutableArray<ConfirmedBootstrapLambda> confirmedBootstrapLambdas)
     {
         var hasNoBootstrapLambdas = confirmedBootstrapLambdas.IsDefaultOrEmpty;
         if (hasNoBootstrapLambdas)
         {
-            return ImmutableArray<ContextPipelineConfig>.Empty;
+            return ImmutableArray<ContextPipeline>.Empty;
         }
 
         var contextOrder = new List<string>();
@@ -84,18 +84,18 @@ internal sealed class PipelineConfigExtractor
         return builder;
     }
 
-    private ImmutableArray<ContextPipelineConfig> BuildContextPipelines(
+    private ImmutableArray<ContextPipeline> BuildContextPipelines(
         List<string> contextOrder,
         Dictionary<string, ImmutableArray<ConfirmedBootstrapLambda>.Builder> lambdasByContext)
     {
-        var contexts = ImmutableArray.CreateBuilder<ContextPipelineConfig>(contextOrder.Count);
+        var contexts = ImmutableArray.CreateBuilder<ContextPipeline>(contextOrder.Count);
 
         for (var i = 0; i < contextOrder.Count; i++)
         {
             var contextTypeFqn = contextOrder[i];
             var pipeline = BuildPipelineConfig(lambdasByContext[contextTypeFqn].ToImmutable());
 
-            contexts.Add(new ContextPipelineConfig(contextTypeFqn, pipeline));
+            contexts.Add(new ContextPipeline(contextTypeFqn, pipeline));
         }
 
         return contexts.ToImmutable();

@@ -2,7 +2,7 @@ using System.Collections.Immutable;
 
 namespace TinyDispatcher.SourceGen.Generator.Models;
 
-internal sealed record HostGenerationComposition(
+internal sealed record HostModel(
     DiscoveryResult Discovery,
     ReferencedAssemblyContributions ReferencedContributions,
-    ImmutableArray<HostContextProjection> Contexts);
+    ImmutableArray<HostLane> Lanes);

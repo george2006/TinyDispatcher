@@ -99,12 +99,12 @@ internal static class GeneratorAnalysisPhase
         return Fqn.EnsureGlobal(options.CommandContextType!);
     }
 
-    private static ImmutableArray<HostContextInfo> BuildHostContexts(
+    private static ImmutableArray<HostLaneDeclaration> BuildHostContexts(
         ImmutableArray<UseTinyDispatcherCall> useTinyDispatcherCalls)
     {
         if (useTinyDispatcherCalls.IsDefaultOrEmpty)
         {
-            return ImmutableArray<HostContextInfo>.Empty;
+            return ImmutableArray<HostLaneDeclaration>.Empty;
         }
 
         var contextOrder = new List<string>();
@@ -146,16 +146,16 @@ internal static class GeneratorAnalysisPhase
         return builder;
     }
 
-    private static ImmutableArray<HostContextInfo> BuildHostContexts(
+    private static ImmutableArray<HostLaneDeclaration> BuildHostContexts(
         List<string> contextOrder,
         Dictionary<string, ImmutableArray<UseTinyDispatcherCall>.Builder> callsByContext)
     {
-        var contexts = ImmutableArray.CreateBuilder<HostContextInfo>(callsByContext.Count);
+        var contexts = ImmutableArray.CreateBuilder<HostLaneDeclaration>(callsByContext.Count);
 
         for (var i = 0; i < contextOrder.Count; i++)
         {
             var contextTypeFqn = contextOrder[i];
-            contexts.Add(new HostContextInfo(contextTypeFqn, callsByContext[contextTypeFqn].ToImmutable()));
+            contexts.Add(new HostLaneDeclaration(contextTypeFqn, callsByContext[contextTypeFqn].ToImmutable()));
         }
 
         return contexts.ToImmutable();
