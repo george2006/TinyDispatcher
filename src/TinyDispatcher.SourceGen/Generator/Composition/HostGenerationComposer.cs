@@ -17,7 +17,6 @@ internal sealed class HostGenerationComposer
 
         return new HostModel(
             discovery,
-            extraction.ReferencedContributions,
             lanes);
     }
 

@@ -63,7 +63,7 @@ internal sealed class GeneratorValidationPhase
                 lane,
                 diagnosticsCatalog)
             .WithHostGate(isHost: hostBootstrap.IsHostProject)
-            .WithReferencedContributions(composition.Host.ReferencedContributions)
+            .WithReferencedContributions(composition.References)
             .Build();
     }
 }

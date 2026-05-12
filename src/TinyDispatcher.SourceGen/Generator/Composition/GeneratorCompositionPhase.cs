@@ -22,6 +22,7 @@ internal sealed class GeneratorCompositionPhase
 
         return new GeneratorModel(
             AssemblyContribution: assemblyContribution,
+            References: extraction.ReferencedContributions,
             Host: host);
     }
 }
