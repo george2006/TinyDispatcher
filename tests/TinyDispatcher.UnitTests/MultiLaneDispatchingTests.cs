@@ -18,6 +18,7 @@ public sealed class MultiLaneDispatchingTests
     {
         var services = new ServiceCollection();
         services.AddSingleton<MultiLaneExecutionRecorder>();
+        TinyDispatcher.Generated.ThisAssemblyContribution.AddServices(services);
 
         services.UseTinyDispatcher<OrdersLaneContext>(tiny =>
         {
