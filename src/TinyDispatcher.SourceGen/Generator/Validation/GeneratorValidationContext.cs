@@ -40,21 +40,29 @@ internal sealed class GeneratorValidationContext
 
     public IEnumerable<MiddlewareRef> EnumerateAllMiddlewares()
     {
-        for (int i = 0; i < Globals.Length; i++)
-            yield return Globals[i];
-
-        foreach (var kv in PerCommand)
+        for (var i = 0; i < Globals.Length; i++)
         {
-            var arr = kv.Value;
-            for (int i = 0; i < arr.Length; i++)
-                yield return arr[i];
+            yield return Globals[i];
         }
 
-        foreach (var p in Policies.Values)
+        foreach (var pair in PerCommand)
         {
-            var arr = p.Middlewares;
-            for (int i = 0; i < arr.Length; i++)
-                yield return arr[i];
+            var middlewares = pair.Value;
+
+            for (var i = 0; i < middlewares.Length; i++)
+            {
+                yield return middlewares[i];
+            }
+        }
+
+        foreach (var policy in Policies.Values)
+        {
+            var middlewares = policy.Middlewares;
+
+            for (var i = 0; i < middlewares.Length; i++)
+            {
+                yield return middlewares[i];
+            }
         }
     }
 
