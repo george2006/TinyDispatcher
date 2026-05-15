@@ -116,40 +116,40 @@ internal static class PipelinePlanner
 
     private static ImmutableArray<PipelineDefinition> BuildPerCommandPipelines(
         MiddlewareRef[] global,
-        IReadOnlyDictionary<string, MiddlewareRef[]> perCmd,
+        IReadOnlyDictionary<string, MiddlewareRef[]> perCommandMiddlewares,
         IReadOnlyDictionary<string, PipelinePolicyContribution> policyByCommand,
         string pipelineClassSuffix)
     {
-        if (perCmd.Count == 0)
+        if (perCommandMiddlewares.Count == 0)
         {
             return ImmutableArray<PipelineDefinition>.Empty;
         }
 
-        var list = new List<PipelineDefinition>(perCmd.Count);
+        var list = new List<PipelineDefinition>(perCommandMiddlewares.Count);
 
-        var orderedCommands = PipelineOrdering.GetStringsInStableOrder(perCmd.Keys);
+        var orderedCommands = PipelineOrdering.GetStringsInStableOrder(perCommandMiddlewares.Keys);
         for (var i = 0; i < orderedCommands.Length; i++)
         {
-            var cmdFqn = orderedCommands[i];
-            var perCmdMids = perCmd[cmdFqn];
-            MiddlewareRef[] policyMids;
+            var commandFqn = orderedCommands[i];
+            var commandMiddlewares = perCommandMiddlewares[commandFqn];
+            MiddlewareRef[] policyMiddlewares;
 
-            if (policyByCommand.TryGetValue(cmdFqn, out var policy))
+            if (policyByCommand.TryGetValue(commandFqn, out var policy))
             {
-                policyMids = policy.Middlewares;
+                policyMiddlewares = policy.Middlewares;
             }
             else
             {
-                policyMids = NoMiddlewares;
+                policyMiddlewares = NoMiddlewares;
             }
 
             list.Add(new PipelineDefinition(
                 ClassName: "TinyDispatcherPipeline_" +
-                    PipelineNameFactory.SanitizeCommandName(cmdFqn) +
+                    PipelineNameFactory.SanitizeCommandName(commandFqn) +
                     pipelineClassSuffix,
                 IsOpenGeneric: false,
-                CommandType: cmdFqn,
-                Steps: BuildSteps(global, policyMids, perCmdMids)));
+                CommandType: commandFqn,
+                Steps: BuildSteps(global, policyMiddlewares, commandMiddlewares)));
         }
 
         return list.ToImmutableArray();
