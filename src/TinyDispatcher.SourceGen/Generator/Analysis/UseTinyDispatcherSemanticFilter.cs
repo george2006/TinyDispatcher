@@ -32,7 +32,7 @@ internal sealed class UseTinyDispatcherSemanticFilter
             var candidate = candidates[i];
             var model = compilation.GetSemanticModel(candidate.SyntaxTree);
 
-            if (IsTinyDispatcherBootstrap(candidate, model))
+            if (IsConfirmedBootstrapCall(candidate, model))
             {
                 builder.Add(candidate);
             }
@@ -41,14 +41,14 @@ internal sealed class UseTinyDispatcherSemanticFilter
         return builder.ToImmutable();
     }
 
-    private static bool IsTinyDispatcherBootstrap(
+    private static bool IsConfirmedBootstrapCall(
         InvocationExpressionSyntax invocation,
         SemanticModel model)
     {
         var symbolInfo = model.GetSymbolInfo(invocation);
 
         if (symbolInfo.Symbol is IMethodSymbol method &&
-            IsTinyDispatcherBootstrapMethod(method))
+            IsKnownBootstrapMethod(method))
         {
             return true;
         }
@@ -56,7 +56,7 @@ internal sealed class UseTinyDispatcherSemanticFilter
         for (var i = 0; i < symbolInfo.CandidateSymbols.Length; i++)
         {
             if (symbolInfo.CandidateSymbols[i] is IMethodSymbol candidate &&
-                IsTinyDispatcherBootstrapMethod(candidate))
+                IsKnownBootstrapMethod(candidate))
             {
                 return true;
             }
@@ -65,7 +65,7 @@ internal sealed class UseTinyDispatcherSemanticFilter
         return false;
     }
 
-    private static bool IsTinyDispatcherBootstrapMethod(IMethodSymbol method)
+    private static bool IsKnownBootstrapMethod(IMethodSymbol method)
     {
         var original = method.ReducedFrom ?? method;
         var methodName = original.Name;
