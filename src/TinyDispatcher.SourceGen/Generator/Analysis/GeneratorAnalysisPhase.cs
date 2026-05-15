@@ -15,7 +15,7 @@ internal static class GeneratorAnalysisPhase
 {
     public static GeneratorAnalysisResult Analyze(
         Compilation compilation,
-        ImmutableArray<InvocationExpressionSyntax> useTinyCallsSyntax,
+        ImmutableArray<InvocationExpressionSyntax> bootstrapCallCandidates,
         AnalyzerConfigOptionsProvider optionsProvider)
     {
         GuardInputs(compilation);
@@ -24,23 +24,23 @@ internal static class GeneratorAnalysisPhase
         var bootstrapLambdaExtractor = new BootstrapLambdaExtractor();
         var semanticFilter = new UseTinyDispatcherSemanticFilter();
         var optionsFactory = new GeneratorOptionsFactory(new OptionsProvider());
-        var confirmedUseTinyCallsSyntax = semanticFilter.Filter(compilation, useTinyCallsSyntax);
+        var confirmedBootstrapCalls = semanticFilter.Filter(compilation, bootstrapCallCandidates);
         var confirmedBootstrapLambdas =
-            bootstrapLambdaExtractor.Extract(compilation, confirmedUseTinyCallsSyntax);
-        var useTinyDispatcherCalls =
-            contextInference.ResolveAllUseTinyDispatcherContexts(confirmedUseTinyCallsSyntax, compilation);
+            bootstrapLambdaExtractor.Extract(compilation, confirmedBootstrapCalls);
+        var resolvedHostCalls =
+            contextInference.ResolveAllUseTinyDispatcherContexts(confirmedBootstrapCalls, compilation);
 
         var effectiveOptions = ResolveEffectiveOptions(
             compilation,
             optionsProvider,
-            useTinyDispatcherCalls,
+            resolvedHostCalls,
             contextInference,
             optionsFactory);
 
         var hostBootstrap = BuildHostBootstrapInfo(
-            confirmedUseTinyCallsSyntax,
+            confirmedBootstrapCalls,
             effectiveOptions,
-            useTinyDispatcherCalls);
+            resolvedHostCalls);
 
         return new GeneratorAnalysisResult(
             Analysis: new GeneratorAnalysis(
@@ -79,14 +79,16 @@ internal static class GeneratorAnalysisPhase
     }
 
     private static HostBootstrapInfo BuildHostBootstrapInfo(
-        ImmutableArray<InvocationExpressionSyntax> useTinyCallsSyntax,
+        ImmutableArray<InvocationExpressionSyntax> confirmedBootstrapCalls,
         GeneratorOptions effectiveOptions,
-        ImmutableArray<UseTinyDispatcherCall> useTinyDispatcherCalls)
+        ImmutableArray<UseTinyDispatcherCall> resolvedHostCalls)
     {
+        var isHostProject = confirmedBootstrapCalls.Length > 0;
+
         return new HostBootstrapInfo(
-            IsHostProject: useTinyCallsSyntax.Length > 0,
+            IsHostProject: isHostProject,
             ConfiguredContextFqn: GetConfiguredContextFqn(effectiveOptions),
-            LaneDeclarations: BuildHostLaneDeclarations(useTinyDispatcherCalls));
+            LaneDeclarations: BuildHostLaneDeclarations(resolvedHostCalls));
     }
 
     private static string GetConfiguredContextFqn(GeneratorOptions options)
