@@ -85,7 +85,7 @@ internal static class GeneratorSyntaxProviders
                 (context, _) =>
                 {
                     var invocation = (InvocationExpressionSyntax)context.Node;
-                    return syntax.IsUseTinyDispatcherInvocation(invocation) ? invocation : null;
+                    return syntax.IsBootstrapInvocation(invocation) ? invocation : null;
                 })
             .Collect();
     }

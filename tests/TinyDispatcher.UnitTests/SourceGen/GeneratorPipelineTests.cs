@@ -82,7 +82,7 @@ namespace MyApp
         return tree.GetRoot()
             .DescendantNodes()
             .OfType<InvocationExpressionSyntax>()
-            .Where(syntax.IsUseTinyDispatcherInvocation)
+            .Where(syntax.IsBootstrapInvocation)
             .Cast<InvocationExpressionSyntax?>()
             .ToImmutableArray();
     }
