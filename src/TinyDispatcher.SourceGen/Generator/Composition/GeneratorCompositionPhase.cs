@@ -12,17 +12,17 @@ internal sealed class GeneratorCompositionPhase
         HostBootstrapInfo hostBootstrap,
         GeneratorExtraction extraction)
     {
-        var host = _hostGenerationComposer.Compose(
+        var hostModel = _hostGenerationComposer.Compose(
             hostBootstrap,
             extraction);
-        var assemblyContribution = new AssemblyContributionModel(
+        var assemblyContributionModel = new AssemblyContributionModel(
             extraction.ThisAssembly.Discovery,
-            host.Lanes,
+            hostModel.Lanes,
             hostBootstrap.IsHostProject);
 
         return new GeneratorModel(
-            AssemblyContribution: assemblyContribution,
+            AssemblyContribution: assemblyContributionModel,
             References: extraction.ReferencedContributions,
-            Host: host);
+            Host: hostModel);
     }
 }
