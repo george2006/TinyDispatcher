@@ -24,19 +24,22 @@ internal sealed class PipelineConfigExtractor
         }
 
         var contextOrder = new List<string>();
-        var lambdasByContext = GroupLambdasByContext(confirmedBootstrapLambdas, contextOrder);
-        return BuildContextPipelines(contextOrder, lambdasByContext);
+        var bootstrapLambdasByContext = GroupBootstrapLambdasByContext(
+            confirmedBootstrapLambdas,
+            contextOrder);
+
+        return BuildContextPipelines(contextOrder, bootstrapLambdasByContext);
     }
 
-    private PipelineConfig BuildPipelineConfig(ImmutableArray<ConfirmedBootstrapLambda> confirmedBootstrapLambdas)
+    private PipelineConfig BuildPipelineConfig(ImmutableArray<ConfirmedBootstrapLambda> contextBootstrapLambdas)
     {
         var globalEntries = new List<OrderedEntry>();
         var perCommandEntries = new List<OrderedPerCommandEntry>();
         var policyTypeSymbols = new List<INamedTypeSymbol>();
 
-        for (var i = 0; i < confirmedBootstrapLambdas.Length; i++)
+        for (var i = 0; i < contextBootstrapLambdas.Length; i++)
         {
-            var contributions = _invocationExtractor.Extract(confirmedBootstrapLambdas[i]);
+            var contributions = _invocationExtractor.Extract(contextBootstrapLambdas[i]);
 
             globalEntries.AddRange(contributions.Globals);
             perCommandEntries.AddRange(contributions.PerCommand);
@@ -49,55 +52,59 @@ internal sealed class PipelineConfigExtractor
             _policyBuilder.Build(policyTypeSymbols));
     }
 
-    private static Dictionary<string, ImmutableArray<ConfirmedBootstrapLambda>.Builder> GroupLambdasByContext(
+    private static Dictionary<string, ImmutableArray<ConfirmedBootstrapLambda>.Builder> GroupBootstrapLambdasByContext(
         ImmutableArray<ConfirmedBootstrapLambda> confirmedBootstrapLambdas,
         List<string> contextOrder)
     {
-        var groups = new Dictionary<string, ImmutableArray<ConfirmedBootstrapLambda>.Builder>(
+        var bootstrapLambdasByContext = new Dictionary<string, ImmutableArray<ConfirmedBootstrapLambda>.Builder>(
             StringComparer.Ordinal);
 
         for (var i = 0; i < confirmedBootstrapLambdas.Length; i++)
         {
-            var lambda = confirmedBootstrapLambdas[i];
-            var builder = GetOrAddContextBuilder(groups, contextOrder, lambda.ContextTypeFqn);
-            builder.Add(lambda);
+            var bootstrapLambda = confirmedBootstrapLambdas[i];
+            var contextGroup = GetOrAddContextGroup(
+                bootstrapLambdasByContext,
+                contextOrder,
+                bootstrapLambda.ContextTypeFqn);
+
+            contextGroup.Add(bootstrapLambda);
         }
 
-        return groups;
+        return bootstrapLambdasByContext;
     }
 
-    private static ImmutableArray<ConfirmedBootstrapLambda>.Builder GetOrAddContextBuilder(
-        Dictionary<string, ImmutableArray<ConfirmedBootstrapLambda>.Builder> groups,
+    private static ImmutableArray<ConfirmedBootstrapLambda>.Builder GetOrAddContextGroup(
+        Dictionary<string, ImmutableArray<ConfirmedBootstrapLambda>.Builder> bootstrapLambdasByContext,
         List<string> contextOrder,
         string contextTypeFqn)
     {
-        var hasExistingContext = groups.TryGetValue(contextTypeFqn, out var builder);
+        var hasExistingContext = bootstrapLambdasByContext.TryGetValue(contextTypeFqn, out var contextGroup);
         if (hasExistingContext)
         {
-            return builder!;
+            return contextGroup!;
         }
 
-        builder = ImmutableArray.CreateBuilder<ConfirmedBootstrapLambda>();
-        groups.Add(contextTypeFqn, builder);
+        contextGroup = ImmutableArray.CreateBuilder<ConfirmedBootstrapLambda>();
+        bootstrapLambdasByContext.Add(contextTypeFqn, contextGroup);
         contextOrder.Add(contextTypeFqn);
 
-        return builder;
+        return contextGroup;
     }
 
     private ImmutableArray<ContextPipeline> BuildContextPipelines(
         List<string> contextOrder,
-        Dictionary<string, ImmutableArray<ConfirmedBootstrapLambda>.Builder> lambdasByContext)
+        Dictionary<string, ImmutableArray<ConfirmedBootstrapLambda>.Builder> bootstrapLambdasByContext)
     {
-        var contexts = ImmutableArray.CreateBuilder<ContextPipeline>(contextOrder.Count);
+        var contextPipelines = ImmutableArray.CreateBuilder<ContextPipeline>(contextOrder.Count);
 
         for (var i = 0; i < contextOrder.Count; i++)
         {
             var contextTypeFqn = contextOrder[i];
-            var pipeline = BuildPipelineConfig(lambdasByContext[contextTypeFqn].ToImmutable());
+            var contextPipeline = BuildPipelineConfig(bootstrapLambdasByContext[contextTypeFqn].ToImmutable());
 
-            contexts.Add(new ContextPipeline(contextTypeFqn, pipeline));
+            contextPipelines.Add(new ContextPipeline(contextTypeFqn, contextPipeline));
         }
 
-        return contexts.ToImmutable();
+        return contextPipelines.ToImmutable();
     }
 }

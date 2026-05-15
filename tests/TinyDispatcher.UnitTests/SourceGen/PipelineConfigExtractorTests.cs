@@ -63,13 +63,13 @@ namespace MyApp
     }
 }
 """);
-        var confirmedCalls = GetConfirmedCalls(compilation);
-        var lambdas = new BootstrapLambdaExtractor().Extract(compilation, confirmedCalls);
+        var confirmedBootstrapCalls = GetConfirmedBootstrapCalls(compilation);
+        var confirmedBootstrapLambdas = new BootstrapLambdaExtractor().Extract(compilation, confirmedBootstrapCalls);
 
-        var contexts = new PipelineConfigExtractor().ExtractByContext(lambdas);
+        var contextPipelines = new PipelineConfigExtractor().ExtractByContext(confirmedBootstrapLambdas);
 
         Assert.Collection(
-            contexts,
+            contextPipelines,
             context =>
             {
                 Assert.Equal("global::MyApp.AppContext", context.ContextTypeFqn);
@@ -84,7 +84,7 @@ namespace MyApp
             });
     }
 
-    private static ImmutableArray<InvocationExpressionSyntax> GetConfirmedCalls(Compilation compilation)
+    private static ImmutableArray<InvocationExpressionSyntax> GetConfirmedBootstrapCalls(Compilation compilation)
     {
         var candidates = compilation.SyntaxTrees.Single()
             .GetRoot()
