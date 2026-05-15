@@ -12,12 +12,12 @@ internal sealed class HostGenerationComposer
         HostBootstrapInfo hostBootstrap,
         GeneratorExtraction extraction)
     {
-        var lanes = BuildHostLanes(hostBootstrap, extraction);
-        var discovery = BuildHostDiscovery(extraction.ThisAssembly, lanes);
+        var hostLanes = BuildHostLanes(hostBootstrap, extraction);
+        var hostDiscovery = BuildHostDiscovery(extraction.ThisAssembly, hostLanes);
 
         return new HostModel(
-            discovery,
-            lanes);
+            hostDiscovery,
+            hostLanes);
     }
 
     private static ImmutableArray<HostLane> BuildHostLanes(
@@ -41,35 +41,35 @@ internal sealed class HostGenerationComposer
         HostLaneDeclaration declaration)
     {
         var contextFqn = declaration.ContextTypeFqn;
-        var thisAssemblyDiscovery = FilterDiscoveryByContext(
+        var laneDiscovery = FilterDiscoveryByContext(
             extraction.ThisAssembly.Discovery,
             contextFqn);
-        var thisAssemblyPipeline = SelectThisAssemblyPipeline(
+        var lanePipeline = SelectThisAssemblyPipeline(
             extraction.ThisAssembly,
             contextFqn);
-        var hostDiscovery = thisAssemblyDiscovery;
-        var hostPipeline = thisAssemblyPipeline;
+        var effectiveLaneDiscovery = laneDiscovery;
+        var effectiveLanePipeline = lanePipeline;
         var shouldMergeReferencedContributions = ShouldMergeReferencedContributions(
             hostBootstrap,
             contextFqn);
 
         if (shouldMergeReferencedContributions)
         {
-            hostDiscovery = ReferencedAssemblyContributionComposer.MergeDiscovery(
-                thisAssemblyDiscovery,
+            effectiveLaneDiscovery = ReferencedAssemblyContributionComposer.MergeDiscovery(
+                laneDiscovery,
                 extraction.ReferencedContributions,
                 contextFqn);
-            hostPipeline = ReferencedAssemblyContributionComposer.MergePipelineConfig(
-                thisAssemblyPipeline,
+            effectiveLanePipeline = ReferencedAssemblyContributionComposer.MergePipelineConfig(
+                lanePipeline,
                 extraction.ReferencedContributions,
                 contextFqn);
         }
 
         return new HostLane(
             Declaration: declaration,
-            ThisAssemblyPipeline: thisAssemblyPipeline,
-            Discovery: hostDiscovery,
-            Pipeline: hostPipeline);
+            ThisAssemblyPipeline: lanePipeline,
+            Discovery: effectiveLaneDiscovery,
+            Pipeline: effectiveLanePipeline);
     }
 
     private static DiscoveryResult BuildHostDiscovery(
