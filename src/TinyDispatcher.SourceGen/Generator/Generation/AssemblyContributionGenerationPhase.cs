@@ -14,7 +14,7 @@ internal sealed class AssemblyContributionGenerationPhase
         GeneratorOptions options,
         AssemblyContributionModel assemblyContribution)
     {
-        var emitOptions = BuildEmitOptions(options);
+        var emitOptions = GenerationEmitOptions.ForAssemblyContribution(options);
         var pipelineContributions = PipelineContributions.Create(PipelineConfig.Empty);
 
         var moduleInitializer = new ModuleInitializerSourcePlan(
@@ -112,7 +112,7 @@ internal sealed class AssemblyContributionGenerationPhase
         {
             var lane = lanes[i];
             sources.Add(new PipelineContributionSource(
-                BuildContextEmitOptions(options, lane.ContextTypeFqn),
+                GenerationEmitOptions.ForContextLane(options, lane.ContextTypeFqn),
                 PipelineContributions.Create(lane.Pipeline)));
         }
 
@@ -171,7 +171,7 @@ internal sealed class AssemblyContributionGenerationPhase
         var pipelinePlan = PipelinePlanner.Build(
             PipelineContributions.Create(lane.Pipeline),
             lane.Discovery,
-            BuildContextEmitOptions(options, lane.ContextTypeFqn));
+            GenerationEmitOptions.ForContextLane(options, lane.ContextTypeFqn));
 
         if (!pipelinePlan.ShouldEmit)
         {
@@ -179,25 +179,6 @@ internal sealed class AssemblyContributionGenerationPhase
         }
 
         return pipelinePlan;
-    }
-
-    private static GeneratorOptions BuildContextEmitOptions(
-        GeneratorOptions options,
-        string contextFqn)
-    {
-        if (string.IsNullOrWhiteSpace(contextFqn))
-        {
-            return options;
-        }
-
-        return new GeneratorOptions(
-            GeneratedNamespace: options.GeneratedNamespace,
-            EmitDiExtensions: options.EmitDiExtensions,
-            EmitHandlerRegistrations: options.EmitHandlerRegistrations,
-            IncludeNamespacePrefix: options.IncludeNamespacePrefix,
-            CommandContextType: contextFqn,
-            EmitPipelineMap: options.EmitPipelineMap,
-            PipelineMapFormat: options.PipelineMapFormat);
     }
 
     private static bool ShouldEmitPipelines(
@@ -225,15 +206,4 @@ internal sealed class AssemblyContributionGenerationPhase
                pipeline.Policies.Count > 0;
     }
 
-    private static GeneratorOptions BuildEmitOptions(GeneratorOptions options)
-    {
-        return new GeneratorOptions(
-            GeneratedNamespace: options.GeneratedNamespace,
-            EmitDiExtensions: options.EmitDiExtensions,
-            EmitHandlerRegistrations: options.EmitHandlerRegistrations,
-            IncludeNamespacePrefix: options.IncludeNamespacePrefix,
-            CommandContextType: null,
-            EmitPipelineMap: options.EmitPipelineMap,
-            PipelineMapFormat: options.PipelineMapFormat);
-    }
 }

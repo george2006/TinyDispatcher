@@ -17,7 +17,7 @@ internal sealed class HostGenerationPhase
 
         return new HostGenerationSourcePlan(
             Discovery: hostGeneration.Discovery,
-            EmitOptions: BuildEmitOptions(options),
+            EmitOptions: GenerationEmitOptions.ForAssemblyContribution(options),
             Lanes: lanes);
     }
 
@@ -79,7 +79,7 @@ internal sealed class HostGenerationPhase
             var lane = lanes[i];
 
             var lanePlan = BuildLanePlan(
-                BuildContextEmitOptions(options, lane.ContextTypeFqn),
+                GenerationEmitOptions.ForContextLane(options, lane.ContextTypeFqn),
                 shouldEmitPipelines: ShouldEmitPipelines(
                     hostBootstrap,
                     lane.ContextTypeFqn,
@@ -133,37 +133,6 @@ internal sealed class HostGenerationPhase
         }
 
         return pipelinePlan;
-    }
-
-    private static GeneratorOptions BuildEmitOptions(GeneratorOptions options)
-    {
-        return new GeneratorOptions(
-            GeneratedNamespace: options.GeneratedNamespace,
-            EmitDiExtensions: options.EmitDiExtensions,
-            EmitHandlerRegistrations: options.EmitHandlerRegistrations,
-            IncludeNamespacePrefix: options.IncludeNamespacePrefix,
-            CommandContextType: null,
-            EmitPipelineMap: options.EmitPipelineMap,
-            PipelineMapFormat: options.PipelineMapFormat);
-    }
-
-    private static GeneratorOptions BuildContextEmitOptions(
-        GeneratorOptions options,
-        string contextFqn)
-    {
-        if (string.IsNullOrWhiteSpace(contextFqn))
-        {
-            return options;
-        }
-
-        return new GeneratorOptions(
-            GeneratedNamespace: options.GeneratedNamespace,
-            EmitDiExtensions: options.EmitDiExtensions,
-            EmitHandlerRegistrations: options.EmitHandlerRegistrations,
-            IncludeNamespacePrefix: options.IncludeNamespacePrefix,
-            CommandContextType: contextFqn,
-            EmitPipelineMap: options.EmitPipelineMap,
-            PipelineMapFormat: options.PipelineMapFormat);
     }
 
     private static bool ShouldEmitPipelines(
