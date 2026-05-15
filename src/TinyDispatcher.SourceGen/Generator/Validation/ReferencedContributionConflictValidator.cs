@@ -12,11 +12,20 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
 
     public void Validate(GeneratorValidationContext context, DiagnosticBag diags)
     {
-        if (context is null) throw new ArgumentNullException(nameof(context));
-        if (diags is null) throw new ArgumentNullException(nameof(diags));
+        if (context is null)
+        {
+            throw new ArgumentNullException(nameof(context));
+        }
+
+        if (diags is null)
+        {
+            throw new ArgumentNullException(nameof(diags));
+        }
 
         if (!ShouldValidate(context))
+        {
             return;
+        }
 
         ValidatePerCommandMiddlewareConflicts(context, diags);
         ValidatePolicyConflicts(context, diags);
@@ -36,9 +45,9 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
 
         RememberThisAssemblyPerCommandMiddleware(context.ThisAssemblyPipeline, ownersByCommand);
 
-        foreach (var assembly in context.ReferencedContributions.EnumerateMatchingContext(context.ContextTypeFqn))
+        foreach (var referencedAssembly in context.ReferencedContributions.EnumerateMatchingContext(context.ContextTypeFqn))
         {
-            RememberReferencedPerCommandMiddleware(context, diags, ownersByCommand, assembly);
+            RememberReferencedPerCommandMiddleware(context, diags, ownersByCommand, referencedAssembly);
         }
     }
 
@@ -56,45 +65,45 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
         GeneratorValidationContext context,
         DiagnosticBag diags,
         Dictionary<string, string> ownersByCommand,
-        ReferencedAssemblyContribution assembly)
+        ReferencedAssemblyContribution referencedAssembly)
     {
         var reportedCommands = new HashSet<string>(StringComparer.Ordinal);
 
-        for (var i = 0; i < assembly.PerCommandMiddlewareContributions.Length; i++)
+        for (var i = 0; i < referencedAssembly.PerCommandMiddlewareContributions.Length; i++)
         {
-            var finding = assembly.PerCommandMiddlewareContributions[i];
+            var contribution = referencedAssembly.PerCommandMiddlewareContributions[i];
             if (!ContextMatching.Matches(
-                finding.ContextTypeFqn,
+                contribution.ContextTypeFqn,
                 context.ContextTypeFqn))
             {
                 continue;
             }
 
-            var isFirstContributionForCommand = reportedCommands.Add(finding.CommandTypeFqn);
+            var isFirstContributionForCommand = reportedCommands.Add(contribution.CommandTypeFqn);
 
             if (!isFirstContributionForCommand)
             {
                 ReportPerCommandMiddlewareConflict(
                     context,
                     diags,
-                    finding.CommandTypeFqn,
-                    assembly.AssemblyName,
-                    assembly.AssemblyName);
+                    contribution.CommandTypeFqn,
+                    referencedAssembly.AssemblyName,
+                    referencedAssembly.AssemblyName);
                 continue;
             }
 
-            if (TryGetExistingOwner(ownersByCommand, finding.CommandTypeFqn, out var existingOwner))
+            if (TryGetExistingOwner(ownersByCommand, contribution.CommandTypeFqn, out var existingOwner))
             {
                 ReportPerCommandMiddlewareConflict(
                     context,
                     diags,
-                    finding.CommandTypeFqn,
+                    contribution.CommandTypeFqn,
                     existingOwner,
-                    assembly.AssemblyName);
+                    referencedAssembly.AssemblyName);
                 continue;
             }
 
-            ownersByCommand[finding.CommandTypeFqn] = assembly.AssemblyName;
+            ownersByCommand[contribution.CommandTypeFqn] = referencedAssembly.AssemblyName;
         }
     }
 
@@ -106,9 +115,9 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
 
         RememberThisAssemblyPolicies(context.ThisAssemblyPipeline, ownersByPolicy);
 
-        foreach (var assembly in context.ReferencedContributions.EnumerateMatchingContext(context.ContextTypeFqn))
+        foreach (var referencedAssembly in context.ReferencedContributions.EnumerateMatchingContext(context.ContextTypeFqn))
         {
-            RememberReferencedPolicies(context, diags, ownersByPolicy, assembly);
+            RememberReferencedPolicies(context, diags, ownersByPolicy, referencedAssembly);
         }
     }
 
@@ -126,45 +135,45 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
         GeneratorValidationContext context,
         DiagnosticBag diags,
         Dictionary<string, string> ownersByPolicy,
-        ReferencedAssemblyContribution assembly)
+        ReferencedAssemblyContribution referencedAssembly)
     {
         var reportedPolicies = new HashSet<string>(StringComparer.Ordinal);
 
-        for (var i = 0; i < assembly.PolicyContributions.Length; i++)
+        for (var i = 0; i < referencedAssembly.PolicyContributions.Length; i++)
         {
-            var finding = assembly.PolicyContributions[i];
+            var contribution = referencedAssembly.PolicyContributions[i];
             if (!ContextMatching.Matches(
-                finding.ContextTypeFqn,
+                contribution.ContextTypeFqn,
                 context.ContextTypeFqn))
             {
                 continue;
             }
 
-            var isFirstContributionForPolicy = reportedPolicies.Add(finding.PolicyTypeFqn);
+            var isFirstContributionForPolicy = reportedPolicies.Add(contribution.PolicyTypeFqn);
 
             if (!isFirstContributionForPolicy)
             {
                 ReportPolicyConflict(
                     context,
                     diags,
-                    finding.PolicyTypeFqn,
-                    assembly.AssemblyName,
-                    assembly.AssemblyName);
+                    contribution.PolicyTypeFqn,
+                    referencedAssembly.AssemblyName,
+                    referencedAssembly.AssemblyName);
                 continue;
             }
 
-            if (TryGetExistingOwner(ownersByPolicy, finding.PolicyTypeFqn, out var existingOwner))
+            if (TryGetExistingOwner(ownersByPolicy, contribution.PolicyTypeFqn, out var existingOwner))
             {
                 ReportPolicyConflict(
                     context,
                     diags,
-                    finding.PolicyTypeFqn,
+                    contribution.PolicyTypeFqn,
                     existingOwner,
-                    assembly.AssemblyName);
+                    referencedAssembly.AssemblyName);
                 continue;
             }
 
-            ownersByPolicy[finding.PolicyTypeFqn] = assembly.AssemblyName;
+            ownersByPolicy[contribution.PolicyTypeFqn] = referencedAssembly.AssemblyName;
         }
     }
 
@@ -205,7 +214,9 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
     private static string JoinOwners(string firstOwner, string secondOwner)
     {
         if (string.Equals(firstOwner, secondOwner, StringComparison.Ordinal))
+        {
             return "'" + firstOwner + "'";
+        }
 
         return string.Concat("'", firstOwner, "' and '", secondOwner, "'");
     }
