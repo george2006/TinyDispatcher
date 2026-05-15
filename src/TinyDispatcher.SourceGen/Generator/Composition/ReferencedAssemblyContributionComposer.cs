@@ -50,10 +50,10 @@ internal static class ReferencedAssemblyContributionComposer
             policies[pair.Key] = pair.Value;
         }
 
-        foreach (var assembly in referencedContributions.EnumerateMatchingContext(contextFqn))
+        foreach (var referencedAssembly in referencedContributions.EnumerateMatchingContext(contextFqn))
         {
             MergeAssemblyPipeline(
-                assembly,
+                referencedAssembly,
                 contextFqn,
                 globals,
                 perCommand,
@@ -83,85 +83,85 @@ internal static class ReferencedAssemblyContributionComposer
     }
 
     private static void MergeAssemblyPipeline(
-        ReferencedAssemblyContribution assembly,
+        ReferencedAssemblyContribution referencedAssembly,
         string contextFqn,
         ImmutableArray<MiddlewareRef>.Builder globals,
         ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Builder perCommand,
         ImmutableDictionary<string, PolicySpec>.Builder policies)
     {
-        globals.AddRange(assembly.Globals);
+        globals.AddRange(referencedAssembly.Globals);
 
         MergePerCommandContributions(
             perCommand,
-            assembly,
+            referencedAssembly,
             contextFqn);
         MergePolicyContributions(
             policies,
-            assembly,
+            referencedAssembly,
             contextFqn);
     }
 
     private static void MergePerCommandContributions(
         ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Builder target,
-        ReferencedAssemblyContribution assembly,
+        ReferencedAssemblyContribution referencedAssembly,
         string contextFqn)
     {
-        for (var i = 0; i < assembly.PerCommandMiddlewareContributions.Length; i++)
+        for (var i = 0; i < referencedAssembly.PerCommandMiddlewareContributions.Length; i++)
         {
-            var finding = assembly.PerCommandMiddlewareContributions[i];
+            var contribution = referencedAssembly.PerCommandMiddlewareContributions[i];
 
             var contributionBelongsToAnotherContext = !ContextMatching.Matches(
-                finding.ContextTypeFqn,
+                contribution.ContextTypeFqn,
                 contextFqn);
             if (contributionBelongsToAnotherContext)
             {
                 continue;
             }
 
-            var commandWasAlreadyConfigured = target.ContainsKey(finding.CommandTypeFqn);
+            var commandWasAlreadyConfigured = target.ContainsKey(contribution.CommandTypeFqn);
             if (!commandWasAlreadyConfigured)
             {
-                target[finding.CommandTypeFqn] = finding.Middlewares;
+                target[contribution.CommandTypeFqn] = contribution.Middlewares;
             }
         }
     }
 
     private static void MergePolicyContributions(
         ImmutableDictionary<string, PolicySpec>.Builder target,
-        ReferencedAssemblyContribution assembly,
+        ReferencedAssemblyContribution referencedAssembly,
         string contextFqn)
     {
-        for (var i = 0; i < assembly.PolicyContributions.Length; i++)
+        for (var i = 0; i < referencedAssembly.PolicyContributions.Length; i++)
         {
-            var finding = assembly.PolicyContributions[i];
+            var contribution = referencedAssembly.PolicyContributions[i];
 
             var contributionBelongsToAnotherContext = !ContextMatching.Matches(
-                finding.ContextTypeFqn,
+                contribution.ContextTypeFqn,
                 contextFqn);
             if (contributionBelongsToAnotherContext)
             {
                 continue;
             }
 
-            var policyHasNoCommandsForContext = finding.Commands.Length == 0;
+            var policyHasNoCommandsForContext = contribution.Commands.Length == 0;
             if (policyHasNoCommandsForContext)
             {
                 continue;
             }
 
-            var policyWasAlreadyConfigured = target.ContainsKey(finding.PolicyTypeFqn);
+            var policyWasAlreadyConfigured = target.ContainsKey(contribution.PolicyTypeFqn);
             if (!policyWasAlreadyConfigured)
             {
-                target[finding.PolicyTypeFqn] = ToPolicySpec(finding);
+                target[contribution.PolicyTypeFqn] = ToPolicySpec(contribution);
             }
         }
     }
 
-    private static PolicySpec ToPolicySpec(ReferencedPolicyContribution finding)
+    private static PolicySpec ToPolicySpec(ReferencedPolicyContribution contribution)
     {
         return new PolicySpec(
-            finding.PolicyTypeFqn,
-            finding.Middlewares,
-            finding.Commands);
+            contribution.PolicyTypeFqn,
+            contribution.Middlewares,
+            contribution.Commands);
     }
 }
