@@ -10,8 +10,15 @@ internal sealed class PipelineDiagnosticsValidator : IGeneratorValidator
 {
     public void Validate(GeneratorValidationContext context, DiagnosticBag diags)
     {
-        if (context is null) throw new ArgumentNullException(nameof(context));
-        if (diags is null) throw new ArgumentNullException(nameof(diags));
+        if (context is null)
+        {
+            throw new ArgumentNullException(nameof(context));
+        }
+
+        if (diags is null)
+        {
+            throw new ArgumentNullException(nameof(diags));
+        }
 
         var discoveredCommands = BuildDiscoveredCommandSet(context.DiscoveryResult);
 
@@ -37,11 +44,14 @@ internal sealed class PipelineDiagnosticsValidator : IGeneratorValidator
         DiagnosticBag diags,
         HashSet<string> discoveredCommands)
     {
-        if (context.PerCommand.Count == 0) return;
-
-        foreach (var kv in context.PerCommand)
+        if (context.PerCommand.Count == 0)
         {
-            var hasNormalizedCommand = TryNormalizeCommand(kv.Key, out var command);
+            return;
+        }
+
+        foreach (var perCommandPipeline in context.PerCommand)
+        {
+            var hasNormalizedCommand = TryNormalizeCommand(perCommandPipeline.Key, out var command);
             if (!hasNormalizedCommand)
             {
                 continue;
@@ -63,7 +73,10 @@ internal sealed class PipelineDiagnosticsValidator : IGeneratorValidator
         DiagnosticBag diags,
         HashSet<string> discoveredCommands)
     {
-        if (context.Policies.Count == 0) return;
+        if (context.Policies.Count == 0)
+        {
+            return;
+        }
 
         foreach (var policy in context.Policies.Values)
         {
@@ -94,20 +107,26 @@ internal sealed class PipelineDiagnosticsValidator : IGeneratorValidator
         GeneratorValidationContext context,
         DiagnosticBag diags)
     {
-        if (context.Policies.Count == 0) return;
+        if (context.Policies.Count == 0)
+        {
+            return;
+        }
 
         var policiesByCommand = BuildPoliciesByCommand(context.Policies.Values);
 
-        foreach (var kv in policiesByCommand)
+        foreach (var policyGroup in policiesByCommand)
         {
-            if (kv.Value.Count <= 1) continue;
+            if (policyGroup.Value.Count <= 1)
+            {
+                continue;
+            }
 
-            var policies = JoinDistinct(kv.Value);
+            var policies = JoinDistinct(policyGroup.Value);
 
             diags.Add(context.Diagnostics.Create(
                 context.Diagnostics.MultiplePoliciesForSameCommand,
                 Location.None,
-                kv.Key,
+                policyGroup.Key,
                 policies));
         }
     }
