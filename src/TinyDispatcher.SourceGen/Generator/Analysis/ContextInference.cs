@@ -10,23 +10,23 @@ namespace TinyDispatcher.SourceGen.Generator.Analysis;
 
 internal sealed class ContextInference
 {
-    public ImmutableArray<UseTinyDispatcherCall> ResolveAllUseTinyDispatcherContexts(
-        ImmutableArray<InvocationExpressionSyntax> useTinyDispatcherInvocations,
+    public ImmutableArray<UseTinyDispatcherCall> ResolveAllBootstrapContexts(
+        ImmutableArray<InvocationExpressionSyntax> bootstrapCalls,
         Compilation compilation)
     {
-        if (useTinyDispatcherInvocations.IsDefaultOrEmpty)
+        if (bootstrapCalls.IsDefaultOrEmpty)
         {
             return ImmutableArray<UseTinyDispatcherCall>.Empty;
         }
 
         var builder = ImmutableArray.CreateBuilder<UseTinyDispatcherCall>();
 
-        for (var i = 0; i < useTinyDispatcherInvocations.Length; i++)
+        for (var i = 0; i < bootstrapCalls.Length; i++)
         {
-            var invocation = useTinyDispatcherInvocations[i];
-            if (TryResolveUseTinyDispatcherCall(invocation, compilation, out var useTinyDispatcherCall))
+            var bootstrapCall = bootstrapCalls[i];
+            if (TryResolveBootstrapContext(bootstrapCall, compilation, out var resolvedCall))
             {
-                builder.Add(useTinyDispatcherCall);
+                builder.Add(resolvedCall);
             }
         }
 
@@ -63,17 +63,17 @@ internal sealed class ContextInference
         return true;
     }
 
-    public bool TryResolveUseTinyDispatcherCall(
-        InvocationExpressionSyntax invocation,
+    public bool TryResolveBootstrapContext(
+        InvocationExpressionSyntax bootstrapCall,
         Compilation compilation,
-        out UseTinyDispatcherCall useTinyDispatcherCall)
+        out UseTinyDispatcherCall resolvedCall)
     {
-        if (TryCreateNoOpContextCall(invocation, out useTinyDispatcherCall))
+        if (TryCreateNoOpContextCall(bootstrapCall, out resolvedCall))
         {
             return true;
         }
 
-        return TryResolveGenericContextCall(invocation, compilation, out useTinyDispatcherCall);
+        return TryResolveGenericContextCall(bootstrapCall, compilation, out resolvedCall);
     }
 
     private static bool TryCreateNoOpContextCall(

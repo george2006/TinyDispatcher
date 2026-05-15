@@ -11,24 +11,24 @@ internal sealed class BootstrapLambdaExtractor
 {
     public ImmutableArray<ConfirmedBootstrapLambda> Extract(
         Compilation compilation,
-        ImmutableArray<InvocationExpressionSyntax> useTinyCallsSyntax)
+        ImmutableArray<InvocationExpressionSyntax> confirmedBootstrapCalls)
     {
-        if (useTinyCallsSyntax.IsDefaultOrEmpty)
+        if (confirmedBootstrapCalls.IsDefaultOrEmpty)
         {
             return ImmutableArray<ConfirmedBootstrapLambda>.Empty;
         }
 
-        var builder = ImmutableArray.CreateBuilder<ConfirmedBootstrapLambda>(useTinyCallsSyntax.Length);
+        var builder = ImmutableArray.CreateBuilder<ConfirmedBootstrapLambda>(confirmedBootstrapCalls.Length);
         var contextInference = new ContextInference();
 
-        for (var i = 0; i < useTinyCallsSyntax.Length; i++)
+        for (var i = 0; i < confirmedBootstrapCalls.Length; i++)
         {
-            var useTinyCall = useTinyCallsSyntax[i];
-            var semanticModel = compilation.GetSemanticModel(useTinyCall.SyntaxTree);
-            var lambda = SelectBootstrapLambda(useTinyCall, semanticModel);
+            var bootstrapCall = confirmedBootstrapCalls[i];
+            var semanticModel = compilation.GetSemanticModel(bootstrapCall.SyntaxTree);
+            var lambda = SelectBootstrapLambda(bootstrapCall, semanticModel);
             var hasBootstrapLambda = lambda is not null;
-            var hasResolvedContext = contextInference.TryResolveUseTinyDispatcherCall(
-                useTinyCall,
+            var hasResolvedContext = contextInference.TryResolveBootstrapContext(
+                bootstrapCall,
                 compilation,
                 out var resolvedCall);
 
@@ -42,15 +42,15 @@ internal sealed class BootstrapLambdaExtractor
     }
 
     private static LambdaExpressionSyntax? SelectBootstrapLambda(
-        InvocationExpressionSyntax useTinyCall,
+        InvocationExpressionSyntax bootstrapCall,
         SemanticModel model)
     {
-        if (useTinyCall.ArgumentList is null)
+        if (bootstrapCall.ArgumentList is null)
         {
             return null;
         }
 
-        foreach (var arg in useTinyCall.ArgumentList.Arguments)
+        foreach (var arg in bootstrapCall.ArgumentList.Arguments)
         {
             if (arg.Expression is not LambdaExpressionSyntax lambda)
             {
@@ -63,17 +63,17 @@ internal sealed class BootstrapLambdaExtractor
             }
         }
 
-        return SelectFirstLambda(useTinyCall);
+        return SelectFirstLambda(bootstrapCall);
     }
 
-    private static LambdaExpressionSyntax? SelectFirstLambda(InvocationExpressionSyntax useTinyCall)
+    private static LambdaExpressionSyntax? SelectFirstLambda(InvocationExpressionSyntax bootstrapCall)
     {
-        if (useTinyCall.ArgumentList is null)
+        if (bootstrapCall.ArgumentList is null)
         {
             return null;
         }
 
-        foreach (var argument in useTinyCall.ArgumentList.Arguments)
+        foreach (var argument in bootstrapCall.ArgumentList.Arguments)
         {
             if (argument.Expression is LambdaExpressionSyntax lambda)
             {

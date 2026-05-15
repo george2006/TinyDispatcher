@@ -28,7 +28,7 @@ internal static class GeneratorAnalysisPhase
         var confirmedBootstrapLambdas =
             bootstrapLambdaExtractor.Extract(compilation, confirmedBootstrapCalls);
         var resolvedHostCalls =
-            contextInference.ResolveAllUseTinyDispatcherContexts(confirmedBootstrapCalls, compilation);
+            contextInference.ResolveAllBootstrapContexts(confirmedBootstrapCalls, compilation);
 
         var effectiveOptions = ResolveEffectiveOptions(
             compilation,
