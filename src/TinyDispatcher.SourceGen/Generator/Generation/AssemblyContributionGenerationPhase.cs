@@ -160,7 +160,7 @@ internal sealed class AssemblyContributionGenerationPhase
         GeneratorOptions options,
         HostLane lane)
     {
-        if (!ShouldEmitPipelines(
+        if (!GenerationEmissionRules.ShouldEmitPipelines(
                 isHostProject,
                 lane.ContextTypeFqn,
                 lane.Pipeline))
@@ -179,31 +179,6 @@ internal sealed class AssemblyContributionGenerationPhase
         }
 
         return pipelinePlan;
-    }
-
-    private static bool ShouldEmitPipelines(
-        bool isHostProject,
-        string contextFqn,
-        PipelineConfig pipeline)
-    {
-        if (!isHostProject)
-        {
-            return false;
-        }
-
-        if (string.IsNullOrWhiteSpace(contextFqn))
-        {
-            return false;
-        }
-
-        return HasAnyPipelineContributions(pipeline);
-    }
-
-    private static bool HasAnyPipelineContributions(PipelineConfig pipeline)
-    {
-        return pipeline.Globals.Length > 0 ||
-               pipeline.PerCommand.Count > 0 ||
-               pipeline.Policies.Count > 0;
     }
 
 }

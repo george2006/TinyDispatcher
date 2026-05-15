@@ -80,8 +80,8 @@ internal sealed class HostGenerationPhase
 
             var lanePlan = BuildLanePlan(
                 GenerationEmitOptions.ForContextLane(options, lane.ContextTypeFqn),
-                shouldEmitPipelines: ShouldEmitPipelines(
-                    hostBootstrap,
+                shouldEmitPipelines: GenerationEmissionRules.ShouldEmitPipelines(
+                    hostBootstrap.IsHostProject,
                     lane.ContextTypeFqn,
                     lane.Pipeline),
                 shouldEmitPipelineMaps: ShouldEmitPipelineMaps(hostBootstrap, lane.ContextTypeFqn),
@@ -135,24 +135,6 @@ internal sealed class HostGenerationPhase
         return pipelinePlan;
     }
 
-    private static bool ShouldEmitPipelines(
-        HostBootstrapInfo hostBootstrap,
-        string contextFqn,
-        PipelineConfig pipeline)
-    {
-        if (!hostBootstrap.IsHostProject)
-        {
-            return false;
-        }
-
-        if (string.IsNullOrWhiteSpace(contextFqn))
-        {
-            return false;
-        }
-
-        return HasAnyPipelineContributions(pipeline);
-    }
-
     private static bool ShouldEmitPipelineMaps(
         HostBootstrapInfo hostBootstrap,
         string contextFqn)
@@ -160,12 +142,4 @@ internal sealed class HostGenerationPhase
         return hostBootstrap.IsHostProject &&
                !string.IsNullOrWhiteSpace(contextFqn);
     }
-
-    private static bool HasAnyPipelineContributions(PipelineConfig pipeline)
-    {
-        return pipeline.Globals.Length > 0 ||
-               pipeline.PerCommand.Count > 0 ||
-               pipeline.Policies.Count > 0;
-    }
-
 }
