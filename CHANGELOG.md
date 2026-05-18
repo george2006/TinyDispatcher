@@ -1,3 +1,27 @@
+## 1.1.0 - 2026-05-18
+
+### Added
+- Multi-assembly composition support for TinyDispatcher.
+  - Contributing assemblies publish structured assembly contributions.
+  - Host projects compose final pipelines for commands contributed by referenced assemblies.
+  - Referenced assemblies can contribute handler metadata, per-command middleware, policies, and context information.
+  - A multi-project sample demonstrates cross-assembly dispatch and host-owned pipeline composition.
+- Enhanced source generator diagnostics for referenced assembly composition, including provenance-aware conflict reporting.
+
+### Changed
+- TinyDispatcher now uses assembly-level contribution attributes as the compile-time transport for cross-assembly generator composition.
+- Generated `ModuleInitializer`s publish `ThisAssemblyContribution.Create()` instead of only applying local DI actions.
+- `DispatcherPipelineBootstrap` stores structured contribution snapshots while preserving existing DI application behavior.
+- Non-host projects skip redundant referenced contribution validation, improving build performance.
+
+### Fixed
+- Referenced assemblies can now contribute global middleware to host-generated pipelines.
+- Generator validation now uses the host's complete view of referenced assembly contributions.
+
+### Notes
+- The host remains the sole final composer.
+- No reflection-based assembly scanning or runtime pipeline fallback was introduced.
+
 ## 1.1.0-rc3 - 2026-05-08
 
 ### Added
