@@ -2,7 +2,13 @@
 
 This guide shows the minimum steps to wire TinyDispatcher into an application.
 
-## 1) Define commands, queries and handlers
+## 1) Install
+
+```bash
+dotnet add package TinyDispatcher
+```
+
+## 2) Define commands, queries and handlers
 
 Commands implement `ICommand`:
 
@@ -32,7 +38,7 @@ public sealed class GetOrderHandler : IQueryHandler<GetOrder, OrderDto>
 }
 ```
 
-## 2) Register
+## 3) Register
 
 ### Option A: Use the shipped `AppContext`
 
@@ -112,7 +118,7 @@ public sealed class CreateOrderHandler : ICommandHandler<CreateOrder, NoOpContex
 }
 ```
 
-## 3) Add policies and middleware
+## 4) Add policies and middleware
 
 ### Policy (group commands + attach middleware)
 
@@ -185,7 +191,7 @@ public sealed class RequestIdMiddleware<TCommand> : ICommandMiddleware<TCommand,
 }
 ```
 
-## 4) Dispatch
+## 5) Dispatch
 
 ```csharp
 await dispatcher.DispatchAsync(new CreateOrder("123"), ct);
