@@ -41,34 +41,43 @@ internal sealed class ContextConsistencyValidator : IGeneratorValidator
             return;
         }
 
-        // Hard rule: only one UseTinyDispatcher<TContext> call allowed per project
-        var hasMultipleBootstrapCalls = calls.Length > 1;
+        var hasRepeatedContext = TryFindFirstRepeatedContextCall(calls, out var repeatedContextCall);
 
-        if (hasMultipleBootstrapCalls)
+        if (hasRepeatedContext)
         {
-            var loc = calls[1].Location ?? Location.None;
-            var contexts = GetDistinctContexts(calls);
-
-            diags.Add(catalog.Create(catalog.MultipleContextsDetected, loc, contexts));
+            var loc = repeatedContextCall.Location ?? Location.None;
+            diags.Add(catalog.Create(
+                catalog.RepeatedContextBootstrap,
+                loc,
+                repeatedContextCall.ContextTypeFqn));
         }
     }
 
-    private static string GetDistinctContexts(ImmutableArray<UseTinyDispatcherCall> calls)
+    private static bool TryFindFirstRepeatedContextCall(
+        ImmutableArray<UseTinyDispatcherCall> calls,
+        out UseTinyDispatcherCall repeatedContextCall)
     {
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-        var contexts = new List<string>();
+        repeatedContextCall = default;
+
+        if (calls.Length <= 1)
+        {
+            return false;
+        }
+
+        var seenContexts = new HashSet<string>(StringComparer.Ordinal);
 
         for (var i = 0; i < calls.Length; i++)
         {
-            var context = calls[i].ContextTypeFqn;
-            var isFirstOccurrence = seen.Add(context);
+            var call = calls[i];
+            var isFirstCallForContext = seenContexts.Add(call.ContextTypeFqn);
 
-            if (isFirstOccurrence)
+            if (!isFirstCallForContext)
             {
-                contexts.Add(context);
+                repeatedContextCall = call;
+                return true;
             }
         }
 
-        return string.Join(", ", contexts);
+        return false;
     }
 }

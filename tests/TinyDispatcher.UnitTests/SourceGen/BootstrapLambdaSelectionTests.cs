@@ -109,24 +109,15 @@ namespace Microsoft.Extensions.DependencyInjection
             .Select(s => s.HintName)
             .ToArray();
 
-        Assert.Contains(generatedNames, n => n == "TinyDispatcherPipeline.g.cs");
+        Assert.Contains(generatedNames, n => n == "TinyDispatcherPipeline.ConsoleApp_Ctx.g.cs");
     }
 
     private static CSharpCompilation CreateCompilation(string source)
     {
-        var refs =
-            AppDomain.CurrentDomain.GetAssemblies()
-                .Where(a => !a.IsDynamic && !string.IsNullOrWhiteSpace(a.Location))
-                .Select(a => MetadataReference.CreateFromFile(a.Location))
-                .Cast<MetadataReference>()
-                .ToList();
-
-        refs.Add(MetadataReference.CreateFromFile(typeof(Generator).Assembly.Location));
-
         return CSharpCompilation.Create(
             assemblyName: "Tests",
             syntaxTrees: new[] { CSharpSyntaxTree.ParseText(source) },
-            references: refs,
+            references: SourceGenCompilationReferences.CurrentDomainWithoutUnitTests(),
             options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
     }
 }

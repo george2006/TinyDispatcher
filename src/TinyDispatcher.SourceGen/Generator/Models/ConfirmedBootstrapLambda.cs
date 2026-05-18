@@ -5,4 +5,5 @@ namespace TinyDispatcher.SourceGen.Generator.Models;
 
 internal sealed record ConfirmedBootstrapLambda(
     SemanticModel SemanticModel,
-    LambdaExpressionSyntax Lambda);
+    LambdaExpressionSyntax Lambda,
+    string ContextTypeFqn);

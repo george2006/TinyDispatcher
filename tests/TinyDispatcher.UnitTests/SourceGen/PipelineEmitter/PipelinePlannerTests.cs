@@ -39,18 +39,18 @@ public sealed class PipelinePlannerTests
         Assert.True(plan.ShouldEmit);
         Assert.NotNull(plan.GlobalPipeline);
         Assert.True(plan.GlobalPipeline!.IsOpenGeneric);
-        Assert.Equal("TinyDispatcherGlobalPipeline", plan.GlobalPipeline.ClassName);
+        Assert.Equal("TinyDispatcherGlobalPipeline_MyApp_AppContext", plan.GlobalPipeline.ClassName);
         AssertStepNames(
             plan.GlobalPipeline.Steps,
             "global::MyApp.GlobalLogMiddleware");
 
         Assert.Contains(plan.ServiceRegistrations, r =>
             r.ServiceTypeExpression.Contains("ICommandPipeline<global::MyApp.CmdA", StringComparison.Ordinal) &&
-            r.ImplementationTypeExpression.Contains("TinyDispatcherGlobalPipeline<global::MyApp.CmdA>", StringComparison.Ordinal));
+            r.ImplementationTypeExpression.Contains("TinyDispatcherGlobalPipeline_MyApp_AppContext<global::MyApp.CmdA>", StringComparison.Ordinal));
 
         Assert.Contains(plan.ServiceRegistrations, r =>
             r.ServiceTypeExpression.Contains("ICommandPipeline<global::MyApp.CmdB", StringComparison.Ordinal) &&
-            r.ImplementationTypeExpression.Contains("TinyDispatcherGlobalPipeline<global::MyApp.CmdB>", StringComparison.Ordinal));
+            r.ImplementationTypeExpression.Contains("TinyDispatcherGlobalPipeline_MyApp_AppContext<global::MyApp.CmdB>", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -174,6 +174,46 @@ public sealed class PipelinePlannerTests
         Assert.Contains("TinyDispatcherPipeline_", reg.ImplementationTypeExpression, StringComparison.Ordinal);
         Assert.DoesNotContain("TinyDispatcherPolicyPipeline_", reg.ImplementationTypeExpression, StringComparison.Ordinal);
         Assert.DoesNotContain("TinyDispatcherGlobalPipeline<", reg.ImplementationTypeExpression, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Build_uses_context_name_in_generated_pipeline_types()
+    {
+        var global = ImmutableArray.Create(Mw("global::MyApp.GlobalLogMiddleware", 2));
+        var perCommand = ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty.Add(
+            "global::MyApp.CmdA",
+            ImmutableArray.Create(Mw("global::MyApp.PerCommandLogMiddleware", 2)));
+        var policies = ImmutableDictionary<string, PolicySpec>.Empty.Add(
+            "global::MyApp.CheckoutPolicy",
+            new PolicySpec(
+                PolicyTypeFqn: "global::MyApp.CheckoutPolicy",
+                Middlewares: ImmutableArray.Create(Mw("global::MyApp.PolicyLogMiddleware", 2)),
+                Commands: ImmutableArray.Create("global::MyApp.CmdB")));
+        var discovery = FakeDiscovery("global::MyApp.CmdA", "global::MyApp.CmdB", "global::MyApp.CmdC");
+        var options = FakeOptions("MyApp.Generated", "global::MyApp.AppContext");
+
+        var plan = PipelinePlanner.Build(
+            Contributions(global, perCommand, policies),
+            discovery,
+            options);
+
+        Assert.Equal("TinyDispatcherGlobalPipeline_MyApp_AppContext", plan.GlobalPipeline!.ClassName);
+        Assert.Equal("TinyDispatcherPipeline_CmdA_MyApp_AppContext", plan.PerCommandPipelines[0].ClassName);
+        Assert.Equal(
+            "TinyDispatcherPolicyPipeline_MyApp_CheckoutPolicy_MyApp_AppContext",
+            plan.PolicyPipelines[0].ClassName);
+        Assert.Contains(plan.ServiceRegistrations, r =>
+            r.ImplementationTypeExpression.Contains(
+                "TinyDispatcherPipeline_CmdA_MyApp_AppContext",
+                StringComparison.Ordinal));
+        Assert.Contains(plan.ServiceRegistrations, r =>
+            r.ImplementationTypeExpression.Contains(
+                "TinyDispatcherPolicyPipeline_MyApp_CheckoutPolicy_MyApp_AppContext<global::MyApp.CmdB>",
+                StringComparison.Ordinal));
+        Assert.Contains(plan.ServiceRegistrations, r =>
+            r.ImplementationTypeExpression.Contains(
+                "TinyDispatcherGlobalPipeline_MyApp_AppContext<global::MyApp.CmdC>",
+                StringComparison.Ordinal));
     }
 
     private static GeneratorOptions FakeOptions(string genNs, string ctxFqn)

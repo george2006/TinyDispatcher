@@ -66,6 +66,45 @@ internal sealed class RoslynHandlerDiscovery
     private static bool IsConcreteHandlerType(INamedTypeSymbol? type)
         => type is not null && type.TypeKind == TypeKind.Class && !type.IsAbstract;
 
+    private static bool IsAccessibleFromGeneratedCode(ITypeSymbol type)
+    {
+        if (type is INamedTypeSymbol namedType)
+        {
+            if (!IsAccessibleFromGeneratedCode(namedType.DeclaredAccessibility))
+            {
+                return false;
+            }
+
+            for (var i = 0; i < namedType.TypeArguments.Length; i++)
+            {
+                if (!IsAccessibleFromGeneratedCode(namedType.TypeArguments[i]))
+                {
+                    return false;
+                }
+            }
+
+            var containingType = namedType.ContainingType;
+            while (containingType is not null)
+            {
+                if (!IsAccessibleFromGeneratedCode(containingType.DeclaredAccessibility))
+                {
+                    return false;
+                }
+
+                containingType = containingType.ContainingType;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsAccessibleFromGeneratedCode(Accessibility accessibility)
+    {
+        return accessibility is Accessibility.Public
+            or Accessibility.Internal
+            or Accessibility.ProtectedOrInternal;
+    }
+
     private bool IsIncludedByNamespaceFilter(INamedTypeSymbol type)
     {
         if (_namespacePrefixFilter is null)
@@ -119,6 +158,13 @@ internal sealed class RoslynHandlerDiscovery
             return;
         }
 
+        if (!IsAccessibleFromGeneratedCode(handlerType) ||
+            !IsAccessibleFromGeneratedCode(commandArg) ||
+            !IsAccessibleFromGeneratedCode(ctxArg))
+        {
+            return;
+        }
+
         if (_commandContextTypeFqn is not null)
         {
             var ctxFqn = EnsureGlobalPrefix(ctxArg.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
@@ -144,6 +190,13 @@ internal sealed class RoslynHandlerDiscovery
         var resultArg = interfaceType.TypeArguments[1];
 
         if (queryArg.TypeKind == TypeKind.TypeParameter || resultArg.TypeKind == TypeKind.TypeParameter)
+        {
+            return;
+        }
+
+        if (!IsAccessibleFromGeneratedCode(handlerType) ||
+            !IsAccessibleFromGeneratedCode(queryArg) ||
+            !IsAccessibleFromGeneratedCode(resultArg))
         {
             return;
         }

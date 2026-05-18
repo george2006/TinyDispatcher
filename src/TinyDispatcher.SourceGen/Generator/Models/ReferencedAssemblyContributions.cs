@@ -13,33 +13,46 @@ internal sealed record ReferencedAssemblyContributions(
     {
         for (var i = 0; i < Assemblies.Length; i++)
         {
-            if (!Assemblies[i].Commands.IsDefaultOrEmpty)
+            if (!Assemblies[i].Handlers.IsDefaultOrEmpty)
+            {
                 return true;
+            }
         }
 
         return false;
     }
 
-    public IEnumerable<HandlerContract> EnumerateCommands(string expectedContextFqn)
+    public IEnumerable<HandlerContract> EnumerateCommands(string contextFqn)
     {
         for (var i = 0; i < Assemblies.Length; i++)
         {
             var assembly = Assemblies[i];
-            if (!assembly.MatchesContext(expectedContextFqn))
+            if (!ContextMatching.Matches(assembly.ContextTypeFqn, contextFqn))
+            {
                 continue;
+            }
 
-            for (var j = 0; j < assembly.Commands.Length; j++)
-                yield return assembly.Commands[j];
+            for (var j = 0; j < assembly.Handlers.Length; j++)
+            {
+                var handler = assembly.Handlers[j];
+                if (ContextMatching.Matches(handler.ContextTypeFqn, contextFqn))
+                {
+                    yield return handler;
+                }
+            }
         }
     }
 
-    public IEnumerable<ReferencedAssemblyContribution> EnumerateMatchingContext(string expectedContextFqn)
+    public IEnumerable<ReferencedAssemblyContribution> EnumerateMatchingContext(string contextFqn)
     {
         for (var i = 0; i < Assemblies.Length; i++)
         {
             var assembly = Assemblies[i];
-            if (assembly.MatchesContext(expectedContextFqn))
+            if (ContextMatching.Matches(assembly.ContextTypeFqn, contextFqn))
+            {
                 yield return assembly;
+            }
         }
     }
+
 }

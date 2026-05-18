@@ -1,80 +1,69 @@
 #nullable enable
 
+using System.Collections.Immutable;
 using TinyDispatcher.SourceGen.Diagnostics;
-using TinyDispatcher.SourceGen.Generator.Generation;
 using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen.Generator.Validation;
 
 internal sealed class GeneratorValidationPhase
 {
-    public GeneratorValidationResult Validate(
+    public DiagnosticBag Validate(
         HostBootstrapInfo hostBootstrap,
-        GeneratorExtraction extraction,
+        GeneratorModel composition,
         DiagnosticsCatalog diagnosticsCatalog,
         ValidationRoslynDependencies roslynDependencies)
     {
-        var validationContext = BuildValidationContext(
+        var validationContexts = BuildValidationContexts(
             hostBootstrap,
-            extraction,
+            composition,
             diagnosticsCatalog);
-        var diagnostics = GeneratorValidator.Validate(
-            validationContext,
-            roslynDependencies.CommandMiddlewareInterface,
-            roslynDependencies.MiddlewareTypeResolver);
+        var diagnostics = new DiagnosticBag();
 
-        return new GeneratorValidationResult(validationContext, diagnostics);
+        for (var i = 0; i < validationContexts.Length; i++)
+        {
+            var contextDiagnostics = GeneratorValidator.Validate(
+                validationContexts[i],
+                roslynDependencies.CommandMiddlewareInterface,
+                roslynDependencies.MiddlewareTypeResolver);
+
+            diagnostics.AddRange(contextDiagnostics.ToImmutable());
+        }
+
+        return diagnostics;
+    }
+
+    private static ImmutableArray<GeneratorValidationContext> BuildValidationContexts(
+        HostBootstrapInfo hostBootstrap,
+        GeneratorModel composition,
+        DiagnosticsCatalog diagnosticsCatalog)
+    {
+        var lanes = composition.Host.Lanes;
+        var validationContexts = ImmutableArray.CreateBuilder<GeneratorValidationContext>(lanes.Length);
+
+        for (var i = 0; i < lanes.Length; i++)
+        {
+            validationContexts.Add(BuildValidationContext(
+                hostBootstrap,
+                composition,
+                diagnosticsCatalog,
+                lanes[i]));
+        }
+
+        return validationContexts.ToImmutable();
     }
 
     private static GeneratorValidationContext BuildValidationContext(
         HostBootstrapInfo hostBootstrap,
-        GeneratorExtraction extraction,
-        DiagnosticsCatalog diagnosticsCatalog)
+        GeneratorModel composition,
+        DiagnosticsCatalog diagnosticsCatalog,
+        HostLane lane)
     {
-        var discovery = BuildDiscovery(hostBootstrap, extraction);
-        var pipeline = BuildPipeline(hostBootstrap, extraction);
-
         return new GeneratorValidationContext.Builder(
-                discovery,
+                lane,
                 diagnosticsCatalog)
             .WithHostGate(isHost: hostBootstrap.IsHostProject)
-            .WithUseTinyDispatcherCalls(hostBootstrap.UseTinyDispatcherCalls)
-            .WithExpectedContext(hostBootstrap.ExpectedContextFqn)
-            .WithReferencedContributions(extraction.ReferencedContributions)
-            .WithLocalPipelineConfig(extraction.Pipeline)
-            .WithPipelineConfig(pipeline)
+            .WithReferencedContributions(composition.References)
             .Build();
-    }
-
-    private static DiscoveryResult BuildDiscovery(
-        HostBootstrapInfo hostBootstrap,
-        GeneratorExtraction extraction)
-    {
-        if (!ShouldMergeReferencedContributions(hostBootstrap))
-            return extraction.Discovery;
-
-        return ReferencedAssemblyContributionComposer.MergeDiscovery(
-            extraction.Discovery,
-            extraction.ReferencedContributions,
-            hostBootstrap.ExpectedContextFqn);
-    }
-
-    private static PipelineConfig BuildPipeline(
-        HostBootstrapInfo hostBootstrap,
-        GeneratorExtraction extraction)
-    {
-        if (!ShouldMergeReferencedContributions(hostBootstrap))
-            return extraction.Pipeline;
-
-        return ReferencedAssemblyContributionComposer.MergePipelineConfig(
-            extraction.Pipeline,
-            extraction.ReferencedContributions,
-            hostBootstrap.ExpectedContextFqn);
-    }
-
-    private static bool ShouldMergeReferencedContributions(HostBootstrapInfo hostBootstrap)
-    {
-        return hostBootstrap.IsHostProject &&
-               !string.IsNullOrWhiteSpace(hostBootstrap.ExpectedContextFqn);
     }
 }

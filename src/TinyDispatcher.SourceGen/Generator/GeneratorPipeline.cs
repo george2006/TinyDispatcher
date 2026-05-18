@@ -2,6 +2,7 @@
 
 using TinyDispatcher.SourceGen.Diagnostics;
 using TinyDispatcher.SourceGen.Generator.Analysis;
+using TinyDispatcher.SourceGen.Generator.Composition;
 using TinyDispatcher.SourceGen.Generator.Generation;
 using TinyDispatcher.SourceGen.Generator.Extraction;
 using TinyDispatcher.SourceGen.Generator.Models;
@@ -14,6 +15,7 @@ internal sealed class GeneratorPipeline
 {
     private readonly DiagnosticsCatalog _diagnosticsCatalog = new();
     private readonly GeneratorExtractionPhase _extractionPhase = new();
+    private readonly GeneratorCompositionPhase _compositionPhase = new();
     private readonly GeneratorValidationPhase _validationPhase = new();
     private readonly GeneratorGenerationPhase _generationPhase = new();
 
@@ -31,17 +33,24 @@ internal sealed class GeneratorPipeline
             input.HandlerSymbols,
             analysisResult.ConfirmedBootstrapLambdas,
             analysis.EffectiveOptions);
-        var validation = _validationPhase.Validate(
+        var composition = _compositionPhase.Compose(
             analysis.HostBootstrap,
-            extraction,
+            extraction);
+        var diagnostics = _validationPhase.Validate(
+            analysis.HostBootstrap,
+            composition,
             _diagnosticsCatalog,
             validationDependencies);
 
-        if (GeneratorDiagnosticReporter.ReportAndHasErrors(context, validation.Diagnostics))
+        if (GeneratorDiagnosticReporter.ReportAndHasErrors(context, diagnostics))
         {
             return;
         }
 
-        _generationPhase.Generate(context, analysis.EffectiveOptions, extraction, validation);
+        _generationPhase.Generate(
+            context,
+            analysis.EffectiveOptions,
+            composition,
+            analysis.HostBootstrap);
     }
 }

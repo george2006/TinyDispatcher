@@ -27,7 +27,7 @@ internal sealed class ReferencedAssemblyContributionExtractor
             return ReferencedAssemblyContributions.Empty;
         }
 
-        var assemblies = ImmutableArray.CreateBuilder<ReferencedAssemblyContribution>();
+        var referencedAssemblyContributions = ImmutableArray.CreateBuilder<ReferencedAssemblyContribution>();
 
         foreach (var assembly in compilation.SourceModule.ReferencedAssemblySymbols)
         {
@@ -36,16 +36,16 @@ internal sealed class ReferencedAssemblyContributionExtractor
                 attributeSet,
                 out var contribution))
             {
-                assemblies.Add(contribution);
+                referencedAssemblyContributions.Add(contribution);
             }
         }
 
-        if (assemblies.Count == 0)
+        if (referencedAssemblyContributions.Count == 0)
         {
             return ReferencedAssemblyContributions.Empty;
         }
 
-        return new ReferencedAssemblyContributions(assemblies.ToImmutable());
+        return new ReferencedAssemblyContributions(referencedAssemblyContributions.ToImmutable());
     }
 
     private static bool TryCreateAttributeSet(Compilation compilation, out AttributeSet attributeSet)
@@ -77,46 +77,46 @@ internal sealed class ReferencedAssemblyContributionExtractor
         AttributeSet attributeSet,
         out ReferencedAssemblyContribution contribution)
     {
-        var state = new ContributionState();
+        var contributionBuilder = new ReferencedAssemblyContributionBuilder();
 
         foreach (var attribute in assembly.GetAttributes())
         {
-            ProcessAttribute(
+            ApplyContributionAttribute(
                 attribute,
                 attributeSet,
-                state);
+                contributionBuilder);
         }
 
-        contribution = state.Build(assembly.Identity.Name);
+        contribution = contributionBuilder.Build(assembly.Identity.Name);
         return contribution.HasContributions();
     }
 
-    private static void ProcessAttribute(
+    private static void ApplyContributionAttribute(
         AttributeData attribute,
         AttributeSet attributeSet,
-        ContributionState state)
+        ReferencedAssemblyContributionBuilder contribution)
     {
         if (IsContextAttribute(attribute, attributeSet))
         {
-            AddContext(attribute, state);
+            AddContext(attribute, contribution);
             return;
         }
 
         if (IsHandlerAttribute(attribute, attributeSet))
         {
-            AddHandler(attribute, state);
+            AddHandler(attribute, contribution);
             return;
         }
 
         if (IsPipelineAttribute(attribute, attributeSet))
         {
-            AddPipeline(attribute, state);
+            AddPipeline(attribute, contribution);
             return;
         }
 
         if (IsPolicyAttribute(attribute, attributeSet))
         {
-            AddPolicy(attribute, state);
+            AddPolicy(attribute, contribution);
         }
     }
 
@@ -145,7 +145,7 @@ internal sealed class ReferencedAssemblyContributionExtractor
         return SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, expectedAttribute);
     }
 
-    private static void AddContext(AttributeData attribute, ContributionState state)
+    private static void AddContext(AttributeData attribute, ReferencedAssemblyContributionBuilder state)
     {
         var contextTypeFqn = state.ContextTypeFqn;
         if (!TryReadContext(attribute, ref contextTypeFqn))
@@ -172,7 +172,7 @@ internal sealed class ReferencedAssemblyContributionExtractor
         return true;
     }
 
-    private static void AddHandler(AttributeData attribute, ContributionState state)
+    private static void AddHandler(AttributeData attribute, ReferencedAssemblyContributionBuilder state)
     {
         if (!TryReadHandler(attribute, out var handler))
         {
@@ -180,9 +180,9 @@ internal sealed class ReferencedAssemblyContributionExtractor
         }
 
         var handlerKey = CreateHandlerKey(handler);
-        if (state.SeenHandlers.Add(handlerKey))
+        if (state.SeenHandlerContracts.Add(handlerKey))
         {
-            state.Handlers.Add(handler);
+            state.HandlerContracts.Add(handler);
         }
     }
 
@@ -215,27 +215,27 @@ internal sealed class ReferencedAssemblyContributionExtractor
         return true;
     }
 
-    private static void AddPipeline(AttributeData attribute, ContributionState state)
+    private static void AddPipeline(AttributeData attribute, ReferencedAssemblyContributionBuilder state)
     {
-        if (!TryReadPipeline(attribute, out var commandTypeFqn, out var middlewares))
+        if (!TryReadPipeline(attribute, out var pipeline))
         {
             return;
         }
 
-        var pipelineHasNoMiddlewares = PipelineHasNoMiddlewares(middlewares);
+        var pipelineHasNoMiddlewares = PipelineHasNoMiddlewares(pipeline.Middlewares);
         if (pipelineHasNoMiddlewares)
         {
             return;
         }
 
-        var pipelineTargetsCommand = PipelineTargetsCommand(commandTypeFqn, out var commandType);
+        var pipelineTargetsCommand = PipelineTargetsCommand(pipeline.CommandTypeFqn, out var commandType);
         if (pipelineTargetsCommand)
         {
-            AddPerCommandPipeline(state, commandType, middlewares);
+            AddPerCommandPipeline(state, commandType, pipeline.Middlewares, pipeline.ContextTypeFqn);
             return;
         }
 
-        AddGlobalPipeline(state, middlewares);
+        AddGlobalPipeline(state, pipeline.Middlewares);
     }
 
     private static bool PipelineHasNoMiddlewares(ImmutableArray<MiddlewareRef> middlewares)
@@ -256,36 +256,37 @@ internal sealed class ReferencedAssemblyContributionExtractor
     }
 
     private static void AddGlobalPipeline(
-        ContributionState state,
+        ReferencedAssemblyContributionBuilder state,
         ImmutableArray<MiddlewareRef> middlewares)
     {
         state.Globals.AddRange(middlewares);
     }
 
     private static void AddPerCommandPipeline(
-        ContributionState state,
+        ReferencedAssemblyContributionBuilder state,
         string commandType,
-        ImmutableArray<MiddlewareRef> middlewares)
+        ImmutableArray<MiddlewareRef> middlewares,
+        string? contextTypeFqn)
     {
-        state.PerCommandMiddlewareFindings.Add(new PerCommandMiddlewareFinding(commandType, middlewares));
+        state.PerCommandMiddlewareContributions.Add(new ReferencedPerCommandMiddlewareContribution(
+            commandType,
+            middlewares,
+            contextTypeFqn));
     }
 
-    private static bool TryReadPipeline(
-        AttributeData attribute,
-        out string? commandTypeFqn,
-        out ImmutableArray<MiddlewareRef> middlewares)
+    private static bool TryReadPipeline(AttributeData attribute, out PipelineContribution pipeline)
     {
-        commandTypeFqn = null;
-        middlewares = ImmutableArray<MiddlewareRef>.Empty;
+        pipeline = default;
 
         if (attribute.ConstructorArguments.Length != 1)
         {
             return false;
         }
 
-        middlewares = ReadMiddlewareArray(attribute.ConstructorArguments[0]);
-        commandTypeFqn = ReadPipelineCommandType(attribute);
-
+        pipeline = new PipelineContribution(
+            ReadPipelineCommandType(attribute),
+            ReadMiddlewareArray(attribute.ConstructorArguments[0]),
+            ReadContributionContextType(attribute));
         return true;
     }
 
@@ -343,20 +344,21 @@ internal sealed class ReferencedAssemblyContributionExtractor
         return builder.ToImmutable();
     }
 
-    private static void AddPolicy(AttributeData attribute, ContributionState state)
+    private static void AddPolicy(AttributeData attribute, ReferencedAssemblyContributionBuilder state)
     {
         if (TryReadPolicy(attribute, out var policy))
         {
-            state.PolicyFindings.Add(new PolicyFinding(
+            state.PolicyContributions.Add(new ReferencedPolicyContribution(
                 policy.PolicyTypeFqn,
                 policy.Middlewares,
-                policy.Commands));
+                policy.Commands,
+                policy.ContextTypeFqn));
         }
     }
 
-    private static bool TryReadPolicy(AttributeData attribute, out PolicySpec policy)
+    private static bool TryReadPolicy(AttributeData attribute, out PolicyContribution policy)
     {
-        policy = default!;
+        policy = default;
 
         if (attribute.ConstructorArguments.Length != 3)
         {
@@ -368,10 +370,43 @@ internal sealed class ReferencedAssemblyContributionExtractor
             return false;
         }
 
-        policy = new PolicySpec(
-            PolicyTypeFqn: policyTypeFqn,
-            Middlewares: ReadMiddlewareArray(attribute.ConstructorArguments[1]),
-            Commands: ReadTypeArray(attribute.ConstructorArguments[2]));
+        policy = new PolicyContribution(
+            policyTypeFqn,
+            ReadMiddlewareArray(attribute.ConstructorArguments[1]),
+            ReadTypeArray(attribute.ConstructorArguments[2]),
+            ReadContributionContextType(attribute));
+
+        return true;
+    }
+
+    private static string? ReadContributionContextType(AttributeData attribute)
+    {
+        foreach (var namedArgument in attribute.NamedArguments)
+        {
+            if (TryReadContributionContextType(namedArgument, out var contextTypeFqn))
+            {
+                return contextTypeFqn;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool TryReadContributionContextType(
+        KeyValuePair<string, TypedConstant> namedArgument,
+        out string contextTypeFqn)
+    {
+        contextTypeFqn = string.Empty;
+
+        if (namedArgument.Key != "ContextType")
+        {
+            return false;
+        }
+
+        if (!TryReadType(namedArgument.Value, out contextTypeFqn))
+        {
+            return false;
+        }
 
         return true;
     }
@@ -453,19 +488,30 @@ internal sealed class ReferencedAssemblyContributionExtractor
         INamedTypeSymbol PipelineAttribute,
         INamedTypeSymbol PolicyAttribute);
 
-    private sealed class ContributionState
+    private readonly record struct PipelineContribution(
+        string? CommandTypeFqn,
+        ImmutableArray<MiddlewareRef> Middlewares,
+        string? ContextTypeFqn);
+
+    private readonly record struct PolicyContribution(
+        string PolicyTypeFqn,
+        ImmutableArray<MiddlewareRef> Middlewares,
+        ImmutableArray<string> Commands,
+        string? ContextTypeFqn);
+
+    private sealed class ReferencedAssemblyContributionBuilder
     {
-        public ImmutableArray<HandlerContract>.Builder Handlers { get; } = ImmutableArray.CreateBuilder<HandlerContract>();
+        public ImmutableArray<HandlerContract>.Builder HandlerContracts { get; } = ImmutableArray.CreateBuilder<HandlerContract>();
 
         public ImmutableArray<MiddlewareRef>.Builder Globals { get; } = ImmutableArray.CreateBuilder<MiddlewareRef>();
 
-        public ImmutableArray<PerCommandMiddlewareFinding>.Builder PerCommandMiddlewareFindings { get; }
-            = ImmutableArray.CreateBuilder<PerCommandMiddlewareFinding>();
+        public ImmutableArray<ReferencedPerCommandMiddlewareContribution>.Builder PerCommandMiddlewareContributions { get; }
+            = ImmutableArray.CreateBuilder<ReferencedPerCommandMiddlewareContribution>();
 
-        public ImmutableArray<PolicyFinding>.Builder PolicyFindings { get; }
-            = ImmutableArray.CreateBuilder<PolicyFinding>();
+        public ImmutableArray<ReferencedPolicyContribution>.Builder PolicyContributions { get; }
+            = ImmutableArray.CreateBuilder<ReferencedPolicyContribution>();
 
-        public HashSet<string> SeenHandlers { get; } = new(StringComparer.Ordinal);
+        public HashSet<string> SeenHandlerContracts { get; } = new(StringComparer.Ordinal);
 
         public string? ContextTypeFqn { get; set; }
 
@@ -474,10 +520,10 @@ internal sealed class ReferencedAssemblyContributionExtractor
             return new ReferencedAssemblyContribution(
                 assemblyName,
                 ContextTypeFqn,
-                Handlers.ToImmutable(),
                 Globals.ToImmutable(),
-                PerCommandMiddlewareFindings.ToImmutable(),
-                PolicyFindings.ToImmutable());
+                PerCommandMiddlewareContributions.ToImmutable(),
+                PolicyContributions.ToImmutable(),
+                HandlerContracts.ToImmutable());
         }
     }
 }

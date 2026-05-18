@@ -50,6 +50,28 @@ public sealed class PipelineMapEmissionTests
             t => t.Contains("TINYDISPATCHER_PIPELINE_MAP_JSON", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void EmitPipelineMap_true_emits_one_map_per_context_for_shared_command_type()
+    {
+        var compilation = CreateCompilationAllRefs(MultiContextSource());
+
+        var (driver, diagnostics) = Run(compilation);
+
+        Assert.DoesNotContain(diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+
+        var generatedNames = driver.GetRunResult()
+            .Results.SelectMany(r => r.GeneratedSources)
+            .Select(s => s.HintName)
+            .ToArray();
+
+        Assert.Contains(
+            generatedNames,
+            name => name == "PipelineMap.ConsoleApp_CtxA.ConsoleApp_Ping.g.cs");
+        Assert.Contains(
+            generatedNames,
+            name => name == "PipelineMap.ConsoleApp_CtxB.ConsoleApp_Ping.g.cs");
+    }
+
     private static (Microsoft.CodeAnalysis.GeneratorDriver Driver, Microsoft.CodeAnalysis.Diagnostic[] Diagnostics) Run(CSharpCompilation compilation)
     {
         var generator = new Generator();
@@ -106,6 +128,49 @@ public static class Boot
         services.UseTinyDispatcher<TinyDispatcher.AppContext>(tiny => {{ }});
     }}
 }}
+";
+    }
+
+    private static string MultiContextSource()
+    {
+        return @"
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using TinyDispatcher;
+
+[assembly: TinyDispatcherGeneratorOptions(
+    EmitPipelineMap = true,
+    PipelineMapFormat = ""json""
+)]
+
+namespace ConsoleApp
+{
+    public sealed class CtxA { }
+    public sealed class CtxB { }
+    public sealed record Ping : ICommand;
+
+    public sealed class PingHandlerA : ICommandHandler<Ping, CtxA>
+    {
+        public Task HandleAsync(Ping command, CtxA context, CancellationToken ct = default)
+            => Task.CompletedTask;
+    }
+
+    public sealed class PingHandlerB : ICommandHandler<Ping, CtxB>
+    {
+        public Task HandleAsync(Ping command, CtxB context, CancellationToken ct = default)
+            => Task.CompletedTask;
+    }
+
+    public static class Boot
+    {
+        public static void Configure(IServiceCollection services)
+        {
+            services.UseTinyDispatcher<CtxA>(tiny => { });
+            services.UseTinyDispatcher<CtxB>(tiny => { });
+        }
+    }
+}
 ";
     }
 }

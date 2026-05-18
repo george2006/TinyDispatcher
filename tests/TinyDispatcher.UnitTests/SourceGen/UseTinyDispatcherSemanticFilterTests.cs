@@ -167,7 +167,7 @@ namespace MyApp
             .GetRoot()
             .DescendantNodes()
             .OfType<InvocationExpressionSyntax>()
-            .Where(syntax.IsUseTinyDispatcherInvocation)
+            .Where(syntax.IsBootstrapInvocation)
             .ToImmutableArray();
     }
 }

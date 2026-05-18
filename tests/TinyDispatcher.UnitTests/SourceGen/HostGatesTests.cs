@@ -52,7 +52,7 @@ namespace TinyDispatcher
         // Contract: host artifacts must NOT exist without UseTinyDispatcher(...)
         Assert.DoesNotContain(
             generatedNames,
-            n => string.Equals(n, "TinyDispatcherPipeline.g.cs", StringComparison.Ordinal));
+            IsPipelineSource);
     }
 
     [Fact]
@@ -110,7 +110,7 @@ namespace ConsoleApp
 
         Assert.DoesNotContain(
             generatedNames,
-            n => string.Equals(n, "TinyDispatcherPipeline.g.cs", StringComparison.Ordinal));
+            IsPipelineSource);
         Assert.DoesNotContain(
             generatedNames,
             n => string.Equals(n, "TinyDispatcherPipelineMap.g.cs", StringComparison.Ordinal));
@@ -154,7 +154,7 @@ namespace MyApp
 
         Assert.Contains("ThisAssemblyContribution.g.cs", generatedNames);
         Assert.Contains("DispatcherModuleInitializer.g.cs", generatedNames);
-        Assert.DoesNotContain("TinyDispatcherPipeline.g.cs", generatedNames);
+        Assert.DoesNotContain(generatedNames, IsPipelineSource);
     }
 
     private static CSharpCompilation CreateCompilation(string source)
@@ -174,5 +174,10 @@ namespace MyApp
             syntaxTrees: new[] { CSharpSyntaxTree.ParseText(source) },
             references: refs,
             options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+    }
+
+    private static bool IsPipelineSource(string hintName)
+    {
+        return hintName.StartsWith("TinyDispatcherPipeline.", StringComparison.Ordinal);
     }
 }

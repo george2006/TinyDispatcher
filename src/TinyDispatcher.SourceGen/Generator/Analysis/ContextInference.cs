@@ -2,6 +2,7 @@
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System;
 using System.Collections.Immutable;
 using TinyDispatcher.SourceGen.Generator.Models;
 
@@ -9,64 +10,70 @@ namespace TinyDispatcher.SourceGen.Generator.Analysis;
 
 internal sealed class ContextInference
 {
-    public ImmutableArray<UseTinyDispatcherCall> ResolveAllUseTinyDispatcherContexts(
-        ImmutableArray<InvocationExpressionSyntax> useTinyDispatcherInvocations,
+    public ImmutableArray<UseTinyDispatcherCall> ResolveAllBootstrapContexts(
+        ImmutableArray<InvocationExpressionSyntax> bootstrapCalls,
         Compilation compilation)
     {
-        if (useTinyDispatcherInvocations.IsDefaultOrEmpty)
+        if (bootstrapCalls.IsDefaultOrEmpty)
         {
             return ImmutableArray<UseTinyDispatcherCall>.Empty;
         }
 
         var builder = ImmutableArray.CreateBuilder<UseTinyDispatcherCall>();
 
-        for (var i = 0; i < useTinyDispatcherInvocations.Length; i++)
+        for (var i = 0; i < bootstrapCalls.Length; i++)
         {
-            var invocation = useTinyDispatcherInvocations[i];
-            if (TryResolveUseTinyDispatcherCall(invocation, compilation, out var useTinyDispatcherCall))
+            var bootstrapCall = bootstrapCalls[i];
+            if (TryResolveBootstrapContext(bootstrapCall, compilation, out var resolvedCall))
             {
-                builder.Add(useTinyDispatcherCall);
+                builder.Add(resolvedCall);
             }
         }
 
         return builder.ToImmutable();
     }
 
-    /// <summary>
-    /// Best-effort inference of a concrete context from syntax-discovered UseTinyDispatcher calls.
-    /// Returns null if none can be inferred safely.
-    /// </summary>
-    public string? TryInferContextTypeFromUseTinyCalls(
-        ImmutableArray<InvocationExpressionSyntax> useTinyCallsSyntax,
-        Compilation compilation)
+    public bool TryInferSingleContextTypeFromResolvedCalls(
+        ImmutableArray<UseTinyDispatcherCall> useTinyDispatcherCalls,
+        out string contextTypeFqn)
     {
-        // We resolve using the same logic as the semantic resolver, but accept the syntax list.
-        var all = ResolveAllUseTinyDispatcherContexts(useTinyCallsSyntax, compilation);
-        return TryInferContextTypeFromResolvedCalls(all);
-    }
+        contextTypeFqn = string.Empty;
 
-    public string? TryInferContextTypeFromResolvedCalls(
-        ImmutableArray<UseTinyDispatcherCall> useTinyDispatcherCalls)
-    {
         if (useTinyDispatcherCalls.IsDefaultOrEmpty)
         {
-            return null;
+            return false;
         }
 
-        return useTinyDispatcherCalls[0].ContextTypeFqn;
+        contextTypeFqn = useTinyDispatcherCalls[0].ContextTypeFqn;
+
+        for (var i = 1; i < useTinyDispatcherCalls.Length; i++)
+        {
+            var isSameContext = string.Equals(
+                contextTypeFqn,
+                useTinyDispatcherCalls[i].ContextTypeFqn,
+                StringComparison.Ordinal);
+
+            if (!isSameContext)
+            {
+                contextTypeFqn = string.Empty;
+                return false;
+            }
+        }
+
+        return true;
     }
 
-    private static bool TryResolveUseTinyDispatcherCall(
-        InvocationExpressionSyntax invocation,
+    public bool TryResolveBootstrapContext(
+        InvocationExpressionSyntax bootstrapCall,
         Compilation compilation,
-        out UseTinyDispatcherCall useTinyDispatcherCall)
+        out UseTinyDispatcherCall resolvedCall)
     {
-        if (TryCreateNoOpContextCall(invocation, out useTinyDispatcherCall))
+        if (TryCreateNoOpContextCall(bootstrapCall, out resolvedCall))
         {
             return true;
         }
 
-        return TryResolveGenericContextCall(invocation, compilation, out useTinyDispatcherCall);
+        return TryResolveGenericContextCall(bootstrapCall, compilation, out resolvedCall);
     }
 
     private static bool TryCreateNoOpContextCall(

@@ -46,8 +46,10 @@ public static class ServiceCollectionExtensions
         if (services is null) throw new ArgumentNullException(nameof(services));
 
         // User config (middleware, policies, etc.)
-        configure?.Invoke(new TinyBootstrap(services));
+        var bootstrap = new TinyBootstrap(services);
+        configure?.Invoke(bootstrap);
 
+        RegisterSelectedContextFactoryWhenNeeded(services, bootstrap.ContextFactorySelection, contextFactory);
         RegisterDefaultAppContextFactoryWhenNeeded(services, contextFactory);
         RegisterDispatcherAndApplyPipelineBootstrap(services, contextFactory);
 
@@ -62,6 +64,8 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         Action<TinyBootstrap> configure)
     {
+        if (services is null) throw new ArgumentNullException(nameof(services));
+
         configure?.Invoke(new TinyBootstrap(services));
         RegisterNoOpContextFactory(services);
         RegisterDispatcherAndApplyPipelineBootstrap<NoOpContext>(services);
@@ -79,6 +83,66 @@ public static class ServiceCollectionExtensions
         services.TryAddScoped<IContextFactory<TContext>>(sp =>
             (IContextFactory<TContext>)(object)
             new DefaultAppContextFactory(sp.GetServices<IFeatureInitializer>()));
+    }
+
+    private static void RegisterSelectedContextFactoryWhenNeeded<TContext>(
+        IServiceCollection services,
+        TinyBootstrapContextFactorySelection selection,
+        Func<IServiceProvider, CancellationToken, ValueTask<TContext>>? contextFactory)
+    {
+        var hasDelegateFactory = contextFactory is not null;
+        if (hasDelegateFactory)
+        {
+            return;
+        }
+
+        if (selection.Kind == TinyBootstrapContextFactoryKind.None)
+        {
+            return;
+        }
+
+        if (selection.Kind == TinyBootstrapContextFactoryKind.DefaultFactory)
+        {
+            RegisterSelectedDefaultContextFactory<TContext>(services);
+            return;
+        }
+
+        RegisterSelectedContextFactoryType<TContext>(services, selection.FactoryType);
+    }
+
+    private static void RegisterSelectedDefaultContextFactory<TContext>(IServiceCollection services)
+    {
+        if (typeof(TContext) != typeof(AppContext))
+        {
+            throw new InvalidOperationException(
+                "TinyDispatcher: UseDefaultFactory() is only available for TinyDispatcher.AppContext.");
+        }
+
+        services.Replace(ServiceDescriptor.Scoped<IContextFactory<TContext>>(sp =>
+            (IContextFactory<TContext>)(object)
+            new DefaultAppContextFactory(sp.GetServices<IFeatureInitializer>())));
+    }
+
+    private static void RegisterSelectedContextFactoryType<TContext>(
+        IServiceCollection services,
+        Type? factoryType)
+    {
+        var serviceType = typeof(IContextFactory<TContext>);
+        var hasFactoryType = factoryType is not null;
+
+        if (!hasFactoryType)
+        {
+            throw new InvalidOperationException("TinyDispatcher: no context factory type was selected.");
+        }
+
+        var implementsContextFactory = serviceType.IsAssignableFrom(factoryType!);
+        if (!implementsContextFactory)
+        {
+            throw new InvalidOperationException(
+                $"TinyDispatcher: context factory type '{factoryType}' must implement '{serviceType}'.");
+        }
+
+        services.Replace(ServiceDescriptor.Scoped(serviceType, factoryType!));
     }
 
     private static void RegisterNoOpContextFactory(IServiceCollection services)

@@ -14,13 +14,18 @@ internal static class PipelineRegistrationPlanner
         bool hasGlobal,
         DiscoveryResult discovery,
         IReadOnlyDictionary<string, MiddlewareRef[]> perCommand,
-        PipelinePolicyContribution[] policies)
+        PipelinePolicyContribution[] policies,
+        string pipelineClassSuffix = "")
     {
-        var commandToPolicyPipeline = BuildCommandToPolicyPipelineNames(generatedNamespace, policies);
+        var commandToPolicyPipeline = BuildCommandToPolicyPipelineNames(
+            generatedNamespace,
+            policies,
+            pipelineClassSuffix);
         var state = new PipelineRegistrationState(
             GeneratedNamespace: generatedNamespace,
             CoreNamespace: coreNamespace,
             ContextTypeFqn: contextTypeFqn,
+            PipelineClassSuffix: pipelineClassSuffix,
             HasGlobal: hasGlobal,
             Discovery: discovery,
             PerCommandSet: new HashSet<string>(perCommand.Keys, StringComparer.Ordinal),
@@ -38,14 +43,15 @@ internal static class PipelineRegistrationPlanner
 
     private static Dictionary<string, string> BuildCommandToPolicyPipelineNames(
         string generatedNamespace,
-        PipelinePolicyContribution[] policies)
+        PipelinePolicyContribution[] policies,
+        string pipelineClassSuffix)
     {
         var map = new Dictionary<string, string>(StringComparer.Ordinal);
 
         for (var i = 0; i < policies.Length; i++)
         {
             var policy = policies[i];
-            var pipelineName = GetPolicyPipelineTypeName(generatedNamespace, policy);
+            var pipelineName = GetPolicyPipelineTypeName(generatedNamespace, policy, pipelineClassSuffix);
 
             PipelinePolicyCommandMap.AddFirstPolicyWins(map, policy.Commands, pipelineName);
         }
@@ -53,12 +59,16 @@ internal static class PipelineRegistrationPlanner
         return map;
     }
 
-    private static string GetPolicyPipelineTypeName(string generatedNamespace, PipelinePolicyContribution policy)
+    private static string GetPolicyPipelineTypeName(
+        string generatedNamespace,
+        PipelinePolicyContribution policy,
+        string pipelineClassSuffix)
     {
         return "global::" +
             generatedNamespace +
             ".TinyDispatcherPolicyPipeline_" +
-            PipelineNameFactory.SanitizePolicyName(policy.PolicyTypeFqn);
+            PipelineNameFactory.SanitizePolicyName(policy.PolicyTypeFqn) +
+            pipelineClassSuffix;
     }
 
     private static void AddPerCommandRegistrations(
@@ -73,7 +83,7 @@ internal static class PipelineRegistrationPlanner
 
             registrations.Add(new ServiceRegistration(
                 ServiceTypeExpression: $"{state.CoreNamespace}.ICommandPipeline<{command}, {state.ContextTypeFqn}>",
-                ImplementationTypeExpression: $"global::{state.GeneratedNamespace}.TinyDispatcherPipeline_{PipelineNameFactory.SanitizeCommandName(command)}"));
+                ImplementationTypeExpression: $"global::{state.GeneratedNamespace}.TinyDispatcherPipeline_{PipelineNameFactory.SanitizeCommandName(command)}{state.PipelineClassSuffix}"));
         }
     }
 
@@ -147,13 +157,14 @@ internal static class PipelineRegistrationPlanner
 
         registrations.Add(new ServiceRegistration(
             ServiceTypeExpression: $"{state.CoreNamespace}.ICommandPipeline<{command}, {state.ContextTypeFqn}>",
-            ImplementationTypeExpression: $"global::{state.GeneratedNamespace}.TinyDispatcherGlobalPipeline<{command}>"));
+            ImplementationTypeExpression: $"global::{state.GeneratedNamespace}.TinyDispatcherGlobalPipeline{state.PipelineClassSuffix}<{command}>"));
     }
 
     private sealed record PipelineRegistrationState(
         string GeneratedNamespace,
         string CoreNamespace,
         string ContextTypeFqn,
+        string PipelineClassSuffix,
         bool HasGlobal,
         DiscoveryResult Discovery,
         HashSet<string> PerCommandSet,

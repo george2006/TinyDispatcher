@@ -11,29 +11,90 @@ namespace TinyDispatcher.SourceGen.Generator.Generation.Emitters.PipelineMaps;
 
 internal static class PipelineMapMermaidEmitter
 {
-    public static void Emit(IGeneratorContext context, PipelineDescriptor d)
+    private const string DispatchNodeName = "A";
+    private const string HandlerNodeName = "H";
+    private const string MiddlewareNodePrefix = "M";
+
+    public static void Emit(IGeneratorContext context, PipelineDescriptor descriptor)
     {
-        var w = new CodeWriter(capacity: 4_000);
+        var source = WriteSource(descriptor);
+        var hintName = BuildHintName(descriptor);
 
-        w.Line("flowchart TD");
-        w.Line($"  A[Dispatch: {Short(d.CommandFullName)}]");
+        context.AddSource(hintName, SourceText.From(source, Encoding.UTF8));
+    }
 
-        var prev = "A";
-        var idx = 1;
+    private static string WriteSource(PipelineDescriptor descriptor)
+    {
+        var writer = new CodeWriter(capacity: 4_000);
 
-        foreach (var mw in d.Middlewares)
+        WriteGraph(writer, descriptor);
+        writer.EnsureAllBlocksClosed();
+
+        return writer.ToString();
+    }
+
+    private static void WriteGraph(CodeWriter writer, PipelineDescriptor descriptor)
+    {
+        writer.Line("flowchart TD");
+        WriteDispatchNode(writer, descriptor);
+
+        var lastNode = WriteMiddlewareNodes(writer, descriptor);
+        WriteHandlerNode(writer, descriptor, lastNode);
+    }
+
+    private static void WriteDispatchNode(CodeWriter writer, PipelineDescriptor descriptor)
+    {
+        writer.Line($"  {DispatchNodeName}[Dispatch: {Short(descriptor.CommandFullName)}]");
+    }
+
+    private static string WriteMiddlewareNodes(CodeWriter writer, PipelineDescriptor descriptor)
+    {
+        var lastNode = DispatchNodeName;
+
+        for (var i = 0; i < descriptor.Middlewares.Count; i++)
         {
-            var node = $"M{idx++}";
-            w.Line($"  {prev} --> {node}[{mw.Source}: {Short(mw.MiddlewareFullName)}]");
-            prev = node;
+            lastNode = WriteMiddlewareNode(
+                writer,
+                previousNode: lastNode,
+                middlewareNode: BuildMiddlewareNodeName(i),
+                middleware: descriptor.Middlewares[i]);
         }
 
-        w.Line($"  {prev} --> H[Handler: {Short(d.HandlerFullName)}]");
+        return lastNode;
+    }
 
-        w.EnsureAllBlocksClosed();
+    private static string WriteMiddlewareNode(
+        CodeWriter writer,
+        string previousNode,
+        string middlewareNode,
+        MiddlewareDescriptor middleware)
+    {
+        writer.Line(
+            $"  {previousNode} --> {middlewareNode}[{middleware.Source}: {Short(middleware.MiddlewareFullName)}]");
 
-        var hint = $"PipelineMap.{PipelineNameFactory.SanitizeTypeName(d.CommandFullName)}.g.mmd";
-        context.AddSource(hint, SourceText.From(w.ToString(), Encoding.UTF8));
+        return middlewareNode;
+    }
+
+    private static string BuildMiddlewareNodeName(int middlewareIndex)
+    {
+        return MiddlewareNodePrefix + (middlewareIndex + 1);
+    }
+
+    private static void WriteHandlerNode(
+        CodeWriter writer,
+        PipelineDescriptor descriptor,
+        string previousNode)
+    {
+        writer.Line($"  {previousNode} --> {HandlerNodeName}[Handler: {Short(descriptor.HandlerFullName)}]");
+    }
+
+    private static string BuildHintName(PipelineDescriptor descriptor)
+    {
+        return "PipelineMap." +
+            PipelineNameFactory.SanitizeTypeName(descriptor.ContextFullName) +
+            "." +
+            PipelineNameFactory.SanitizeTypeName(descriptor.CommandFullName) +
+            ".g.mmd";
     }
 
     private static string Short(string s)

@@ -12,79 +12,74 @@ internal sealed class GeneratorValidationContext
 {
     internal GeneratorValidationContext(Builder b)
     {
-        DiscoveryResult = b.DiscoveryResult ?? throw new ArgumentNullException(nameof(b.DiscoveryResult));
+        Lane = b.Lane ?? throw new ArgumentNullException(nameof(b.Lane));
         Diagnostics = b.Diagnostics ?? throw new ArgumentNullException(nameof(b.Diagnostics));
 
-        // Optional / phase-dependent
-        UseTinyDispatcherCalls = b.UseTinyDispatcherCalls;
         IsHostProject = b.IsHostProject;
-
-        ExpectedContextFqn = b.ExpectedContextFqn ?? string.Empty;
         ReferencedContributions = b.ReferencedContributions ?? ReferencedAssemblyContributions.Empty;
-
-        LocalPipeline = b.LocalPipeline ?? PipelineConfig.Empty;
-        Pipeline = b.Pipeline ?? PipelineConfig.Empty;
     }
 
-    public DiscoveryResult DiscoveryResult { get; }
+    public HostLane Lane { get; }
+    public DiscoveryResult DiscoveryResult => Lane.Discovery;
     public DiagnosticsCatalog Diagnostics { get; }
 
     // Host gate / discovery
-    public ImmutableArray<UseTinyDispatcherCall> UseTinyDispatcherCalls { get; }
+    public ImmutableArray<UseTinyDispatcherCall> UseTinyDispatcherCalls => Lane.BootstrapCalls;
     public bool IsHostProject { get; }
 
     // Context
-    public string ExpectedContextFqn { get; }
+    public string ContextTypeFqn => Lane.ContextTypeFqn;
     public ReferencedAssemblyContributions ReferencedContributions { get; }
 
     // Pipeline config
-    public PipelineConfig LocalPipeline { get; }
-    public PipelineConfig Pipeline { get; }
+    public PipelineConfig ThisAssemblyPipeline => Lane.ThisAssemblyPipeline;
+    public PipelineConfig Pipeline => Lane.Pipeline;
     public ImmutableArray<MiddlewareRef> Globals => Pipeline.Globals;
     public ImmutableDictionary<string, ImmutableArray<MiddlewareRef>> PerCommand => Pipeline.PerCommand;
     public ImmutableDictionary<string, PolicySpec> Policies => Pipeline.Policies;
 
     public IEnumerable<MiddlewareRef> EnumerateAllMiddlewares()
     {
-        for (int i = 0; i < Globals.Length; i++)
-            yield return Globals[i];
-
-        foreach (var kv in PerCommand)
+        for (var i = 0; i < Globals.Length; i++)
         {
-            var arr = kv.Value;
-            for (int i = 0; i < arr.Length; i++)
-                yield return arr[i];
+            yield return Globals[i];
         }
 
-        foreach (var p in Policies.Values)
+        foreach (var pair in PerCommand)
         {
-            var arr = p.Middlewares;
-            for (int i = 0; i < arr.Length; i++)
-                yield return arr[i];
+            var middlewares = pair.Value;
+
+            for (var i = 0; i < middlewares.Length; i++)
+            {
+                yield return middlewares[i];
+            }
+        }
+
+        foreach (var policy in Policies.Values)
+        {
+            var middlewares = policy.Middlewares;
+
+            for (var i = 0; i < middlewares.Length; i++)
+            {
+                yield return middlewares[i];
+            }
         }
     }
 
     internal sealed class Builder
     {
-        public Builder(DiscoveryResult discoveryResult, DiagnosticsCatalog diagnostics)
+        public Builder(HostLane lane, DiagnosticsCatalog diagnostics)
         {
-            DiscoveryResult = discoveryResult;
+            Lane = lane;
             Diagnostics = diagnostics;
         }
 
-        public DiscoveryResult DiscoveryResult { get; }
+        public HostLane Lane { get; }
         public DiagnosticsCatalog Diagnostics { get; }
-
-        public ImmutableArray<UseTinyDispatcherCall> UseTinyDispatcherCalls { get; private set; } =
-            ImmutableArray<UseTinyDispatcherCall>.Empty;
 
         public bool IsHostProject { get; private set; }
 
-        public string? ExpectedContextFqn { get; private set; }
-
         public ReferencedAssemblyContributions? ReferencedContributions { get; private set; }
-        public PipelineConfig? LocalPipeline { get; private set; }
-        public PipelineConfig? Pipeline { get; private set; }
 
         public Builder WithHostGate(bool isHost)
         {
@@ -92,33 +87,9 @@ internal sealed class GeneratorValidationContext
             return this;
         }
 
-        public Builder WithUseTinyDispatcherCalls(ImmutableArray<UseTinyDispatcherCall> calls)
-        {
-            UseTinyDispatcherCalls = calls;
-            return this;
-        }
-
-        public Builder WithExpectedContext(string expectedContextFqn)
-        {
-            ExpectedContextFqn = expectedContextFqn;
-            return this;
-        }
-
         public Builder WithReferencedContributions(ReferencedAssemblyContributions referencedContributions)
         {
             ReferencedContributions = referencedContributions;
-            return this;
-        }
-
-        public Builder WithLocalPipelineConfig(PipelineConfig pipeline)
-        {
-            LocalPipeline = pipeline;
-            return this;
-        }
-
-        public Builder WithPipelineConfig(PipelineConfig pipeline)
-        {
-            Pipeline = pipeline;
             return this;
         }
 

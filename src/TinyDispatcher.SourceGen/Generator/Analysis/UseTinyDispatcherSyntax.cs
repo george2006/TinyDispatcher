@@ -5,35 +5,76 @@ namespace TinyDispatcher.SourceGen.Generator.Analysis;
 
 internal sealed class UseTinyDispatcherSyntax
 {
-    public bool IsUseTinyDispatcherInvocation(InvocationExpressionSyntax inv)
+    private const string UseTinyDispatcherMethodName = "UseTinyDispatcher";
+    private const string UseTinyNoOpContextMethodName = "UseTinyNoOpContext";
+
+    public bool IsBootstrapInvocation(InvocationExpressionSyntax invocation)
     {
         // services.UseTinyDispatcher<TContext>(...)
-        if (inv.Expression is MemberAccessExpressionSyntax ma)
+        if (invocation.Expression is MemberAccessExpressionSyntax memberAccess)
         {
-            if (ma.Name is GenericNameSyntax g &&
-                string.Equals(g.Identifier.ValueText, "UseTinyDispatcher", StringComparison.Ordinal) &&
-                g.TypeArgumentList != null &&
-                g.TypeArgumentList.Arguments.Count == 1)
+            var isDispatcherBootstrapCall = IsUseTinyDispatcherCall(memberAccess.Name);
+            if (isDispatcherBootstrapCall)
+            {
                 return true;
+            }
 
-            if (ma.Name is IdentifierNameSyntax id &&
-                string.Equals(id.Identifier.ValueText, "UseTinyNoOpContext", StringComparison.Ordinal))
+            var isNoOpBootstrapCall = IsUseTinyNoOpContextCall(memberAccess.Name);
+            if (isNoOpBootstrapCall)
+            {
                 return true;
+            }
 
             return false;
         }
 
         // UseTinyDispatcher<TContext>(...) (using static)
-        if (inv.Expression is GenericNameSyntax gg &&
-            string.Equals(gg.Identifier.ValueText, "UseTinyDispatcher", StringComparison.Ordinal) &&
-            gg.TypeArgumentList != null &&
-            gg.TypeArgumentList.Arguments.Count == 1)
+        var isStaticDispatcherBootstrapCall = IsUseTinyDispatcherCall(invocation.Expression);
+        if (isStaticDispatcherBootstrapCall)
+        {
             return true;
+        }
 
-        if (inv.Expression is IdentifierNameSyntax id2 &&
-            string.Equals(id2.Identifier.ValueText, "UseTinyNoOpContext", StringComparison.Ordinal))
+        var isStaticNoOpBootstrapCall = IsUseTinyNoOpContextCall(invocation.Expression);
+        if (isStaticNoOpBootstrapCall)
+        {
             return true;
+        }
 
         return false;
+    }
+
+    private static bool IsUseTinyDispatcherCall(ExpressionSyntax expression)
+    {
+        if (expression is not GenericNameSyntax genericName)
+        {
+            return false;
+        }
+
+        var hasUseTinyDispatcherName = string.Equals(
+            genericName.Identifier.ValueText,
+            UseTinyDispatcherMethodName,
+            StringComparison.Ordinal);
+
+        if (!hasUseTinyDispatcherName)
+        {
+            return false;
+        }
+
+        return genericName.TypeArgumentList != null &&
+               genericName.TypeArgumentList.Arguments.Count == 1;
+    }
+
+    private static bool IsUseTinyNoOpContextCall(ExpressionSyntax expression)
+    {
+        if (expression is not IdentifierNameSyntax identifierName)
+        {
+            return false;
+        }
+
+        return string.Equals(
+            identifierName.Identifier.ValueText,
+            UseTinyNoOpContextMethodName,
+            StringComparison.Ordinal);
     }
 }

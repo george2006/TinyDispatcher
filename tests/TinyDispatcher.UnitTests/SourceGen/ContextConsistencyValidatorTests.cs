@@ -12,7 +12,7 @@ namespace TinyDispatcher.UnitTests.SourceGen;
 public sealed class ContextConsistencyValidatorTests
 {
     [Fact]
-    public void DISP110_when_multiple_UseTinyDispatcher_calls_exist()
+    public void Does_not_report_DISP110_when_multiple_UseTinyDispatcher_calls_target_different_contexts()
     {
         var source = @"
 using System;
@@ -64,7 +64,8 @@ namespace ConsoleApp
 
         var diagnostics = Run(source);
 
-        Assert.Contains(diagnostics, d => d.Id == "DISP110");
+        Assert.DoesNotContain(diagnostics, d => d.Id == "DISP110");
+        Assert.DoesNotContain(diagnostics, d => d.Id == "DISP112");
     }
 
     [Fact]
@@ -112,6 +113,54 @@ namespace ConsoleApp
         var diagnostics = Run(source);
 
         Assert.DoesNotContain(diagnostics, d => d.Id == "DISP110");
+    }
+
+    [Fact]
+    public void DISP112_warning_when_multiple_UseTinyDispatcher_calls_target_same_context()
+    {
+        var source = @"
+using System;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace TinyDispatcher
+{
+    public interface ICommand { }
+
+    public sealed class TinyBootstrapp
+    {
+        public void UseGlobalMiddleware(Type openMiddleware) { }
+    }
+}
+
+namespace Microsoft.Extensions.DependencyInjection
+{
+    public static class ServiceCollectionExtensions
+    {
+        public static IServiceCollection UseTinyDispatcher<TContext>(
+            this IServiceCollection services,
+            Action<TinyDispatcher.TinyBootstrapp> tiny)
+            => services;
+    }
+}
+
+namespace ConsoleApp
+{
+    public sealed class Ctx { }
+
+    public static class Startup
+    {
+        public static void Configure(IServiceCollection services)
+        {
+            services.UseTinyDispatcher<Ctx>(tiny => { });
+            services.UseTinyDispatcher<Ctx>(tiny => { });
+        }
+    }
+}
+";
+
+        var diagnostics = Run(source);
+
+        Assert.Contains(diagnostics, d => d.Id == "DISP112" && d.Severity == DiagnosticSeverity.Warning);
     }
 
     // Optional: only keep if your ContextConsistencyValidator emits DISP111 for "host but no context"

@@ -1,3 +1,16 @@
+## 1.2.0-alpha.1 - planned
+
+### Added
+- Experimental multi-context / context-lane dispatching.
+  - Modules can own different context types inside the same modular monolith.
+  - Each lane can have its own strongly typed dispatcher, context factory, handlers, middleware, policies, and generated pipeline.
+  - The Orders/Payments sample demonstrates multiple typed lanes in one process.
+
+### Notes
+- This is an alpha release for evaluation and feedback.
+- APIs may change before the stable `1.2.0` release.
+- `1.1.x` remains the stable line for production use.
+
 ## 1.1.0 - 2026-05-18
 
 ### Added

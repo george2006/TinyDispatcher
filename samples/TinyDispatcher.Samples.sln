@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyDispatcher.Samples.Clos
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyDispatcher.Samples.Aspnet", "src\TinyDispatcher.Samples.Aspnet\TinyDispatcher.Samples.Aspnet.csproj", "{9DD8603E-2E2C-4F57-867F-86B43D935B26}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyDispatcher.Samples.MultiLaneDispatching", "src\TinyDispatcher.Samples.MultiLaneDispatching\TinyDispatcher.Samples.MultiLaneDispatching.csproj", "{D12E4700-4B97-4C20-BAA8-BCAF39F4EFB9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,6 +47,10 @@ Global
 		{9DD8603E-2E2C-4F57-867F-86B43D935B26}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9DD8603E-2E2C-4F57-867F-86B43D935B26}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9DD8603E-2E2C-4F57-867F-86B43D935B26}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D12E4700-4B97-4C20-BAA8-BCAF39F4EFB9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D12E4700-4B97-4C20-BAA8-BCAF39F4EFB9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D12E4700-4B97-4C20-BAA8-BCAF39F4EFB9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D12E4700-4B97-4C20-BAA8-BCAF39F4EFB9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -29,24 +29,32 @@ internal static class PipelineTypeNames
         return trimmed;
     }
 
-    public static string CloseMiddleware(MiddlewareRef mw, string cmd, string ctx)
+    public static string CloseMiddleware(
+        MiddlewareRef middleware,
+        string commandType,
+        string contextType)
     {
-        if (mw.Arity == 2)
+        if (UsesOpenContextParameter(middleware))
         {
-            return mw.OpenTypeFqn + "<" + cmd + ", " + ctx + ">";
+            return middleware.OpenTypeFqn + "<" + commandType + ", " + contextType + ">";
         }
 
-        return mw.OpenTypeFqn + "<" + cmd + ">";
+        return middleware.OpenTypeFqn + "<" + commandType + ">";
     }
 
-    public static string OpenGenericTypeof(MiddlewareRef mw)
+    public static string OpenGenericTypeof(MiddlewareRef middleware)
     {
-        if (mw.Arity == 2)
+        if (UsesOpenContextParameter(middleware))
         {
-            return mw.OpenTypeFqn + "<,>";
+            return middleware.OpenTypeFqn + "<,>";
         }
 
-        return mw.OpenTypeFqn + "<>";
+        return middleware.OpenTypeFqn + "<>";
+    }
+
+    private static bool UsesOpenContextParameter(MiddlewareRef middleware)
+    {
+        return middleware.Arity == 2;
     }
 }
 

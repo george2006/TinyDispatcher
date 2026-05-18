@@ -40,6 +40,8 @@ public sealed class TinyDispatcherPipelineContributionAttribute : Attribute
 
     public Type? CommandType { get; set; }
 
+    public Type? ContextType { get; set; }
+
     public Type[] MiddlewareTypes { get; }
 }
 
@@ -57,6 +59,8 @@ public sealed class TinyDispatcherPolicyContributionAttribute : Attribute
     }
 
     public Type PolicyType { get; }
+
+    public Type? ContextType { get; set; }
 
     public Type[] MiddlewareTypes { get; }
 

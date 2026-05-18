@@ -14,7 +14,7 @@ namespace TinyDispatcher.UnitTests.SourceGen;
 public sealed class ContextInferenceTests
 {
     [Fact]
-    public void ResolveAllUseTinyDispatcherContexts_returns_no_op_context_for_UseTinyNoOpContext()
+    public void ResolveAllBootstrapContexts_returns_no_op_context_for_UseTinyNoOpContext()
     {
         var compilation = CreateCompilation("""
 using Microsoft.Extensions.DependencyInjection;
@@ -48,14 +48,14 @@ namespace MyApp
 """);
         var invocations = FindInvocations(compilation);
 
-        var result = new ContextInference().ResolveAllUseTinyDispatcherContexts(invocations, compilation);
+        var result = new ContextInference().ResolveAllBootstrapContexts(invocations, compilation);
 
         var call = Assert.Single(result);
         Assert.Equal("global::TinyDispatcher.Context.NoOpContext", call.ContextTypeFqn);
     }
 
     [Fact]
-    public void ResolveAllUseTinyDispatcherContexts_returns_generic_context_type()
+    public void ResolveAllBootstrapContexts_returns_generic_context_type()
     {
         var compilation = CreateCompilation("""
 using System;
@@ -92,14 +92,14 @@ namespace MyApp
 """);
         var invocations = FindInvocations(compilation);
 
-        var result = new ContextInference().ResolveAllUseTinyDispatcherContexts(invocations, compilation);
+        var result = new ContextInference().ResolveAllBootstrapContexts(invocations, compilation);
 
         var call = Assert.Single(result);
         Assert.Equal("global::MyApp.AppContext", call.ContextTypeFqn);
     }
 
     [Fact]
-    public void ResolveAllUseTinyDispatcherContexts_skips_type_parameter_contexts()
+    public void ResolveAllBootstrapContexts_skips_type_parameter_contexts()
     {
         var compilation = CreateCompilation("""
 using System;
@@ -134,9 +134,28 @@ namespace MyApp
 """);
         var invocations = FindInvocations(compilation);
 
-        var result = new ContextInference().ResolveAllUseTinyDispatcherContexts(invocations, compilation);
+        var result = new ContextInference().ResolveAllBootstrapContexts(invocations, compilation);
 
         Assert.Empty(result);
+    }
+
+    [Fact]
+    public void TryInferSingleContextTypeFromResolvedCalls_returns_false_for_multiple_contexts()
+    {
+        var calls = ImmutableArray.Create(
+            new TinyDispatcher.SourceGen.Generator.Models.UseTinyDispatcherCall(
+                "global::MyApp.AppContext",
+                Location.None),
+            new TinyDispatcher.SourceGen.Generator.Models.UseTinyDispatcherCall(
+                "global::MyApp.OtherContext",
+                Location.None));
+
+        var result = new ContextInference().TryInferSingleContextTypeFromResolvedCalls(
+            calls,
+            out var contextTypeFqn);
+
+        Assert.False(result);
+        Assert.Equal(string.Empty, contextTypeFqn);
     }
 
     private static CSharpCompilation CreateCompilation(string source)

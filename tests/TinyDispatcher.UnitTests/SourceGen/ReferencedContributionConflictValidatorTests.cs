@@ -14,7 +14,7 @@ public sealed class ReferencedContributionConflictValidatorTests
     public void Validate_reports_DISP413_when_referenced_assembly_conflicts_with_local_per_command_pipeline()
     {
         var context = CreateContext(
-            localPipeline: new PipelineConfig(
+            thisAssemblyPipeline: new PipelineConfig(
                 ImmutableArray<MiddlewareRef>.Empty,
                 ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty.Add(
                     "global::MyApp.CreateOrder",
@@ -24,12 +24,11 @@ public sealed class ReferencedContributionConflictValidatorTests
                 new ReferencedAssemblyContribution(
                     "OrdersContrib",
                     "global::MyApp.AppContext",
-                    ImmutableArray<HandlerContract>.Empty,
                     ImmutableArray<MiddlewareRef>.Empty,
-                    ImmutableArray.Create(new PerCommandMiddlewareFinding(
+                    ImmutableArray.Create(new ReferencedPerCommandMiddlewareContribution(
                         "global::MyApp.CreateOrder",
                         ImmutableArray.Create(new MiddlewareRef("global::Orders.SharedMiddleware", 2)))),
-                    ImmutableArray<PolicyFinding>.Empty)));
+                    ImmutableArray<ReferencedPolicyContribution>.Empty)));
 
         var diagnostics = new DiagnosticBag();
 
@@ -43,26 +42,24 @@ public sealed class ReferencedContributionConflictValidatorTests
     public void Validate_reports_DISP413_when_referenced_assemblies_contribute_same_per_command_pipeline()
     {
         var context = CreateContext(
-            localPipeline: PipelineConfig.Empty,
+            thisAssemblyPipeline: PipelineConfig.Empty,
             referencedContributions: Referenced(
                 new ReferencedAssemblyContribution(
                     "OrdersContrib",
                     "global::MyApp.AppContext",
-                    ImmutableArray<HandlerContract>.Empty,
                     ImmutableArray<MiddlewareRef>.Empty,
-                    ImmutableArray.Create(new PerCommandMiddlewareFinding(
+                    ImmutableArray.Create(new ReferencedPerCommandMiddlewareContribution(
                         "global::MyApp.CreateOrder",
                         ImmutableArray.Create(new MiddlewareRef("global::Orders.SharedMiddleware", 2)))),
-                    ImmutableArray<PolicyFinding>.Empty),
+                    ImmutableArray<ReferencedPolicyContribution>.Empty),
                 new ReferencedAssemblyContribution(
                     "BillingContrib",
                     "global::MyApp.AppContext",
-                    ImmutableArray<HandlerContract>.Empty,
                     ImmutableArray<MiddlewareRef>.Empty,
-                    ImmutableArray.Create(new PerCommandMiddlewareFinding(
+                    ImmutableArray.Create(new ReferencedPerCommandMiddlewareContribution(
                         "global::MyApp.CreateOrder",
                         ImmutableArray.Create(new MiddlewareRef("global::Billing.SharedMiddleware", 2)))),
-                    ImmutableArray<PolicyFinding>.Empty)));
+                    ImmutableArray<ReferencedPolicyContribution>.Empty)));
 
         var diagnostics = new DiagnosticBag();
 
@@ -76,21 +73,20 @@ public sealed class ReferencedContributionConflictValidatorTests
     public void Validate_reports_DISP413_when_single_referenced_assembly_repeats_same_command_target()
     {
         var context = CreateContext(
-            localPipeline: PipelineConfig.Empty,
+            thisAssemblyPipeline: PipelineConfig.Empty,
             referencedContributions: Referenced(
                 new ReferencedAssemblyContribution(
                     "OrdersContrib",
                     "global::MyApp.AppContext",
-                    ImmutableArray<HandlerContract>.Empty,
                     ImmutableArray<MiddlewareRef>.Empty,
                     ImmutableArray.Create(
-                        new PerCommandMiddlewareFinding(
+                        new ReferencedPerCommandMiddlewareContribution(
                             "global::MyApp.CreateOrder",
                             ImmutableArray.Create(new MiddlewareRef("global::Orders.FirstMiddleware", 2))),
-                        new PerCommandMiddlewareFinding(
+                        new ReferencedPerCommandMiddlewareContribution(
                             "global::MyApp.CreateOrder",
                             ImmutableArray.Create(new MiddlewareRef("global::Orders.SecondMiddleware", 2)))),
-                    ImmutableArray<PolicyFinding>.Empty)));
+                    ImmutableArray<ReferencedPolicyContribution>.Empty)));
 
         var diagnostics = new DiagnosticBag();
 
@@ -101,10 +97,38 @@ public sealed class ReferencedContributionConflictValidatorTests
     }
 
     [Fact]
+    public void Validate_does_not_report_DISP413_for_referenced_command_in_other_context()
+    {
+        var context = CreateContext(
+            thisAssemblyPipeline: new PipelineConfig(
+                ImmutableArray<MiddlewareRef>.Empty,
+                ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty.Add(
+                    "global::MyApp.CreateOrder",
+                    ImmutableArray.Create(new MiddlewareRef("global::MyApp.LocalMiddleware", 2))),
+                ImmutableDictionary<string, PolicySpec>.Empty),
+            referencedContributions: Referenced(
+                new ReferencedAssemblyContribution(
+                    "MixedContrib",
+                    null,
+                    ImmutableArray<MiddlewareRef>.Empty,
+                    ImmutableArray.Create(new ReferencedPerCommandMiddlewareContribution(
+                        "global::MyApp.CreateOrder",
+                        ImmutableArray.Create(new MiddlewareRef("global::Mixed.OtherMiddleware", 2)),
+                        "global::OtherApp.OtherContext")),
+                    ImmutableArray<ReferencedPolicyContribution>.Empty)));
+
+        var diagnostics = new DiagnosticBag();
+
+        new ReferencedContributionConflictValidator().Validate(context, diagnostics);
+
+        Assert.Empty(diagnostics.ToImmutable());
+    }
+
+    [Fact]
     public void Validate_reports_DISP414_when_referenced_assembly_conflicts_with_local_policy()
     {
         var context = CreateContext(
-            localPipeline: new PipelineConfig(
+            thisAssemblyPipeline: new PipelineConfig(
                 ImmutableArray<MiddlewareRef>.Empty,
                 ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
                 ImmutableDictionary<string, PolicySpec>.Empty.Add(
@@ -117,10 +141,9 @@ public sealed class ReferencedContributionConflictValidatorTests
                 new ReferencedAssemblyContribution(
                     "OrdersContrib",
                     "global::MyApp.AppContext",
-                    ImmutableArray<HandlerContract>.Empty,
                     ImmutableArray<MiddlewareRef>.Empty,
-                    ImmutableArray<PerCommandMiddlewareFinding>.Empty,
-                    ImmutableArray.Create(new PolicyFinding(
+                    ImmutableArray<ReferencedPerCommandMiddlewareContribution>.Empty,
+                    ImmutableArray.Create(new ReferencedPolicyContribution(
                         "global::MyApp.SharedPolicy",
                         ImmutableArray<MiddlewareRef>.Empty,
                         ImmutableArray<string>.Empty)))));
@@ -137,20 +160,19 @@ public sealed class ReferencedContributionConflictValidatorTests
     public void Validate_reports_DISP414_when_single_referenced_assembly_repeats_same_policy_type()
     {
         var context = CreateContext(
-            localPipeline: PipelineConfig.Empty,
+            thisAssemblyPipeline: PipelineConfig.Empty,
             referencedContributions: Referenced(
                 new ReferencedAssemblyContribution(
                     "OrdersContrib",
                     "global::MyApp.AppContext",
-                    ImmutableArray<HandlerContract>.Empty,
                     ImmutableArray<MiddlewareRef>.Empty,
-                    ImmutableArray<PerCommandMiddlewareFinding>.Empty,
+                    ImmutableArray<ReferencedPerCommandMiddlewareContribution>.Empty,
                     ImmutableArray.Create(
-                        new PolicyFinding(
+                        new ReferencedPolicyContribution(
                             "global::MyApp.SharedPolicy",
                             ImmutableArray<MiddlewareRef>.Empty,
                             ImmutableArray<string>.Empty),
-                        new PolicyFinding(
+                        new ReferencedPolicyContribution(
                             "global::MyApp.SharedPolicy",
                             ImmutableArray<MiddlewareRef>.Empty,
                             ImmutableArray<string>.Empty)))));
@@ -167,25 +189,23 @@ public sealed class ReferencedContributionConflictValidatorTests
     public void Validate_reports_DISP414_when_referenced_assemblies_define_same_policy()
     {
         var context = CreateContext(
-            localPipeline: PipelineConfig.Empty,
+            thisAssemblyPipeline: PipelineConfig.Empty,
             referencedContributions: Referenced(
                 new ReferencedAssemblyContribution(
                     "OrdersContrib",
                     "global::MyApp.AppContext",
-                    ImmutableArray<HandlerContract>.Empty,
                     ImmutableArray<MiddlewareRef>.Empty,
-                    ImmutableArray<PerCommandMiddlewareFinding>.Empty,
-                    ImmutableArray.Create(new PolicyFinding(
+                    ImmutableArray<ReferencedPerCommandMiddlewareContribution>.Empty,
+                    ImmutableArray.Create(new ReferencedPolicyContribution(
                         "global::MyApp.SharedPolicy",
                         ImmutableArray<MiddlewareRef>.Empty,
                         ImmutableArray<string>.Empty))),
                 new ReferencedAssemblyContribution(
                     "BillingContrib",
                     "global::MyApp.AppContext",
-                    ImmutableArray<HandlerContract>.Empty,
                     ImmutableArray<MiddlewareRef>.Empty,
-                    ImmutableArray<PerCommandMiddlewareFinding>.Empty,
-                    ImmutableArray.Create(new PolicyFinding(
+                    ImmutableArray<ReferencedPerCommandMiddlewareContribution>.Empty,
+                    ImmutableArray.Create(new ReferencedPolicyContribution(
                         "global::MyApp.SharedPolicy",
                         ImmutableArray<MiddlewareRef>.Empty,
                         ImmutableArray<string>.Empty)))));
@@ -199,25 +219,56 @@ public sealed class ReferencedContributionConflictValidatorTests
     }
 
     [Fact]
+    public void Validate_does_not_report_DISP414_for_referenced_policy_in_other_context()
+    {
+        var context = CreateContext(
+            thisAssemblyPipeline: new PipelineConfig(
+                ImmutableArray<MiddlewareRef>.Empty,
+                ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
+                ImmutableDictionary<string, PolicySpec>.Empty.Add(
+                    "global::MyApp.SharedPolicy",
+                    new PolicySpec(
+                        "global::MyApp.SharedPolicy",
+                        ImmutableArray<MiddlewareRef>.Empty,
+                        ImmutableArray.Create("global::MyApp.CreateOrder")))),
+            referencedContributions: Referenced(
+                new ReferencedAssemblyContribution(
+                    "MixedContrib",
+                    null,
+                    ImmutableArray<MiddlewareRef>.Empty,
+                    ImmutableArray<ReferencedPerCommandMiddlewareContribution>.Empty,
+                    ImmutableArray.Create(new ReferencedPolicyContribution(
+                        "global::MyApp.SharedPolicy",
+                        ImmutableArray<MiddlewareRef>.Empty,
+                        ImmutableArray.Create("global::MyApp.CreateOrder"),
+                        "global::OtherApp.OtherContext")))));
+
+        var diagnostics = new DiagnosticBag();
+
+        new ReferencedContributionConflictValidator().Validate(context, diagnostics);
+
+        Assert.Empty(diagnostics.ToImmutable());
+    }
+
+    [Fact]
     public void Validate_skips_conflict_checks_for_non_host_projects()
     {
         var context = new GeneratorValidationContext.Builder(
-                EmptyDiscovery(),
+                CreateLane(
+                    contextTypeFqn: string.Empty,
+                    thisAssemblyPipeline: PipelineConfig.Empty,
+                    pipeline: PipelineConfig.Empty),
                 new DiagnosticsCatalog())
             .WithHostGate(isHost: false)
-            .WithExpectedContext(string.Empty)
-            .WithLocalPipelineConfig(PipelineConfig.Empty)
             .WithReferencedContributions(Referenced(
                 new ReferencedAssemblyContribution(
                     "OrdersContrib",
                     "global::MyApp.AppContext",
-                    ImmutableArray<HandlerContract>.Empty,
                     ImmutableArray<MiddlewareRef>.Empty,
-                    ImmutableArray.Create(new PerCommandMiddlewareFinding(
+                    ImmutableArray.Create(new ReferencedPerCommandMiddlewareContribution(
                         "global::MyApp.CreateOrder",
                         ImmutableArray.Create(new MiddlewareRef("global::Orders.SharedMiddleware", 2)))),
-                    ImmutableArray<PolicyFinding>.Empty)))
-            .WithPipelineConfig(PipelineConfig.Empty)
+                    ImmutableArray<ReferencedPolicyContribution>.Empty)))
             .Build();
 
         var diagnostics = new DiagnosticBag();
@@ -228,18 +279,36 @@ public sealed class ReferencedContributionConflictValidatorTests
     }
 
     private static GeneratorValidationContext CreateContext(
-        PipelineConfig localPipeline,
+        PipelineConfig thisAssemblyPipeline,
         ReferencedAssemblyContributions referencedContributions)
     {
+        var lane = CreateLane(
+            contextTypeFqn: "global::MyApp.AppContext",
+            thisAssemblyPipeline: thisAssemblyPipeline,
+            pipeline: PipelineConfig.Empty);
+
         return new GeneratorValidationContext.Builder(
-                EmptyDiscovery(),
+                lane,
                 new DiagnosticsCatalog())
             .WithHostGate(isHost: true)
-            .WithExpectedContext("global::MyApp.AppContext")
-            .WithLocalPipelineConfig(localPipeline)
             .WithReferencedContributions(referencedContributions)
-            .WithPipelineConfig(PipelineConfig.Empty)
             .Build();
+    }
+
+    private static HostLane CreateLane(
+        string contextTypeFqn,
+        PipelineConfig thisAssemblyPipeline,
+        PipelineConfig pipeline)
+    {
+        var declaration = new HostLaneDeclaration(
+            contextTypeFqn,
+            ImmutableArray<UseTinyDispatcherCall>.Empty);
+
+        return new HostLane(
+            declaration,
+            thisAssemblyPipeline,
+            EmptyDiscovery(),
+            pipeline);
     }
 
     private static DiscoveryResult EmptyDiscovery()

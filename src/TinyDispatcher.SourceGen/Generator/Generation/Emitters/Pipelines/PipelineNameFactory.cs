@@ -14,7 +14,7 @@ internal static class PipelineNameFactory
 
     public static string CtorParamName(MiddlewareRef mw)
     {
-        var open = mw.OpenTypeFqn ?? string.Empty;
+        var open = RemoveGlobalPrefix(mw.OpenTypeFqn ?? string.Empty);
 
         var shortName = GetNameAfterLastDot(open);
 
@@ -55,6 +55,17 @@ internal static class PipelineNameFactory
         var typeName = RemoveGlobalPrefix(typeFqn);
 
         return SanitizeName(typeName);
+    }
+
+    public static string PipelineRegistrationMethodName(string contextFqn)
+    {
+        var contextName = SanitizeTypeName(contextFqn);
+        if (string.IsNullOrWhiteSpace(contextName))
+        {
+            return "AddGeneratedPipelines";
+        }
+
+        return "AddGeneratedPipelines_" + contextName;
     }
 
     private static string RemoveGlobalPrefix(string value)

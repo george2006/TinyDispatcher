@@ -142,7 +142,7 @@ namespace ConsoleApp
         var run = driver.GetRunResult();
         var hints = run.Results.SelectMany(r => r.GeneratedSources).Select(s => s.HintName).ToArray();
 
-        Assert.Contains("TinyDispatcherPipeline.g.cs", hints); 
+        Assert.Contains("TinyDispatcherPipeline.ConsoleApp_MyTestContext.g.cs", hints);
     }
 
     [Fact]
@@ -234,20 +234,10 @@ namespace ConsoleApp
 
     private static CSharpCompilation CreateCompilation(string source)
     {
-        var refs =
-            AppDomain.CurrentDomain.GetAssemblies()
-                .Where(a => !a.IsDynamic && !string.IsNullOrWhiteSpace(a.Location))
-                .Select(a => MetadataReference.CreateFromFile(a.Location))
-                .Cast<MetadataReference>()
-                .ToList();
-
-        // Ensure generator assembly is referenced (tests usually already reference it, but keep explicit)
-        refs.Add(MetadataReference.CreateFromFile(typeof(Generator).Assembly.Location));
-
         return CSharpCompilation.Create(
             assemblyName: "Tests",
             syntaxTrees: new[] { CSharpSyntaxTree.ParseText(source) },
-            references: refs,
+            references: SourceGenCompilationReferences.CurrentDomainWithoutUnitTests(),
             options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
     }
 
