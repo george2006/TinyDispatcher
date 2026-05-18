@@ -15,17 +15,29 @@ It provides a predictable, explicit, and performant command/query dispatch core 
 - **Generated pipelines** (global middleware -> policy middleware -> per-command middleware -> handler)
 - **Deterministic ordering** and precedence rules (predictable output)
 - **Explicit context (`TContext`)** for command handlers
-- **Context lanes** for independent, typed dispatcher pipelines in one app
 - **Multi-assembly composition** with host-owned final pipeline generation
 - **Pluggable context factory** (`tiny.UseContextFactory<TFactory>()`, delegate factory, or DI registration)
 - **Feature-friendly `AppContext`** (optional `IFeatureInitializer`-based composition)
 - **Source-generator diagnostics** for invalid shapes/config (fail fast, no guessing)
+- **Experimental context lanes** in `1.2.0-alpha.*` for module-owned contexts and typed dispatchers
 
 ## Install
+
+Stable release:
 
 ```bash
 dotnet add package TinyDispatcher
 ```
+
+Experimental multi-context / context-lane builds will be published as `1.2.0-alpha.*`.
+Use them only for evaluation and early feedback:
+
+```bash
+dotnet add package TinyDispatcher --version 1.2.0-alpha.1
+```
+
+Run the alpha install command only after the corresponding prerelease package is published.
+`1.1.x` is the stable line. Context lanes are not part of the stable `1.1.x` API.
 
 ## Quick start
 
@@ -80,20 +92,21 @@ TinyDispatcher supports a modular setup where:
 
 This keeps the runtime simple while letting the generator build final pipelines for the full command universe visible to the host.
 
-## Context lanes
+## Experimental: context lanes
 
-TinyDispatcher supports context lanes: independent, typed dispatcher pipelines inside the same application. Each lane has its own context, handlers, middleware and policies.
+Context lanes are planned for `1.2.0-alpha.*`.
+They allow independent, typed dispatcher pipelines inside the same application, where each lane has its own context, handlers, middleware and policies.
 
 Use one lane by default. Add more lanes only when the application has real execution-context or pipeline differences.
 
-See [Multi-Lane Dispatching](docs/multi-lane-dispatching.md) for the full explanation and Orders/Payments sample pointers.
+See [Multi-Lane Dispatching](docs/multi-lane-dispatching.md) for the alpha documentation and Orders/Payments sample pointers.
 
 ## Documentation
 
 - [Getting Started](docs/getting-started.md)
 - [Architecture](docs/architecture.md)
 - [Multi-Assembly Composition](docs/multi-assembly-composition.md)
-- [Multi-Lane Dispatching](docs/multi-lane-dispatching.md)
+- [Multi-Lane Dispatching](docs/multi-lane-dispatching.md) (`1.2.0-alpha.*`)
 - [Middleware](docs/middleware.md)
 - [Pipelines & Layering](docs/pipelines.md)
 - [Context & Features](docs/context.md)

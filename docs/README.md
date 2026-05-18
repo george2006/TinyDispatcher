@@ -8,16 +8,21 @@ Key capabilities (high level):
 - generated, deterministic middleware pipelines
 - host-owned multi-assembly composition
 - explicit `TContext` with **pluggable context factories**
-- **context lanes** for independent dispatcher pipelines in modular monoliths
 - optional **no-op context** mode (`UseTinyNoOpContext`) when you don't need context
 - optional feature composition via `AppContext` + `IFeatureInitializer`
+- experimental **context lanes** in `1.2.0-alpha.*` for module-owned contexts and typed dispatchers
+
+## Release channels
+
+- `1.1.x` is the stable line. It includes compile-time discovery, generated pipelines, explicit contexts, pluggable context factories, no-op context mode, and multi-assembly composition.
+- `1.2.0-alpha.*` is the experimental line for multi-context / context-lane dispatching. APIs may change before the stable release.
 
 Core docs:
 
 - [Getting Started](getting-started.md)
 - [Architecture](architecture.md)
 - [Multi-Assembly Composition](multi-assembly-composition.md)
-- [Multi-Lane Dispatching](multi-lane-dispatching.md)
+- [Multi-Lane Dispatching](multi-lane-dispatching.md) (`1.2.0-alpha.*`)
 - [Source Generator](source-generator.md)
 - [Middleware](middleware.md)
 - [Pipelines & Layering](pipelines.md)

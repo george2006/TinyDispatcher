@@ -7,26 +7,25 @@ TinyDispatcher prioritizes architectural clarity, performance, and predictabilit
 
 ---
 
-## Current Phase (Post 1.0 Stabilization)
+## Current Phase
 
-Focus: Internal quality hardening.
+Focus: stable `1.1.x` support and experimental `1.2.0-alpha.*` feedback.
 
-- Increase test coverage
-- Expand concurrency validation scenarios
-- Strengthen source generator diagnostics
-- Refactor internal components for clarity
-- Remove legacy artifacts
-- Improve documentation where it adds clarity
-
-No new features planned in this phase.
+- Keep `1.1.x` stable for production use and hotfixes.
+- Use `stable/1.1.x` for patch releases.
+- Publish multi-context / context-lane work as `1.2.0-alpha.*`.
+- Mark context lanes clearly as experimental until the API settles.
+- Keep expanding diagnostics, tests, samples, and documentation around modular composition.
 
 ---
 
 ## Short-Term Goals
 
-- Improve generator diagnostics (clear compile-time errors)
-- Improve middleware shape validation
-- Expand integration samples (Azure functions, Worker Service)
+- Publish the first `1.2.0-alpha.*` package for multi-context / context-lane feedback.
+- Document stable `1.1.x` versus experimental `1.2.0-alpha.*` everywhere multi-lane behavior appears.
+- Keep improving generator diagnostics (clear compile-time errors).
+- Keep improving middleware shape validation.
+- Expand integration samples (Azure Functions, Worker Service).
 - Benchmark suite documentation refresh
 
 ---
