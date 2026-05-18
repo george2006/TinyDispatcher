@@ -19,7 +19,7 @@ This enables a pattern where your handlers depend on context features rather tha
 
 For ASP.NET, Azure Functions, or any environment where context depends on the current request/trigger, provide a context factory.
 
-The usual registration style is to select the factory in the TinyDispatcher bootstrap:
+The stable registration style is to register the factory in DI before calling `UseTinyDispatcher<TContext>`:
 
 ```csharp
 public sealed class MyContextFactory : IContextFactory<MyContext>
@@ -30,9 +30,11 @@ public sealed class MyContextFactory : IContextFactory<MyContext>
     }
 }
 
+services.AddScoped<IContextFactory<MyContext>, MyContextFactory>();
+
 services.UseTinyDispatcher<MyContext>(tiny =>
 {
-    tiny.UseContextFactory<MyContextFactory>();
+    // middleware, policies, features...
 });
 ```
 
@@ -46,17 +48,6 @@ services.UseTinyDispatcher<MyContext>(
         // build MyContext from ambient state
         return await ValueTask.FromResult(new MyContext());
     });
-```
-
-Or register a factory in DI yourself:
-
-```csharp
-services.AddScoped<IContextFactory<MyContext>, MyContextFactory>();
-
-services.UseTinyDispatcher<MyContext>(tiny =>
-{
-    // middleware, policies, features...
-});
 ```
 
 If no factory exists, TinyDispatcher fails fast at startup.

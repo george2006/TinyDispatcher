@@ -51,7 +51,7 @@ services.UseTinyDispatcher<AppContext>(tiny =>
 
 ### Option B: Use a custom context with a factory
 
-For a custom context, implement `IContextFactory<TContext>` and select it inside the `UseTinyDispatcher<TContext>` bootstrap:
+For a custom context, implement `IContextFactory<TContext>` and register it in DI before calling `UseTinyDispatcher<TContext>`:
 
 ```csharp
 public sealed class MyContextFactory : IContextFactory<MyContext>
@@ -62,9 +62,11 @@ public sealed class MyContextFactory : IContextFactory<MyContext>
     }
 }
 
+services.AddScoped<IContextFactory<MyContext>, MyContextFactory>();
+
 services.UseTinyDispatcher<MyContext>(tiny =>
 {
-    tiny.UseContextFactory<MyContextFactory>();
+    // optional: middleware, policies, features
 });
 ```
 
@@ -84,20 +86,7 @@ services.UseTinyDispatcher<MyContext>(
     });
 ```
 
-### Option D: Register `IContextFactory<TContext>` in DI
-
-You can also register the factory yourself before calling `UseTinyDispatcher<TContext>`:
-
-```csharp
-services.AddScoped<IContextFactory<MyContext>, MyContextFactory>();
-
-services.UseTinyDispatcher<MyContext>(tiny =>
-{
-    // optional: middleware, policies, features
-});
-```
-
-### Option E: No-op context (when you don't need one)
+### Option D: No-op context (when you don't need one)
 
 If your commands do not need a runtime context object, bootstrap with a no-op context:
 
