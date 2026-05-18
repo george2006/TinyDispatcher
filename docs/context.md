@@ -6,7 +6,7 @@ At runtime, a context instance is created **once per dispatch** using an `IConte
 This keeps handlers clean (they receive an already-built context) and avoids "ambient" static state.
 
 The stable `1.1.x` line supports one typed context per `UseTinyDispatcher<TContext>` registration.
-Experimental context lanes are planned for `1.2.0-alpha.*`.
+Experimental context lanes are available in `1.2.0-alpha.*`.
 
 ## Shipped AppContext
 

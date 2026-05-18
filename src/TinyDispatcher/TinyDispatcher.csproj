@@ -44,7 +44,7 @@
    </PropertyGroup>
 
   <PropertyGroup>
-    <Version>1.1.0</Version>
+    <Version>1.2.0-alpha.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -53,21 +53,22 @@
   </ItemGroup>
   <PropertyGroup>
     <PackageReleaseNotes>
-      TinyDispatcher 1.1.0
+      TinyDispatcher 1.2.0-alpha.1
 
       Added
-      - Multi-assembly composition support with structured assembly contributions.
-      - Host-side pipeline generation for commands contributed by referenced assemblies.
-      - Assembly-level contribution attributes for compile-time cross-assembly composition.
+      - Experimental multi-context / context-lane dispatching.
+      - Module-owned context types inside the same modular monolith.
+      - Strongly typed dispatcher lanes with independent context factories, handlers, middleware, policies, and generated pipelines.
+      - Orders/Payments multi-lane sample covering module-specific contexts and middleware.
 
       Changed
-      - Generated ModuleInitializers now publish ThisAssemblyContribution.Create().
-      - DispatcherPipelineBootstrap stores structured contribution snapshots while preserving DI application behavior.
-      - Source generator validation now reports referenced assembly conflicts with clearer provenance.
+      - Source generator composition now models host lanes explicitly.
+      - Pipeline map emission includes lane-aware generated pipeline information.
 
-      Fixed
-      - Referenced assemblies can now contribute global middleware to host-generated pipelines.
-      - Non-host projects skip redundant referenced contribution validation.
+      Notes
+      - This is an alpha release for evaluation and feedback.
+      - APIs may change before the stable 1.2.0 release.
+      - Stay on 1.1.x for production systems that need the stable API surface.
     </PackageReleaseNotes>
 
 

@@ -29,14 +29,13 @@ Stable release:
 dotnet add package TinyDispatcher
 ```
 
-Experimental multi-context / context-lane builds will be published as `1.2.0-alpha.*`.
+Experimental multi-context / context-lane builds are published as `1.2.0-alpha.*`.
 Use them only for evaluation and early feedback:
 
 ```bash
 dotnet add package TinyDispatcher --version 1.2.0-alpha.1
 ```
 
-Run the alpha install command only after the corresponding prerelease package is published.
 `1.1.x` is the stable line. Context lanes are not part of the stable `1.1.x` API.
 
 ## Quick start
@@ -94,7 +93,7 @@ This keeps the runtime simple while letting the generator build final pipelines 
 
 ## Experimental: context lanes
 
-Context lanes are planned for `1.2.0-alpha.*`.
+Context lanes are available in `1.2.0-alpha.*`.
 They allow independent, typed dispatcher pipelines inside the same application, where each lane has its own context, handlers, middleware and policies.
 
 Use one lane by default. Add more lanes only when the application has real execution-context or pipeline differences.

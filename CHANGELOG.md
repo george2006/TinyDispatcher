@@ -1,4 +1,4 @@
-## 1.2.0-alpha.1 - planned
+## 1.2.0-alpha.1 - 2026-05-18
 
 ### Added
 - Experimental multi-context / context-lane dispatching.
