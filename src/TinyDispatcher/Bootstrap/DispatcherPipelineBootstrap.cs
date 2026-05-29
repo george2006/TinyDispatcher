@@ -1,7 +1,6 @@
 ﻿#nullable enable
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -15,9 +14,6 @@ public static class DispatcherPipelineBootstrap
 {
     public static void AddContribution(AssemblyContribution contribution)
         => PipelineContributionStore.Add(contribution);
-
-    public static IReadOnlyList<AssemblyContribution> GetContributions()
-        => PipelineContributionStore.GetSnapshot();
 
     public static void Apply(IServiceCollection services)
     {

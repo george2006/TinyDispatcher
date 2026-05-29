@@ -71,11 +71,6 @@ internal sealed class ThisAssemblyContributionEmitter
         w.EndBlock();
         w.Line();
 
-        w.BeginBlock("internal static partial class ThisAssemblyPipelineContribution");
-        w.BeginBlock("internal static void Add(IServiceCollection services)");
-        w.Line("ThisAssemblyContribution.AddServices(services);");
-        w.EndBlock();
-        w.EndBlock();
         w.EndBlock();
 
         w.EnsureAllBlocksClosed();
