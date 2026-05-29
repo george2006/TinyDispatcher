@@ -6,7 +6,7 @@ In a multi-assembly setup, the host composes these pipelines from:
 
 - local bootstrap configuration
 - locally discovered handlers
-- structured contributions published by referenced assemblies
+- contribution attributes published by referenced assemblies
 
 ## Layering order
 

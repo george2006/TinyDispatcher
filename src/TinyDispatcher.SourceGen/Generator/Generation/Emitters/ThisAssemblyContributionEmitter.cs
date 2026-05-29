@@ -40,11 +40,7 @@ internal sealed class ThisAssemblyContributionEmitter
 
         w.BeginBlock("internal static global::TinyDispatcher.Bootstrap.AssemblyContribution Create()");
         w.Line("return new global::TinyDispatcher.Bootstrap.AssemblyContribution(");
-        w.Line("    contextType: GetContextType(),");
-        w.Line("    registerServices: AddServices,");
-        w.Line("    handlers: GetHandlerBindings(),");
-        w.Line("    pipelines: GetPipelineBindings(),");
-        w.Line("    policies: GetPolicyBindings());");
+        w.Line("    registerServices: AddServices);");
         w.EndBlock();
         w.Line();
 
@@ -56,26 +52,11 @@ internal sealed class ThisAssemblyContributionEmitter
         w.EndBlock();
         w.Line();
 
-        w.Line($"private static System.Type? GetContextType() => {GetContextTypeExpression(effectiveContributionSources)};");
-        w.Line();
-
-        WriteHandlerBindings(w, discovery);
-        w.Line();
-        WritePipelineBindings(w, effectiveContributionSources);
-        w.Line();
-        WritePolicyBindings(w, effectiveContributionSources);
-        w.Line();
-
         WriteAddGeneratedPipelines(w, pipelineRegistrationMethodNames);
         w.Line("static partial void AddGeneratedHandlers(IServiceCollection services);");
         w.EndBlock();
         w.Line();
 
-        w.BeginBlock("internal static partial class ThisAssemblyPipelineContribution");
-        w.BeginBlock("internal static void Add(IServiceCollection services)");
-        w.Line("ThisAssemblyContribution.AddServices(services);");
-        w.EndBlock();
-        w.EndBlock();
         w.EndBlock();
 
         w.EnsureAllBlocksClosed();
@@ -170,16 +151,6 @@ internal sealed class ThisAssemblyContributionEmitter
         return $", ContextType = typeof({PipelineTypeNames.NormalizeFqn(options.CommandContextType!)})";
     }
 
-    private static string GetContextTypeExpression(
-        ImmutableArray<PipelineContributionSource> contributionSources)
-    {
-        var contextType = TryGetSingleContextType(contributionSources);
-        if (string.IsNullOrWhiteSpace(contextType))
-            return "null";
-
-        return $"typeof({PipelineTypeNames.NormalizeFqn(contextType!)})";
-    }
-
     private static string? TryGetSingleContextType(
         ImmutableArray<PipelineContributionSource> contributionSources)
     {
@@ -206,166 +177,6 @@ internal sealed class ThisAssemblyContributionEmitter
         }
 
         return contextType;
-    }
-
-    private static void WriteHandlerBindings(CodeWriter w, DiscoveryResult discovery)
-    {
-        w.Line("private static System.Collections.Generic.IReadOnlyList<global::TinyDispatcher.Bootstrap.HandlerBinding> GetHandlerBindings()");
-
-        if (discovery.Commands.Length == 0)
-        {
-            w.Line("    => System.Array.Empty<global::TinyDispatcher.Bootstrap.HandlerBinding>();");
-            return;
-        }
-
-        w.Line("    => new global::TinyDispatcher.Bootstrap.HandlerBinding[]");
-        w.BeginAnonymousBlock(string.Empty);
-
-        for (var i = 0; i < discovery.Commands.Length; i++)
-        {
-            var command = discovery.Commands[i];
-            w.Line(
-                $"new(typeof({command.MessageTypeFqn}), typeof({command.HandlerTypeFqn}), typeof({command.ContextTypeFqn})),");
-        }
-
-        w.EndBlock();
-        w.Line(";");
-    }
-
-    private static void WritePipelineBindings(
-        CodeWriter w,
-        ImmutableArray<PipelineContributionSource> contributionSources)
-    {
-        w.Line("private static System.Collections.Generic.IReadOnlyList<global::TinyDispatcher.Bootstrap.PipelineBinding> GetPipelineBindings()");
-
-        if (!HasPipelineBindings(contributionSources))
-        {
-            w.Line("    => System.Array.Empty<global::TinyDispatcher.Bootstrap.PipelineBinding>();");
-            return;
-        }
-
-        w.Line("    => new global::TinyDispatcher.Bootstrap.PipelineBinding[]");
-        w.BeginAnonymousBlock(string.Empty);
-
-        for (var i = 0; i < contributionSources.Length; i++)
-        {
-            var contributions = contributionSources[i].Contributions;
-            if (contributions.Globals.Length > 0)
-                w.Line($"new(commandType: null, middlewares: {BuildMiddlewareArray(contributions.Globals)}),");
-
-            var orderedCommands = PipelineOrdering.GetStringsInStableOrder(contributions.PerCommand.Keys);
-            for (var j = 0; j < orderedCommands.Length; j++)
-            {
-                var command = orderedCommands[j];
-                w.Line($"new(typeof({command}), {BuildMiddlewareArray(contributions.PerCommand[command])}),");
-            }
-        }
-
-        w.EndBlock();
-        w.Line(";");
-    }
-
-    private static bool HasPipelineBindings(
-        ImmutableArray<PipelineContributionSource> contributionSources)
-    {
-        for (var i = 0; i < contributionSources.Length; i++)
-        {
-            var contributions = contributionSources[i].Contributions;
-            if (contributions.Globals.Length > 0 || contributions.PerCommand.Count > 0)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static void WritePolicyBindings(
-        CodeWriter w,
-        ImmutableArray<PipelineContributionSource> contributionSources)
-    {
-        w.Line("private static System.Collections.Generic.IReadOnlyList<global::TinyDispatcher.Bootstrap.PolicyBinding> GetPolicyBindings()");
-
-        if (!HasPolicyBindings(contributionSources))
-        {
-            w.Line("    => System.Array.Empty<global::TinyDispatcher.Bootstrap.PolicyBinding>();");
-            return;
-        }
-
-        w.Line("    => new global::TinyDispatcher.Bootstrap.PolicyBinding[]");
-        w.BeginAnonymousBlock(string.Empty);
-
-        for (var i = 0; i < contributionSources.Length; i++)
-        {
-            var contributions = contributionSources[i].Contributions;
-            for (var j = 0; j < contributions.Policies.Length; j++)
-            {
-                var policy = contributions.Policies[j];
-                w.Line(
-                    $"new(typeof({policy.PolicyTypeFqn}), {BuildMiddlewareArray(policy.Middlewares)}, {BuildPolicyCommandArray(policy.Commands)}),");
-            }
-        }
-
-        w.EndBlock();
-        w.Line(";");
-    }
-
-    private static bool HasPolicyBindings(
-        ImmutableArray<PipelineContributionSource> contributionSources)
-    {
-        for (var i = 0; i < contributionSources.Length; i++)
-        {
-            if (contributionSources[i].Contributions.Policies.Length > 0)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static string BuildMiddlewareArray(IReadOnlyList<MiddlewareRef> middlewares)
-    {
-        if (middlewares.Count == 0)
-            return "System.Array.Empty<global::TinyDispatcher.Bootstrap.MiddlewareBinding>()";
-
-        var source = new StringBuilder();
-        source.Append("new global::TinyDispatcher.Bootstrap.MiddlewareBinding[] { ");
-
-        for (var i = 0; i < middlewares.Count; i++)
-        {
-            if (i > 0)
-                source.Append(", ");
-
-            source.Append("new(typeof(");
-            source.Append(PipelineTypeNames.OpenGenericTypeof(middlewares[i]));
-            source.Append("))");
-        }
-
-        source.Append(" }");
-        return source.ToString();
-    }
-
-    private static string BuildPolicyCommandArray(ImmutableArray<string> commands)
-    {
-        if (commands.Length == 0)
-            return "System.Array.Empty<global::TinyDispatcher.Bootstrap.PolicyCommandBinding>()";
-
-        var source = new StringBuilder();
-        source.Append("new global::TinyDispatcher.Bootstrap.PolicyCommandBinding[] { ");
-
-        for (var i = 0; i < commands.Length; i++)
-        {
-            if (i > 0)
-                source.Append(", ");
-
-            source.Append("new(typeof(");
-            source.Append(commands[i]);
-            source.Append("))");
-        }
-
-        source.Append(" }");
-        return source.ToString();
     }
 
     private static string BuildAttributeTypeList(IReadOnlyList<MiddlewareRef> middlewares)

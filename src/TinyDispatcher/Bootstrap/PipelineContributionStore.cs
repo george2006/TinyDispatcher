@@ -1,6 +1,3 @@
-using System;
-using Microsoft.Extensions.DependencyInjection;
-
 namespace TinyDispatcher.Bootstrap;
 internal static class PipelineContributionStore
 {
@@ -14,12 +11,6 @@ internal static class PipelineContributionStore
         {
             _items.Add(contribution);
         }
-    }
-
-    public static void Add(Action<IServiceCollection> contribution)
-    {
-        if (contribution is null) return;
-        Add(new AssemblyContribution(registerServices: contribution));
     }
 
     public static AssemblyContribution[] GetSnapshot()

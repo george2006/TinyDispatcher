@@ -37,10 +37,6 @@ namespace TinyDispatcher
             ValueTask NextAsync(TCommand command, TContext ctx, CancellationToken ct = default);
         }
 
-        public interface ICommandPipelineInvoker<TCommand, TContext> where TCommand : ICommand
-        {
-            ValueTask ExecuteAsync(TCommand command, TContext ctx, ICommandHandler<TCommand, TContext> handler, CancellationToken ct = default);
-        }
     }
 
     public interface ICommandMiddleware<TCommand, TContext> where TCommand : ICommand
@@ -52,14 +48,10 @@ namespace TinyDispatcher
             CancellationToken ct);
     }
 
-    public interface IGlobalCommandPipeline<TCommand, TContext> : Pipeline.ICommandPipelineInvoker<TCommand, TContext>
-        where TCommand : ICommand { }
-
-    public interface IPolicyCommandPipeline<TCommand, TContext> : Pipeline.ICommandPipelineInvoker<TCommand, TContext>
-        where TCommand : ICommand { }
-
-    public interface ICommandPipeline<TCommand, TContext> : Pipeline.ICommandPipelineInvoker<TCommand, TContext>
-        where TCommand : ICommand { }
+    public interface ICommandPipeline<TCommand, TContext> where TCommand : ICommand
+    {
+        ValueTask ExecuteAsync(TCommand command, TContext ctx, ICommandHandler<TCommand, TContext> handler, CancellationToken ct = default);
+    }
 
     public sealed class TinyBootstrapp
     {

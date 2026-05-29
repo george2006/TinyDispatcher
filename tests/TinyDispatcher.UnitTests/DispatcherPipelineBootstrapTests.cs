@@ -18,8 +18,8 @@ public sealed class DispatcherPipelineBootstrapTests
 
         var calls = 0;
 
-        DispatcherPipelineBootstrap.AddContribution(_ => calls++);
-        DispatcherPipelineBootstrap.AddContribution(_ => calls++);
+        DispatcherPipelineBootstrap.AddContribution(ContributionThatIncrementsCallCount());
+        DispatcherPipelineBootstrap.AddContribution(ContributionThatIncrementsCallCount());
 
         var services = new ServiceCollection();
 
@@ -28,6 +28,9 @@ public sealed class DispatcherPipelineBootstrapTests
         DispatcherPipelineBootstrap.Apply(services);
 
         Assert.Equal(2, calls);
+
+        AssemblyContribution ContributionThatIncrementsCallCount()
+            => new(registerServices: _ => calls++);
     }
 
     [Fact]
