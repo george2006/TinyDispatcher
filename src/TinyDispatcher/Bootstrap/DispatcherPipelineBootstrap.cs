@@ -16,9 +16,6 @@ public static class DispatcherPipelineBootstrap
     public static void AddContribution(AssemblyContribution contribution)
         => PipelineContributionStore.Add(contribution);
 
-    public static void AddContribution(Action<IServiceCollection> contribution)
-        => PipelineContributionStore.Add(contribution);
-
     public static IReadOnlyList<AssemblyContribution> GetContributions()
         => PipelineContributionStore.GetSnapshot();
 
@@ -30,12 +27,9 @@ public static class DispatcherPipelineBootstrap
         if (services.Any(d => d.ServiceType == typeof(DispatcherPipelineBootstrapAppliedMarker)))
             return;
 
-        var contributions = PipelineContributionStore.GetSnapshot();
-        var contributedAssemblyContributions = (IReadOnlyList<AssemblyContribution>)contributions;
-
         services.AddSingleton<DispatcherPipelineBootstrapAppliedMarker>();
-        services.AddSingleton(contributedAssemblyContributions);
 
+        var contributions = PipelineContributionStore.GetSnapshot();
         foreach (var c in contributions)
             c.Apply(services);
     }
