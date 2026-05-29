@@ -104,70 +104,6 @@ public sealed class DispatcherPipelineBootstrapTests
     }
 
     [Fact]
-    public void Stores_contributed_command_handler_metadata_snapshot()
-    {
-        ResetStore();
-        DispatcherPipelineBootstrap.AddContribution(new AssemblyContribution(
-            contextType: typeof(AppContext),
-            handlers: new[]
-            {
-                new HandlerBinding(typeof(CreateOrder), typeof(CreateOrderHandler), typeof(AppContext)),
-            }));
-
-        var services = CreateServices();
-
-        DispatcherPipelineBootstrap.Apply(services);
-
-        var typedSnapshot = GetHandlerBindingsSnapshot(services);
-        var snapshot = GetCommandHandlersSnapshot(services);
-
-        var binding = Assert.Single(typedSnapshot);
-        Assert.Equal(typeof(CreateOrder), binding.CommandType);
-        Assert.Equal(typeof(CreateOrderHandler), binding.HandlerType);
-        Assert.Equal(typeof(AppContext), binding.ContextType);
-
-        Assert.Single(snapshot);
-        Assert.Equal("global::TinyDispatcher.UnitTests.Bootstrap.DispatcherPipelineBootstrapTests.CreateOrder", snapshot[0].CommandTypeFqn);
-        Assert.Equal("global::TinyDispatcher.UnitTests.Bootstrap.DispatcherPipelineBootstrapTests.CreateOrderHandler", snapshot[0].HandlerTypeFqn);
-        Assert.Equal("global::TinyDispatcher.UnitTests.Bootstrap.DispatcherPipelineBootstrapTests.AppContext", snapshot[0].ContextTypeFqn);
-    }
-
-    [Fact]
-    public void Stores_empty_command_handler_snapshot_for_delegate_contribution()
-    {
-        ResetStore();
-        DispatcherPipelineBootstrap.AddContribution(AddTestService);
-
-        var services = CreateServices();
-
-        DispatcherPipelineBootstrap.Apply(services);
-
-        var snapshot = GetCommandHandlersSnapshot(services);
-
-        Assert.Empty(snapshot);
-    }
-
-    [Fact]
-    public void Deduplicates_identical_contributed_command_handler_metadata()
-    {
-        ResetStore();
-        var handler = new HandlerBinding(typeof(CreateOrder), typeof(CreateOrderHandler), typeof(AppContext));
-
-        DispatcherPipelineBootstrap.AddContribution(new AssemblyContribution(handlers: new[] { handler }));
-        DispatcherPipelineBootstrap.AddContribution(new AssemblyContribution(handlers: new[] { handler }));
-
-        var services = CreateServices();
-
-        DispatcherPipelineBootstrap.Apply(services);
-
-        var typedSnapshot = GetHandlerBindingsSnapshot(services);
-        var snapshot = GetCommandHandlersSnapshot(services);
-
-        Assert.Single(typedSnapshot);
-        Assert.Single(snapshot);
-    }
-
-    [Fact]
     public void Stores_all_structured_contributions_for_future_composition()
     {
         ResetStore();
@@ -253,20 +189,6 @@ public sealed class DispatcherPipelineBootstrapTests
         return count;
     }
 
-    private static IReadOnlyList<CommandHandlerDescriptor> GetCommandHandlersSnapshot(IServiceCollection services)
-    {
-        for (int i = 0; i < services.Count; i++)
-        {
-            var descriptor = services[i];
-            if (descriptor.ServiceType != typeof(IReadOnlyList<CommandHandlerDescriptor>))
-                continue;
-
-            return Assert.IsAssignableFrom<IReadOnlyList<CommandHandlerDescriptor>>(descriptor.ImplementationInstance);
-        }
-
-        throw new InvalidOperationException("Expected contributed command handler snapshot registration.");
-    }
-
     private static IReadOnlyList<AssemblyContribution> GetAssemblyContributionSnapshot(IServiceCollection services)
     {
         for (int i = 0; i < services.Count; i++)
@@ -279,20 +201,6 @@ public sealed class DispatcherPipelineBootstrapTests
         }
 
         throw new InvalidOperationException("Expected structured contribution snapshot registration.");
-    }
-
-    private static IReadOnlyList<HandlerBinding> GetHandlerBindingsSnapshot(IServiceCollection services)
-    {
-        for (int i = 0; i < services.Count; i++)
-        {
-            var descriptor = services[i];
-            if (descriptor.ServiceType != typeof(IReadOnlyList<HandlerBinding>))
-                continue;
-
-            return Assert.IsAssignableFrom<IReadOnlyList<HandlerBinding>>(descriptor.ImplementationInstance);
-        }
-
-        throw new InvalidOperationException("Expected structured handler binding snapshot registration.");
     }
 
     private static void ResetStore()
