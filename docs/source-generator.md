@@ -46,8 +46,8 @@ If `UseTinyNoOpContext` is used, the generator can emit a pipeline that avoids c
 In a multi-project setup:
 
 - non-host assemblies analyze their own handlers and pipeline-relevant facts
-- they emit generated assembly contributions for runtime publication
-- they also emit assembly-level contribution attributes as compile-time metadata
+- they emit generated runtime hooks for DI registration
+- they emit assembly-level contribution attributes as compile-time metadata
 - the host generator reads those referenced contributions and composes final pipelines for each configured host context
 
 Important rules:

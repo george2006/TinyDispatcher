@@ -27,7 +27,7 @@ A contributing assembly:
   - per-command middleware bindings
   - policy bindings
   - context information
-- emits generated runtime publication code
+- emits generated runtime DI registration hooks
 - emits assembly-level contribution attributes for referenced host generators to consume
 
 It does **not** generate the final dispatcher graph for the whole app.
@@ -55,10 +55,7 @@ Each contributing assembly emits `ThisAssemblyContribution` with:
 
 The generated `ModuleInitializer` publishes `ThisAssemblyContribution.Create()` through `DispatcherPipelineBootstrap.AddContribution(...)`.
 
-This runtime transport is used to:
-
-- apply generated registrations
-- expose structured contribution snapshots for future runtime validation/composition work
+This runtime transport is only used to apply generated DI registrations. It does not carry metadata used for host composition.
 
 ### Compile-time transport
 

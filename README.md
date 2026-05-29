@@ -148,7 +148,6 @@ Critical runtime infrastructure is fully covered, including:
 - `DefaultAppContextFactory`
 - `ServiceCollectionExtensions`
 - `TinyBootstrap`
-- `PipelineContributionStore`
 
 These components form the core execution and configuration model of TinyDispatcher.
 

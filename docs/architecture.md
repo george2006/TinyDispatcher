@@ -19,8 +19,8 @@ The runtime contains:
 At startup, generated code publishes contributions via a small bootstrap hook:
 
 - the generator emits a `ModuleInitializer` per project
-- module initializers publish structured assembly contributions
-- `UseTinyDispatcher<TContext>` calls `DispatcherPipelineBootstrap.Apply(services)` to apply generated registrations and contribution metadata
+- module initializers publish generated DI registration hooks
+- `UseTinyDispatcher<TContext>` calls `DispatcherPipelineBootstrap.Apply(services)` to apply generated registrations
 
 ## Generator
 
@@ -37,8 +37,8 @@ The generator also emits diagnostics for invalid shapes/config (duplicate handle
 ## Ownership boundaries
 
 - Contributing assemblies analyze local handlers, middleware, and policies at build time.
-- Contributing assemblies publish structured metadata through generated code and assembly attributes.
+- Contributing assemblies publish compile-time metadata through assembly attributes.
 - The host owns final pipeline composition.
-- The runtime applies generated registrations and stores contribution snapshots, but does not perform discovery or runtime scanning.
+- The runtime applies generated registrations, but does not perform discovery, composition, or runtime scanning.
 
 For the multi-assembly flow, see [Multi-Assembly Composition](multi-assembly-composition.md).
