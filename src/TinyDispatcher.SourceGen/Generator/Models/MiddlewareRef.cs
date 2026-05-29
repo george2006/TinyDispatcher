@@ -1,7 +1,5 @@
 ﻿#nullable enable
 
-using System.Collections.Immutable;
-
 namespace TinyDispatcher.SourceGen.Generator.Models;
 
 /// <summary>
@@ -12,10 +10,4 @@ namespace TinyDispatcher.SourceGen.Generator.Models;
 /// </summary>
 public readonly record struct MiddlewareRef(
     string OpenTypeFqn,
-    int Arity)
-{
-    internal static ImmutableArray<MiddlewareRef> FromOrderedEntries(ImmutableArray<OrderedEntry> globals)
-    {
-        throw new NotImplementedException();
-    }
-}
+    int Arity);
