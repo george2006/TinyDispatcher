@@ -113,6 +113,7 @@ See [Multi-Lane Dispatching](docs/multi-lane-dispatching.md) for the alpha docum
 - [Context & Features](docs/context.md)
 - [Source Generator](docs/source-generator.md)
 - [Pipeline Maps](docs/pipeline-maps.md)
+- [TinySuite and sample app](docs/tiny-suite.md)
 - [Performance Notes](docs/performance.md)
 - [Migration Guide](docs/migration.md)
 - [Design Decisions](docs/design-decisions.md)
