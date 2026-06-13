@@ -1,3 +1,19 @@
+## 1.2.0-rc1 - 2026-06-13
+
+### Added
+- Release candidate for multi-context / context-lane dispatching.
+  - Multiple typed dispatcher lanes can live in one host.
+  - Each lane can own its context factory, handlers, middleware, policies, and generated pipeline.
+  - `NoOpContext` can participate as a no-context lane alongside typed context lanes.
+
+### Changed
+- Updated package metadata and documentation from alpha to release candidate language.
+- Folded `NoOpContext` dispatch tests into the main unit test suite now that no-op context is modeled as a lane.
+
+### Notes
+- `1.1.x` remains the current stable line for production systems.
+- The `1.2.0-rc*` line is intended to become stable `1.2.0` unless final RC feedback finds a release-blocking issue.
+
 ## 1.2.0-alpha.1 - 2026-05-18
 
 ### Added
