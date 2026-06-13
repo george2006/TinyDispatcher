@@ -44,7 +44,7 @@
    </PropertyGroup>
 
   <PropertyGroup>
-    <Version>1.2.0-alpha.1</Version>
+    <Version>1.2.0-rc1</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -53,12 +53,13 @@
   </ItemGroup>
   <PropertyGroup>
     <PackageReleaseNotes>
-      TinyDispatcher 1.2.0-alpha.1
+      TinyDispatcher 1.2.0-rc1
 
       Added
-      - Experimental multi-context / context-lane dispatching.
+      - Release candidate for multi-context / context-lane dispatching.
       - Module-owned context types inside the same modular monolith.
       - Strongly typed dispatcher lanes with independent context factories, handlers, middleware, policies, and generated pipelines.
+      - NoOpContext can participate as a no-context lane alongside typed context lanes.
       - Orders/Payments multi-lane sample covering module-specific contexts and middleware.
 
       Changed
@@ -66,9 +67,9 @@
       - Pipeline map emission includes lane-aware generated pipeline information.
 
       Notes
-      - This is an alpha release for evaluation and feedback.
-      - APIs may change before the stable 1.2.0 release.
-      - Stay on 1.1.x for production systems that need the stable API surface.
+      - This is a release candidate for 1.2.0.
+      - The multi-lane API is intended to be stable unless final RC feedback finds a release-blocking issue.
+      - Stay on 1.1.x for production systems that need the current stable API surface.
     </PackageReleaseNotes>
 
 
