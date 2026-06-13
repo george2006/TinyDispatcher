@@ -1,14 +1,14 @@
 # Multi-lane dispatching
 
-This page documents the experimental `1.2.0-alpha.*` multi-context / context-lane model.
+This page documents the `1.2.0-rc*` multi-context / context-lane model.
 The stable `1.1.x` line does not include context lanes.
 
-TinyDispatcher `1.2.0-alpha.*` introduces context lanes: independent, typed dispatcher pipelines inside the same application. Each lane has its own context, handlers, middleware and policies.
+TinyDispatcher `1.2.0-rc*` introduces context lanes: independent, typed dispatcher pipelines inside the same application. Each lane has its own context, handlers, middleware and policies.
 
-Alpha status:
+Release candidate status:
 
-- APIs may change before the stable release.
-- Use this for evaluation, samples, and feedback.
+- The API is intended to be stable unless final RC feedback finds a release-blocking issue.
+- Use this for evaluation, samples, and final feedback before `1.2.0`.
 - Stay on `1.1.x` for production systems that need the stable API surface.
 
 A lane is a typed dispatcher pipeline for a specific execution context. In a modular monolith, that usually means one lane per business area when those areas really do execute differently.
@@ -137,7 +137,7 @@ TinyDispatcher context lanes:
 
 This is not an argument against mediator-style tools. A flat pipeline can be exactly right for small systems or applications with one natural execution context. Context lanes are useful when a modular monolith has multiple business areas that deserve different typed execution paths.
 
-## Running the alpha sample
+## Running the sample
 
 The runnable sample is under `samples/src/TinyDispatcher.Samples.MultiLaneDispatching`.
 

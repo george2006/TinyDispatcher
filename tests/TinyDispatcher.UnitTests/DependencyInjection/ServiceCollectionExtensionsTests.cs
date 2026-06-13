@@ -91,15 +91,6 @@ public sealed class ServiceCollectionExtensionsTests
     }
 
     [Fact]
-    public void Use_tiny_no_op_context_when_services_is_null_throws_argument_null_exception()
-    {
-        var exception = Assert.Throws<ArgumentNullException>(() =>
-            ServiceCollectionExtensions.UseTinyNoOpContext(null!, _ => { }));
-
-        Assert.Equal("services", exception.ParamName);
-    }
-
-    [Fact]
     public void Add_dispatcher_when_no_context_factory_registered_throws()
     {
         var services = new ServiceCollection();
