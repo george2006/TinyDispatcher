@@ -25,6 +25,15 @@ public sealed class ServiceCollectionExtensionsTests
     }
 
     [Fact]
+    public void UseTinyNoOpContext_with_null_services_throws()
+    {
+        var exception = Assert.Throws<ArgumentNullException>(() =>
+            ServiceCollectionExtensions.UseTinyNoOpContext(null!, _ => { }));
+
+        Assert.Equal("services", exception.ParamName);
+    }
+
+    [Fact]
     public async Task UseTinyDispatcher_auto_registers_DefaultAppContextFactory_for_AppContext()
     {
         var services = new ServiceCollection();
