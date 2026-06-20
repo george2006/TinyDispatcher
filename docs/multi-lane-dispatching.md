@@ -1,15 +1,15 @@
 # Multi-lane dispatching
 
-This page documents the `1.2.0-rc*` multi-context / context-lane model.
-The stable `1.1.x` line does not include context lanes.
+This page documents the `1.2.0` multi-context / context-lane model.
+The `1.1.x` line does not include context lanes.
 
-TinyDispatcher `1.2.0-rc*` introduces context lanes: independent, typed dispatcher pipelines inside the same application. Each lane has its own context, handlers, middleware and policies.
+TinyDispatcher `1.2.0` introduces context lanes: independent, typed dispatcher pipelines inside the same application. Each lane has its own context, handlers, middleware and policies.
 
-Release candidate status:
+Release status:
 
-- The API is intended to be stable unless final RC feedback finds a release-blocking issue.
-- Use this for evaluation, samples, and final feedback before `1.2.0`.
-- Stay on `1.1.x` for production systems that need the stable API surface.
+- `1.2.0` is the stable context-lane release.
+- Use one lane by default, then add lanes when modules need different contexts or pipelines.
+- Stay on `1.1.x` only if the application is not ready to adopt context lanes.
 
 A lane is a typed dispatcher pipeline for a specific execution context. In a modular monolith, that usually means one lane per business area when those areas really do execute differently.
 
