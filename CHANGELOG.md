@@ -1,3 +1,22 @@
+## 1.2.0 - 2026-06-20
+
+### Added
+- Stable multi-context / context-lane dispatching.
+  - Multiple typed dispatcher lanes can live in one host.
+  - Each lane can own its context factory, handlers, middleware, policies, and generated pipeline.
+  - `NoOpContext` can participate as a no-context lane alongside typed context lanes.
+  - The Orders/Payments sample demonstrates module-owned contexts and lane-specific middleware.
+
+### Changed
+- Source generator composition now models host lanes explicitly.
+- Pipeline map emission includes lane-aware generated pipeline information.
+- No-op context dispatch tests now live in the main unit test suite because no-op context is modeled as a lane.
+
+### Notes
+- `1.2.0` is the stable release of the context-lane API introduced in the `1.2.0` prerelease line.
+- Use one lane by default. Add lanes when modules need distinct contexts or pipelines.
+- `1.1.x` remains available for applications that are not ready to adopt context lanes.
+
 ## 1.2.0-rc1 - 2026-06-13
 
 ### Added

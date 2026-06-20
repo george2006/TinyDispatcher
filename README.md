@@ -19,7 +19,7 @@ It provides a predictable, explicit, and performant command/query dispatch core 
 - **Pluggable context factory** (delegate factory or DI registration)
 - **Feature-friendly `AppContext`** (optional `IFeatureInitializer`-based composition)
 - **Source-generator diagnostics** for invalid shapes/config (fail fast, no guessing)
-- **Context lanes** in `1.2.0-rc*` for module-owned contexts and typed dispatchers
+- **Context lanes** in `1.2.0` for module-owned contexts and typed dispatchers
 
 ## Install
 
@@ -29,13 +29,7 @@ Stable release:
 dotnet add package TinyDispatcher
 ```
 
-Multi-context / context-lane builds are available as the `1.2.0` release candidate line:
-
-```bash
-dotnet add package TinyDispatcher --version 1.2.0-rc1
-```
-
-`1.1.x` is the current stable line. Context lanes are part of the `1.2.0` release candidate and are intended to be stable unless final RC feedback finds a release-blocking issue.
+`1.2.0` is the current stable line and includes context lanes. `1.1.x` remains available for applications that are not ready to adopt the multi-context API.
 
 ## Quick start
 
@@ -94,19 +88,19 @@ This keeps the runtime simple while letting the generator build final pipelines 
 
 ## Context lanes
 
-Context lanes are available in `1.2.0-rc*`.
+Context lanes are available in `1.2.0`.
 They allow independent, typed dispatcher pipelines inside the same application, where each lane has its own context, handlers, middleware and policies.
 
 Use one lane by default. Add more lanes only when the application has real execution-context or pipeline differences.
 
-See [Multi-Lane Dispatching](docs/multi-lane-dispatching.md) for the release candidate documentation and Orders/Payments sample pointers.
+See [Multi-Lane Dispatching](docs/multi-lane-dispatching.md) for documentation and Orders/Payments sample pointers.
 
 ## Documentation
 
 - [Getting Started](docs/getting-started.md)
 - [Architecture](docs/architecture.md)
 - [Multi-Assembly Composition](docs/multi-assembly-composition.md)
-- [Multi-Lane Dispatching](docs/multi-lane-dispatching.md) (`1.2.0-rc*`)
+- [Multi-Lane Dispatching](docs/multi-lane-dispatching.md) (`1.2.0`)
 - [Middleware](docs/middleware.md)
 - [Pipelines & Layering](docs/pipelines.md)
 - [Context & Features](docs/context.md)
