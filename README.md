@@ -98,7 +98,7 @@ See [Multi-Lane Dispatching](docs/multi-lane-dispatching.md) for documentation a
 
 ## OpenTelemetry
 
-Built-in OpenTelemetry support will be introduced in `1.3.0-beta.1`.
+Built-in OpenTelemetry support is available starting with `1.3.0-beta.1`.
 
 TinyDispatcher emits standard .NET activities and metrics for dispatched commands and queries. Operations preserve the current trace context, so they appear beneath ASP.NET Core requests, worker activities, and parent dispatches.
 

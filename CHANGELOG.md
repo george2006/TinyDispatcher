@@ -1,4 +1,4 @@
-## 1.3.0-beta.1 - Unreleased
+## 1.3.0-beta.1 - 2026-08-16
 
 ### Added
 - Built-in OpenTelemetry activities for commands and queries, including natural parent-child propagation, handler identity, and success, failure, or cancellation outcomes.

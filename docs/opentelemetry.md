@@ -3,9 +3,9 @@
 TinyDispatcher provides built-in traces and metrics through the standard .NET diagnostics APIs.
 It does not choose an exporter or send telemetry anywhere. Applications decide whether to collect the telemetry and where to export it.
 
-This capability will be introduced in `1.3.0-beta.1`.
+This capability is available starting with `1.3.0-beta.1`.
 
-After the beta is published, install it with:
+Install the beta with:
 
 ```powershell
 dotnet add package TinyDispatcher --version 1.3.0-beta.1

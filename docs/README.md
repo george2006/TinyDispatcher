@@ -15,7 +15,7 @@ Key capabilities (high level):
 
 ## Release channels
 
-- `1.3.0-beta.1` will introduce built-in OpenTelemetry traces and metrics for dispatched commands and queries.
+- `1.3.0-beta.1` introduces built-in OpenTelemetry traces and metrics for dispatched commands and queries.
 - `1.2.0` is the stable line. It includes compile-time discovery, generated pipelines, explicit contexts, pluggable context factories, no-op context mode, multi-assembly composition, and context lanes.
 - `1.1.x` remains available for applications that are not ready to adopt the multi-context API.
 
