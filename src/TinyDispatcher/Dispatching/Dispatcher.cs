@@ -32,6 +32,8 @@ public sealed class Dispatcher<TContext> : IDispatcher<TContext>
 
         var handler = _services.GetRequiredService<ICommandHandler<TCommand, TContext>>();
 
+        using var activity = DispatcherTelemetry.StartCommand<TCommand>(handler.GetType());
+
         var ctx = await _contextFactory.CreateAsync(ct).ConfigureAwait(false);
             
         var pipeline = _services.GetService<ICommandPipeline<TCommand, TContext>>();
@@ -39,19 +41,29 @@ public sealed class Dispatcher<TContext> : IDispatcher<TContext>
         if (pipeline is null)
         {
             await handler.HandleAsync(command, ctx, ct).ConfigureAwait(false);
-            return;
+        }
+        else
+        {
+            await pipeline.ExecuteAsync(command, ctx, handler, ct).ConfigureAwait(false);
         }
 
-        await pipeline.ExecuteAsync(command, ctx, handler, ct).ConfigureAwait(false);
+        DispatcherTelemetry.CompleteSuccessfully(activity);
 
     }
 
-    public Task<TResult> DispatchAsync<TQuery, TResult>(TQuery query, CancellationToken ct = default)
+    public async Task<TResult> DispatchAsync<TQuery, TResult>(TQuery query, CancellationToken ct = default)
         where TQuery : IQuery<TResult>
     {
         if (query is null) throw new ArgumentNullException(nameof(query));
 
         var handler = _services.GetRequiredService<IQueryHandler<TQuery, TResult>>();
-        return handler.HandleAsync(query, ct);
+
+        using var activity = DispatcherTelemetry.StartQuery<TQuery>(handler.GetType());
+
+        var result = await handler.HandleAsync(query, ct).ConfigureAwait(false);
+
+        DispatcherTelemetry.CompleteSuccessfully(activity);
+
+        return result;
     }
 }
