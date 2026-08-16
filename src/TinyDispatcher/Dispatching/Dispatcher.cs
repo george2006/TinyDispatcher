@@ -30,12 +30,12 @@ public sealed class Dispatcher<TContext> : IDispatcher<TContext>
     {
         if (command is null) throw new ArgumentNullException(nameof(command));
 
-        using var activity = DispatcherTelemetry.StartCommand<TCommand>();
+        using var telemetry = DispatcherTelemetry.StartCommand<TCommand>();
 
         try
         {
             var handler = _services.GetRequiredService<ICommandHandler<TCommand, TContext>>();
-            DispatcherTelemetry.SetHandler(activity, handler.GetType());
+            telemetry.SetHandler(handler.GetType());
 
             var ctx = await _contextFactory.CreateAsync(ct).ConfigureAwait(false);
             var pipeline = _services.GetService<ICommandPipeline<TCommand, TContext>>();
@@ -49,16 +49,16 @@ public sealed class Dispatcher<TContext> : IDispatcher<TContext>
                 await pipeline.ExecuteAsync(command, ctx, handler, ct).ConfigureAwait(false);
             }
 
-            DispatcherTelemetry.CompleteSuccessfully(activity);
+            telemetry.CompleteSuccessfully();
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            DispatcherTelemetry.CompleteAsCanceled(activity);
+            telemetry.CompleteAsCanceled();
             throw;
         }
         catch (Exception exception)
         {
-            DispatcherTelemetry.CompleteWithFailure(activity, exception);
+            telemetry.CompleteWithFailure(exception);
             throw;
         }
     }
@@ -68,27 +68,27 @@ public sealed class Dispatcher<TContext> : IDispatcher<TContext>
     {
         if (query is null) throw new ArgumentNullException(nameof(query));
 
-        using var activity = DispatcherTelemetry.StartQuery<TQuery>();
+        using var telemetry = DispatcherTelemetry.StartQuery<TQuery>();
 
         try
         {
             var handler = _services.GetRequiredService<IQueryHandler<TQuery, TResult>>();
-            DispatcherTelemetry.SetHandler(activity, handler.GetType());
+            telemetry.SetHandler(handler.GetType());
 
             var result = await handler.HandleAsync(query, ct).ConfigureAwait(false);
 
-            DispatcherTelemetry.CompleteSuccessfully(activity);
+            telemetry.CompleteSuccessfully();
 
             return result;
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            DispatcherTelemetry.CompleteAsCanceled(activity);
+            telemetry.CompleteAsCanceled();
             throw;
         }
         catch (Exception exception)
         {
-            DispatcherTelemetry.CompleteWithFailure(activity, exception);
+            telemetry.CompleteWithFailure(exception);
             throw;
         }
     }

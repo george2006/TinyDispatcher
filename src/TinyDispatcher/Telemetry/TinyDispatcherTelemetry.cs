@@ -6,4 +6,6 @@ namespace TinyDispatcher;
 public static class TinyDispatcherTelemetry
 {
     public const string ActivitySourceName = "TinyDispatcher";
+
+    public const string MeterName = "TinyDispatcher";
 }
