@@ -5,6 +5,23 @@ using TinyDispatcher;
 using TinyDispatcher.Dispatching;
 using TinyDispatcher.Samples.Telemetry.AspNetCore;
 
+double[] operationDurationBoundariesInSeconds =
+[
+    0.001,
+    0.0025,
+    0.005,
+    0.01,
+    0.025,
+    0.05,
+    0.1,
+    0.25,
+    0.5,
+    1,
+    2.5,
+    5,
+    10
+];
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.UseTinyDispatcher<TinyDispatcher.AppContext>(_ => { });
@@ -22,7 +39,14 @@ builder.Services
         .AddConsoleExporter())
     .WithMetrics(metrics => metrics
         .AddMeter(TinyDispatcherTelemetry.MeterName)
-        .AddConsoleExporter());
+        .AddView(
+            "tiny.operation.duration",
+            new ExplicitBucketHistogramConfiguration
+            {
+                Boundaries = operationDurationBoundariesInSeconds
+            })
+        .AddConsoleExporter((_, metricReaderOptions) =>
+            metricReaderOptions.PeriodicExportingMetricReaderOptions.ExportIntervalMilliseconds = -1));
 
 var app = builder.Build();
 

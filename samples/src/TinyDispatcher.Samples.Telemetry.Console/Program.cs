@@ -10,6 +10,23 @@ using TinyDispatcher.Samples.Telemetry.Console;
 
 const string sampleActivitySourceName = "TinyDispatcher.Samples.Telemetry.Console";
 
+double[] operationDurationBoundariesInSeconds =
+[
+    0.001,
+    0.0025,
+    0.005,
+    0.01,
+    0.025,
+    0.05,
+    0.1,
+    0.25,
+    0.5,
+    1,
+    2.5,
+    5,
+    10
+];
+
 var resource = ResourceBuilder.CreateDefault().AddService(
     serviceName: "TinyShop.Console",
     serviceVersion: "1.0.0");
@@ -24,7 +41,14 @@ var tracerProvider = Sdk.CreateTracerProviderBuilder()
 var meterProvider = Sdk.CreateMeterProviderBuilder()
     .SetResourceBuilder(resource)
     .AddMeter(TinyDispatcherTelemetry.MeterName)
-    .AddConsoleExporter()
+    .AddView(
+        "tiny.operation.duration",
+        new ExplicitBucketHistogramConfiguration
+        {
+            Boundaries = operationDurationBoundariesInSeconds
+        })
+    .AddConsoleExporter((_, metricReaderOptions) =>
+        metricReaderOptions.PeriodicExportingMetricReaderOptions.ExportIntervalMilliseconds = -1)
     .Build();
 
 var services = new ServiceCollection();
