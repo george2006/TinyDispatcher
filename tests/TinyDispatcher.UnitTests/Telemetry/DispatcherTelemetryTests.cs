@@ -36,6 +36,7 @@ public sealed class DispatcherTelemetryTests
         Assert.Equal(nameof(TestCommand), GetTag(activity, "tiny.operation.name"));
         Assert.Equal(typeof(TestCommand).FullName, GetTag(activity, "tiny.operation.identity"));
         Assert.Equal("command", GetTag(activity, "tiny.operation.type"));
+        Assert.Equal(typeof(TelemetryContext).FullName, GetTag(activity, "tiny.dispatcher.context"));
         Assert.Equal(typeof(TestCommandHandler).FullName, GetTag(activity, "tiny.operation.handler"));
         Assert.Equal("success", GetTag(activity, "tiny.operation.outcome"));
         Assert.DoesNotContain(activity.Tags, tag => tag.Value == "secret-payload");
@@ -60,6 +61,7 @@ public sealed class DispatcherTelemetryTests
 
         Assert.Equal(nameof(TestQuery), activity.OperationName);
         Assert.Equal("query", GetTag(activity, "tiny.operation.type"));
+        Assert.Equal(typeof(TelemetryContext).FullName, GetTag(activity, "tiny.dispatcher.context"));
         Assert.Equal(typeof(TestQueryHandler).FullName, GetTag(activity, "tiny.operation.handler"));
         Assert.Equal("success", GetTag(activity, "tiny.operation.outcome"));
         Assert.DoesNotContain(activity.Tags, tag => tag.Value == "secret-query");

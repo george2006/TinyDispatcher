@@ -124,8 +124,11 @@ public sealed class DispatcherOpenTelemetryTests
         Assert.Equal(new[] { "failure", "success" },
             executions.Select(point => point.Tags["tiny.operation.outcome"]).OrderBy(value => value));
         Assert.All(executions, point => Assert.Equal(
-            new[] { "tiny.operation.identity", "tiny.operation.outcome", "tiny.operation.type" },
+            new[] { "tiny.dispatcher.context", "tiny.operation.identity", "tiny.operation.outcome", "tiny.operation.type" },
             point.Tags.Keys.OrderBy(key => key)));
+        Assert.All(executions, point => Assert.Equal(
+            typeof(TestContext).FullName,
+            point.Tags["tiny.dispatcher.context"]));
     }
 
     private static ServiceProvider BuildProvider(Action<IServiceCollection> configure)

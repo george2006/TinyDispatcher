@@ -30,7 +30,7 @@ public sealed class Dispatcher<TContext> : IDispatcher<TContext>
     {
         if (command is null) throw new ArgumentNullException(nameof(command));
 
-        using var telemetry = DispatcherTelemetry.StartCommand<TCommand>();
+        using var telemetry = DispatcherTelemetry.StartCommand<TCommand, TContext>();
 
         try
         {
@@ -68,7 +68,7 @@ public sealed class Dispatcher<TContext> : IDispatcher<TContext>
     {
         if (query is null) throw new ArgumentNullException(nameof(query));
 
-        using var telemetry = DispatcherTelemetry.StartQuery<TQuery>();
+        using var telemetry = DispatcherTelemetry.StartQuery<TQuery, TContext>();
 
         try
         {
