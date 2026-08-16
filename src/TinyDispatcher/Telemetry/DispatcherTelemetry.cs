@@ -11,6 +11,7 @@ internal static class DispatcherTelemetry
     private const string OperationTypeAttribute = "tiny.operation.type";
     private const string OperationHandlerAttribute = "tiny.operation.handler";
     private const string OperationOutcomeAttribute = "tiny.operation.outcome";
+    private const string DispatcherContextAttribute = "tiny.dispatcher.context";
     private const string ErrorTypeAttribute = "error.type";
 
     private const string CommandOperationType = "command";
@@ -37,24 +38,26 @@ internal static class DispatcherTelemetry
         "s",
         "Duration of TinyDispatcher operations.");
 
-    internal static DispatcherOperationTelemetry StartCommand<TCommand>()
+    internal static DispatcherOperationTelemetry StartCommand<TCommand, TContext>()
         where TCommand : ICommand
     {
-        return StartOperation(typeof(TCommand), CommandOperationType);
+        return StartOperation(typeof(TCommand), typeof(TContext), CommandOperationType);
     }
 
-    internal static DispatcherOperationTelemetry StartQuery<TQuery>()
+    internal static DispatcherOperationTelemetry StartQuery<TQuery, TContext>()
     {
-        return StartOperation(typeof(TQuery), QueryOperationType);
+        return StartOperation(typeof(TQuery), typeof(TContext), QueryOperationType);
     }
 
     private static DispatcherOperationTelemetry StartOperation(
         Type operationType,
+        Type contextType,
         string operationKind)
     {
         var startTimestamp = Stopwatch.GetTimestamp();
         var operationName = operationType.Name;
         var operationIdentity = GetTypeIdentity(operationType);
+        var contextIdentity = GetTypeIdentity(contextType);
         var activity = ActivitySource.StartActivity(operationName, ActivityKind.Internal);
 
         if (activity is not null)
@@ -62,11 +65,13 @@ internal static class DispatcherTelemetry
             activity.SetTag(OperationNameAttribute, operationName);
             activity.SetTag(OperationIdentityAttribute, operationIdentity);
             activity.SetTag(OperationTypeAttribute, operationKind);
+            activity.SetTag(DispatcherContextAttribute, contextIdentity);
         }
 
         return new DispatcherOperationTelemetry(
             activity,
             operationIdentity,
+            contextIdentity,
             operationKind,
             startTimestamp);
     }
@@ -82,6 +87,7 @@ internal static class DispatcherTelemetry
     {
         TagList tags = default;
         tags.Add(OperationIdentityAttribute, operation.OperationIdentity);
+        tags.Add(DispatcherContextAttribute, operation.ContextIdentity);
         tags.Add(OperationTypeAttribute, operation.OperationType);
         tags.Add(OperationOutcomeAttribute, outcome);
 
@@ -99,16 +105,20 @@ internal static class DispatcherTelemetry
         internal DispatcherOperationTelemetry(
             Activity? activity,
             string operationIdentity,
+            string contextIdentity,
             string operationType,
             long startTimestamp)
         {
             _activity = activity;
             OperationIdentity = operationIdentity;
+            ContextIdentity = contextIdentity;
             OperationType = operationType;
             StartTimestamp = startTimestamp;
         }
 
         internal string OperationIdentity { get; }
+
+        internal string ContextIdentity { get; }
 
         internal string OperationType { get; }
 

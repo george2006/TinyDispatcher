@@ -30,12 +30,13 @@ public sealed class DispatcherTelemetryMetricsTests
         Assert.Equal("{operation}", metrics.Instruments[execution.InstrumentName]);
         Assert.Equal("s", metrics.Instruments[duration.InstrumentName]);
         Assert.Equal(typeof(TestCommand).FullName, execution.Tags["tiny.operation.identity"]);
+        Assert.Equal(typeof(TestContext).FullName, execution.Tags["tiny.dispatcher.context"]);
         Assert.Equal("command", execution.Tags["tiny.operation.type"]);
         Assert.Equal("success", execution.Tags["tiny.operation.outcome"]);
         Assert.Equal(execution.Tags, duration.Tags);
         Assert.True(duration.DoubleValue >= 0);
         Assert.Equal(
-            new[] { "tiny.operation.identity", "tiny.operation.outcome", "tiny.operation.type" },
+            new[] { "tiny.dispatcher.context", "tiny.operation.identity", "tiny.operation.outcome", "tiny.operation.type" },
             execution.Tags.Keys.OrderBy(key => key));
         Assert.DoesNotContain(execution.Tags.Values, value => value == "secret-value");
     }
@@ -143,6 +144,43 @@ public sealed class DispatcherTelemetryMetricsTests
         Assert.All(metrics.Executions, measurement => Assert.Equal(1, measurement.LongValue));
     }
 
+    [Fact]
+    public async Task Same_operation_in_different_context_lanes_records_distinct_context_dimensions()
+    {
+        using var metrics = new CapturedMetrics();
+        var services = new ServiceCollection();
+        AddLane<FirstLaneContext, FirstLaneCommandHandler>(services);
+        AddLane<SecondLaneContext, SecondLaneCommandHandler>(services);
+
+        using var provider = services.BuildServiceProvider();
+
+        await provider.GetRequiredService<IDispatcher<FirstLaneContext>>()
+            .DispatchAsync(new SharedLaneCommand());
+        await provider.GetRequiredService<IDispatcher<SecondLaneContext>>()
+            .DispatchAsync(new SharedLaneCommand());
+
+        Assert.Equal(2, metrics.Executions.Count);
+        Assert.Equal(
+            new[] { typeof(FirstLaneContext).FullName, typeof(SecondLaneContext).FullName }.OrderBy(value => value),
+            metrics.Executions
+                .Select(measurement => measurement.Tags["tiny.dispatcher.context"])
+                .OrderBy(value => value));
+        Assert.All(metrics.Executions, measurement =>
+            Assert.Equal(typeof(SharedLaneCommand).FullName, measurement.Tags["tiny.operation.identity"]));
+    }
+
+    private static void AddLane<TContext, THandler>(IServiceCollection services)
+        where TContext : new()
+        where THandler : class, ICommandHandler<SharedLaneCommand, TContext>
+    {
+        services.AddSingleton<IContextFactory<TContext>, LaneContextFactory<TContext>>();
+        services.AddSingleton<ICommandHandler<SharedLaneCommand, TContext>, THandler>();
+        services.AddSingleton<IDispatcher<TContext>>(provider =>
+            new Dispatcher<TContext>(
+                provider,
+                provider.GetRequiredService<IContextFactory<TContext>>()));
+    }
+
     private static ServiceProvider BuildProvider(Action<IServiceCollection> configure)
     {
         var services = new ServiceCollection();
@@ -203,6 +241,37 @@ public sealed class DispatcherTelemetryMetricsTests
         {
             await Task.Yield();
         }
+    }
+
+    private sealed record SharedLaneCommand : ICommand;
+
+    private sealed class FirstLaneCommandHandler : ICommandHandler<SharedLaneCommand, FirstLaneContext>
+    {
+        public Task HandleAsync(
+            SharedLaneCommand command,
+            FirstLaneContext context,
+            CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+    }
+
+    private sealed class SecondLaneCommandHandler : ICommandHandler<SharedLaneCommand, SecondLaneContext>
+    {
+        public Task HandleAsync(
+            SharedLaneCommand command,
+            SecondLaneContext context,
+            CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+    }
+
+    private sealed class FirstLaneContext;
+
+    private sealed class SecondLaneContext;
+
+    private sealed class LaneContextFactory<TContext> : IContextFactory<TContext>
+        where TContext : new()
+    {
+        public ValueTask<TContext> CreateAsync(CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(new TContext());
     }
 
     private sealed class TestContext;
