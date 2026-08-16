@@ -1,4 +1,5 @@
 <Solution>
   <Project Path="src/Performance.Shared/Performance.Shared.csproj" />
   <Project Path="src/Performance.Perf/Performance.Perf.csproj" />
+  <Project Path="src/Telemetry.Perf/Telemetry.Perf.csproj" />
 </Solution>

@@ -30,28 +30,66 @@ public sealed class Dispatcher<TContext> : IDispatcher<TContext>
     {
         if (command is null) throw new ArgumentNullException(nameof(command));
 
-        var handler = _services.GetRequiredService<ICommandHandler<TCommand, TContext>>();
+        using var telemetry = DispatcherTelemetry.StartCommand<TCommand>();
 
-        var ctx = await _contextFactory.CreateAsync(ct).ConfigureAwait(false);
-            
-        var pipeline = _services.GetService<ICommandPipeline<TCommand, TContext>>();
-
-        if (pipeline is null)
+        try
         {
-            await handler.HandleAsync(command, ctx, ct).ConfigureAwait(false);
-            return;
+            var handler = _services.GetRequiredService<ICommandHandler<TCommand, TContext>>();
+            telemetry.SetHandler(handler.GetType());
+
+            var ctx = await _contextFactory.CreateAsync(ct).ConfigureAwait(false);
+            var pipeline = _services.GetService<ICommandPipeline<TCommand, TContext>>();
+
+            if (pipeline is null)
+            {
+                await handler.HandleAsync(command, ctx, ct).ConfigureAwait(false);
+            }
+            else
+            {
+                await pipeline.ExecuteAsync(command, ctx, handler, ct).ConfigureAwait(false);
+            }
+
+            telemetry.CompleteSuccessfully();
         }
-
-        await pipeline.ExecuteAsync(command, ctx, handler, ct).ConfigureAwait(false);
-
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            telemetry.CompleteAsCanceled();
+            throw;
+        }
+        catch (Exception exception)
+        {
+            telemetry.CompleteWithFailure(exception);
+            throw;
+        }
     }
 
-    public Task<TResult> DispatchAsync<TQuery, TResult>(TQuery query, CancellationToken ct = default)
+    public async Task<TResult> DispatchAsync<TQuery, TResult>(TQuery query, CancellationToken ct = default)
         where TQuery : IQuery<TResult>
     {
         if (query is null) throw new ArgumentNullException(nameof(query));
 
-        var handler = _services.GetRequiredService<IQueryHandler<TQuery, TResult>>();
-        return handler.HandleAsync(query, ct);
+        using var telemetry = DispatcherTelemetry.StartQuery<TQuery>();
+
+        try
+        {
+            var handler = _services.GetRequiredService<IQueryHandler<TQuery, TResult>>();
+            telemetry.SetHandler(handler.GetType());
+
+            var result = await handler.HandleAsync(query, ct).ConfigureAwait(false);
+
+            telemetry.CompleteSuccessfully();
+
+            return result;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            telemetry.CompleteAsCanceled();
+            throw;
+        }
+        catch (Exception exception)
+        {
+            telemetry.CompleteWithFailure(exception);
+            throw;
+        }
     }
 }
