@@ -30,25 +30,37 @@ public sealed class Dispatcher<TContext> : IDispatcher<TContext>
     {
         if (command is null) throw new ArgumentNullException(nameof(command));
 
-        var handler = _services.GetRequiredService<ICommandHandler<TCommand, TContext>>();
+        using var activity = DispatcherTelemetry.StartCommand<TCommand>();
 
-        using var activity = DispatcherTelemetry.StartCommand<TCommand>(handler.GetType());
-
-        var ctx = await _contextFactory.CreateAsync(ct).ConfigureAwait(false);
-            
-        var pipeline = _services.GetService<ICommandPipeline<TCommand, TContext>>();
-
-        if (pipeline is null)
+        try
         {
-            await handler.HandleAsync(command, ctx, ct).ConfigureAwait(false);
+            var handler = _services.GetRequiredService<ICommandHandler<TCommand, TContext>>();
+            DispatcherTelemetry.SetHandler(activity, handler.GetType());
+
+            var ctx = await _contextFactory.CreateAsync(ct).ConfigureAwait(false);
+            var pipeline = _services.GetService<ICommandPipeline<TCommand, TContext>>();
+
+            if (pipeline is null)
+            {
+                await handler.HandleAsync(command, ctx, ct).ConfigureAwait(false);
+            }
+            else
+            {
+                await pipeline.ExecuteAsync(command, ctx, handler, ct).ConfigureAwait(false);
+            }
+
+            DispatcherTelemetry.CompleteSuccessfully(activity);
         }
-        else
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            await pipeline.ExecuteAsync(command, ctx, handler, ct).ConfigureAwait(false);
+            DispatcherTelemetry.CompleteAsCanceled(activity);
+            throw;
         }
-
-        DispatcherTelemetry.CompleteSuccessfully(activity);
-
+        catch (Exception exception)
+        {
+            DispatcherTelemetry.CompleteWithFailure(activity, exception);
+            throw;
+        }
     }
 
     public async Task<TResult> DispatchAsync<TQuery, TResult>(TQuery query, CancellationToken ct = default)
@@ -56,14 +68,28 @@ public sealed class Dispatcher<TContext> : IDispatcher<TContext>
     {
         if (query is null) throw new ArgumentNullException(nameof(query));
 
-        var handler = _services.GetRequiredService<IQueryHandler<TQuery, TResult>>();
+        using var activity = DispatcherTelemetry.StartQuery<TQuery>();
 
-        using var activity = DispatcherTelemetry.StartQuery<TQuery>(handler.GetType());
+        try
+        {
+            var handler = _services.GetRequiredService<IQueryHandler<TQuery, TResult>>();
+            DispatcherTelemetry.SetHandler(activity, handler.GetType());
 
-        var result = await handler.HandleAsync(query, ct).ConfigureAwait(false);
+            var result = await handler.HandleAsync(query, ct).ConfigureAwait(false);
 
-        DispatcherTelemetry.CompleteSuccessfully(activity);
+            DispatcherTelemetry.CompleteSuccessfully(activity);
 
-        return result;
+            return result;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            DispatcherTelemetry.CompleteAsCanceled(activity);
+            throw;
+        }
+        catch (Exception exception)
+        {
+            DispatcherTelemetry.CompleteWithFailure(activity, exception);
+            throw;
+        }
     }
 }

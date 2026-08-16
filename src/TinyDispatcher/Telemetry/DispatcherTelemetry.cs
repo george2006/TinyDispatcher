@@ -10,24 +10,32 @@ internal static class DispatcherTelemetry
     private const string OperationTypeAttribute = "tiny.operation.type";
     private const string OperationHandlerAttribute = "tiny.operation.handler";
     private const string OperationOutcomeAttribute = "tiny.operation.outcome";
+    private const string ErrorTypeAttribute = "error.type";
 
     private const string CommandOperationType = "command";
     private const string QueryOperationType = "query";
     private const string SuccessOutcome = "success";
+    private const string FailureOutcome = "failure";
+    private const string CanceledOutcome = "canceled";
 
     private static readonly ActivitySource ActivitySource = new(
         TinyDispatcherTelemetry.ActivitySourceName,
         typeof(TinyDispatcherTelemetry).Assembly.GetName().Version?.ToString());
 
-    internal static Activity? StartCommand<TCommand>(Type handlerType)
+    internal static Activity? StartCommand<TCommand>()
         where TCommand : ICommand
     {
-        return StartOperation(typeof(TCommand), handlerType, CommandOperationType);
+        return StartOperation(typeof(TCommand), CommandOperationType);
     }
 
-    internal static Activity? StartQuery<TQuery>(Type handlerType)
+    internal static Activity? StartQuery<TQuery>()
     {
-        return StartOperation(typeof(TQuery), handlerType, QueryOperationType);
+        return StartOperation(typeof(TQuery), QueryOperationType);
+    }
+
+    internal static void SetHandler(Activity? activity, Type handlerType)
+    {
+        activity?.SetTag(OperationHandlerAttribute, GetTypeIdentity(handlerType));
     }
 
     internal static void CompleteSuccessfully(Activity? activity)
@@ -35,9 +43,26 @@ internal static class DispatcherTelemetry
         activity?.SetTag(OperationOutcomeAttribute, SuccessOutcome);
     }
 
+    internal static void CompleteWithFailure(Activity? activity, Exception exception)
+    {
+        if (activity is null)
+        {
+            return;
+        }
+
+        activity.SetTag(OperationOutcomeAttribute, FailureOutcome);
+        activity.SetTag(ErrorTypeAttribute, GetTypeIdentity(exception.GetType()));
+        activity.SetStatus(ActivityStatusCode.Error, exception.Message);
+        activity.AddException(exception);
+    }
+
+    internal static void CompleteAsCanceled(Activity? activity)
+    {
+        activity?.SetTag(OperationOutcomeAttribute, CanceledOutcome);
+    }
+
     private static Activity? StartOperation(
         Type operationType,
-        Type handlerType,
         string operationKind)
     {
         var operationName = operationType.Name;
@@ -51,7 +76,6 @@ internal static class DispatcherTelemetry
         activity.SetTag(OperationNameAttribute, operationName);
         activity.SetTag(OperationIdentityAttribute, GetTypeIdentity(operationType));
         activity.SetTag(OperationTypeAttribute, operationKind);
-        activity.SetTag(OperationHandlerAttribute, GetTypeIdentity(handlerType));
 
         return activity;
     }
