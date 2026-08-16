@@ -1,3 +1,8 @@
+## Unreleased
+
+### Added
+- Dispatcher context identity on operation activities and metrics, allowing the same operation to be distinguished across context lanes.
+
 ## 1.3.0-beta.1 - 2026-08-16
 
 ### Added
