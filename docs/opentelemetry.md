@@ -56,6 +56,7 @@ Each operation activity records:
 | `tiny.operation.type` | `command` or `query` |
 | `tiny.operation.handler` | Fully qualified handler type name |
 | `tiny.operation.outcome` | `success`, `failure`, or `canceled` |
+| `tiny.dispatcher.context` | Fully qualified dispatcher context type name |
 
 A failure sets the activity status to `Error` and records the exception using the standard OpenTelemetry exception attributes. Cooperative cancellation records the `canceled` outcome without converting it into a failure.
 
@@ -73,6 +74,9 @@ Both instruments use these dimensions:
 - `tiny.operation.identity`
 - `tiny.operation.type`
 - `tiny.operation.outcome`
+- `tiny.dispatcher.context`
+
+The context dimension keeps the same operation distinguishable when it is dispatched through different context lanes. It describes the dispatcher lane without changing the operation identity.
 
 Histogram aggregation and bucket boundaries belong to the collecting application or backend. The telemetry samples configure boundaries suitable for operations that usually complete in milliseconds.
 
