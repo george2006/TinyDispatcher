@@ -1,3 +1,13 @@
+## 1.3.0-beta.1 - Unreleased
+
+### Added
+- Built-in OpenTelemetry activities for commands and queries, including natural parent-child propagation, handler identity, and success, failure, or cancellation outcomes.
+- Operation execution and duration metrics through the standard `TinyDispatcher` meter.
+- Runnable console and ASP.NET Core telemetry samples covering nested dispatch, hosted-worker dispatch, failures, and cancellation.
+
+### Notes
+- Telemetry collection is opt-in. TinyDispatcher does not configure an exporter or automatically record command and query payloads.
+
 ## 1.2.0 - 2026-06-20
 
 ### Added

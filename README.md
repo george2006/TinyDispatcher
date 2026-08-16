@@ -20,6 +20,7 @@ It provides a predictable, explicit, and performant command/query dispatch core 
 - **Feature-friendly `AppContext`** (optional `IFeatureInitializer`-based composition)
 - **Source-generator diagnostics** for invalid shapes/config (fail fast, no guessing)
 - **Context lanes** in `1.2.0` for module-owned contexts and typed dispatchers
+- **Built-in OpenTelemetry** traces and metrics for commands and queries
 
 ## Install
 
@@ -95,12 +96,29 @@ Use one lane by default. Add more lanes only when the application has real execu
 
 See [Multi-Lane Dispatching](docs/multi-lane-dispatching.md) for documentation and Orders/Payments sample pointers.
 
+## OpenTelemetry
+
+Built-in OpenTelemetry support will be introduced in `1.3.0-beta.1`.
+
+TinyDispatcher emits standard .NET activities and metrics for dispatched commands and queries. Operations preserve the current trace context, so they appear beneath ASP.NET Core requests, worker activities, and parent dispatches.
+
+```text
+POST /orders
+└── CreateOrderCommand
+    └── ReserveInventoryCommand
+```
+
+Collection is opt-in through the application's OpenTelemetry configuration. TinyDispatcher does not select an exporter, send telemetry by itself, or automatically record command and query payloads.
+
+See [OpenTelemetry](docs/opentelemetry.md) for registration, the telemetry contract, privacy behavior, and runnable samples.
+
 ## Documentation
 
 - [Getting Started](docs/getting-started.md)
 - [Architecture](docs/architecture.md)
 - [Multi-Assembly Composition](docs/multi-assembly-composition.md)
 - [Multi-Lane Dispatching](docs/multi-lane-dispatching.md) (`1.2.0`)
+- [OpenTelemetry](docs/opentelemetry.md)
 - [Middleware](docs/middleware.md)
 - [Pipelines & Layering](docs/pipelines.md)
 - [Context & Features](docs/context.md)
@@ -173,3 +191,4 @@ The repository contains runnable samples under `samples/`, including:
 - ASP.NET and custom context setups
 - context factory and closed-context middleware examples
 - a multi-project sample showing cross-assembly handler and pipeline composition
+- console and ASP.NET Core samples showing OpenTelemetry traces and metrics

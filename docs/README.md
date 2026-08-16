@@ -11,9 +11,11 @@ Key capabilities (high level):
 - optional **no-op context** mode (`UseTinyNoOpContext`) when you don't need context
 - optional feature composition via `AppContext` + `IFeatureInitializer`
 - **context lanes** in `1.2.0` for module-owned contexts and typed dispatchers
+- built-in **OpenTelemetry traces and metrics** for dispatched operations
 
 ## Release channels
 
+- `1.3.0-beta.1` will introduce built-in OpenTelemetry traces and metrics for dispatched commands and queries.
 - `1.2.0` is the stable line. It includes compile-time discovery, generated pipelines, explicit contexts, pluggable context factories, no-op context mode, multi-assembly composition, and context lanes.
 - `1.1.x` remains available for applications that are not ready to adopt the multi-context API.
 
@@ -23,6 +25,7 @@ Core docs:
 - [Architecture](architecture.md)
 - [Multi-Assembly Composition](multi-assembly-composition.md)
 - [Multi-Lane Dispatching](multi-lane-dispatching.md) (`1.2.0`)
+- [OpenTelemetry](opentelemetry.md)
 - [Source Generator](source-generator.md)
 - [Middleware](middleware.md)
 - [Pipelines & Layering](pipelines.md)
