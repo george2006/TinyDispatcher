@@ -132,13 +132,16 @@ See [OpenTelemetry](docs/opentelemetry.md) for registration, the telemetry contr
 
 ## Tiny suite
 
-TinyDispatcher belongs to the Tiny suite. Each library owns one application-layer responsibility:
+TinyDispatcher belongs to the Tiny suite:
 
-- [TinyDispatcher](https://github.com/george2006/TinyDispatcher) owns command and query execution.
-- [TinyValidations](https://github.com/george2006/TinyValidations) owns application input validation.
-- [TinyEvents](https://github.com/george2006/TinyEvents) owns reliable application-event handling through the outbox pattern.
+| Project | Kind | Responsibility |
+| --- | --- | --- |
+| [TinyDispatcher](https://github.com/george2006/TinyDispatcher) | Library | Command and query execution |
+| [TinyValidations](https://github.com/george2006/TinyValidations) | Library | Application input validation |
+| [TinyEvents](https://github.com/george2006/TinyEvents) | Library | Reliable application-event handling through the outbox pattern |
+| [TheTinyApplicationLayer](https://github.com/george2006/TheTinyApplicationLayer) | Example | Runnable ASP.NET Core and Blazor application using the complete suite |
 
-The libraries can be adopted independently. Using one does not require referencing the other two.
+The three libraries can be adopted independently. Using one does not require referencing the other two.
 
 ## When to use
 
