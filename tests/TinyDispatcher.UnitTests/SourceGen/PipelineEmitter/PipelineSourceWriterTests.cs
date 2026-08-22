@@ -92,10 +92,8 @@ public sealed class PipelineSourceWriterTests
                 new[] { Mw("global::MyApp.G1", 2) }),
             policyPipelines: new[]
             {
-                Create_pipeline(
+                Create_policy_pipeline(
                     "TinyDispatcherPolicyPipeline_X",
-                    true,
-                    "TCommand",
                     new[] { Mw("global::MyApp.P1", 2) })
             },
             perCommandPipelines: new[]
@@ -140,7 +138,7 @@ public sealed class PipelineSourceWriterTests
 
     private static PipelinePlan Create_plan(
         PipelineDefinition? globalPipeline = null,
-        PipelineDefinition[]? policyPipelines = null,
+        PolicyPipelineDefinition[]? policyPipelines = null,
         PipelineDefinition[]? perCommandPipelines = null)
     {
         return new PipelinePlan(
@@ -149,10 +147,11 @@ public sealed class PipelineSourceWriterTests
             CoreFqn: "global::TinyDispatcher",
             ShouldEmit: true,
             GlobalPipeline: globalPipeline,
-            PolicyPipelines: (policyPipelines ?? Array.Empty<PipelineDefinition>()).ToImmutableArray(),
+            PolicyPipelines: (policyPipelines ?? Array.Empty<PolicyPipelineDefinition>()).ToImmutableArray(),
             PerCommandPipelines: (perCommandPipelines ?? Array.Empty<PipelineDefinition>()).ToImmutableArray(),
             OpenGenericMiddlewareRegistrations: ImmutableArray<OpenGenericRegistration>.Empty,
-            ServiceRegistrations: ImmutableArray<ServiceRegistration>.Empty
+            ServiceRegistrations: ImmutableArray<PipelineRegistration>.Empty,
+            ResolvedPipelines: ImmutableArray<ResolvedPipeline>.Empty
         );
     }
 
@@ -166,8 +165,29 @@ public sealed class PipelineSourceWriterTests
             ClassName: className,
             IsOpenGeneric: isOpenGeneric,
             CommandType: commandType,
-            Steps: steps.Select(m => new MiddlewareStep(m)).ToImmutableArray()
+            Steps: steps
+                .Select(middleware => new MiddlewareStep(
+                    middleware,
+                    PipelineStepSource.Operation))
+                .ToImmutableArray()
         );
+    }
+
+    private static PolicyPipelineDefinition Create_policy_pipeline(
+        string className,
+        MiddlewareRef[] steps)
+    {
+        var pipeline = Create_pipeline(
+            className,
+            isOpenGeneric: true,
+            commandType: "TCommand",
+            steps);
+        var policy = new PipelinePolicyContribution(
+            "global::MyApp.TestPolicy",
+            steps,
+            ImmutableArray<string>.Empty);
+
+        return new PolicyPipelineDefinition(policy, pipeline);
     }
 
     private static int Count(string text, string token)

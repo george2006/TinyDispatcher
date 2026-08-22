@@ -43,11 +43,13 @@ internal static class PipelinePlanner
             generatedNamespace,
             coreNamespace,
             contextType,
-            hasGlobalMiddlewares,
             discovery,
-            perCommandMiddlewares,
-            policies,
-            pipelineClassSuffix);
+            globalPipeline,
+            policyPipelines,
+            perCommandPipelines);
+        var resolvedPipelines = ResolvePipelines(
+            serviceRegistrations,
+            discovery);
 
         var shouldEmit = ShouldEmitPlan(
             globalPipeline,
@@ -65,7 +67,39 @@ internal static class PipelinePlanner
             PolicyPipelines: policyPipelines,
             PerCommandPipelines: perCommandPipelines,
             OpenGenericMiddlewareRegistrations: middlewareRegistrations,
-            ServiceRegistrations: serviceRegistrations);
+            ServiceRegistrations: serviceRegistrations,
+            ResolvedPipelines: resolvedPipelines);
+    }
+
+    private static ImmutableArray<ResolvedPipeline> ResolvePipelines(
+        ImmutableArray<PipelineRegistration> registrations,
+        DiscoveryResult discovery)
+    {
+        var handlersByCommand = new Dictionary<string, HandlerContract>(StringComparer.Ordinal);
+
+        for (var i = 0; i < discovery.Commands.Length; i++)
+        {
+            var handler = discovery.Commands[i];
+            var command = PipelineTypeNames.NormalizeFqn(handler.MessageTypeFqn);
+            handlersByCommand[command] = handler;
+        }
+
+        var pipelines = ImmutableArray.CreateBuilder<ResolvedPipeline>();
+
+        for (var i = 0; i < registrations.Length; i++)
+        {
+            var registration = registrations[i];
+            if (!handlersByCommand.TryGetValue(registration.CommandType, out var handler))
+            {
+                continue;
+            }
+
+            pipelines.Add(new ResolvedPipeline(
+                handler,
+                registration.Pipeline));
+        }
+
+        return pipelines.ToImmutable();
     }
 
     private static PipelineDefinition? BuildGlobalPipeline(
@@ -83,32 +117,34 @@ internal static class PipelinePlanner
             ClassName: "TinyDispatcherGlobalPipeline" + pipelineClassSuffix,
             IsOpenGeneric: true,
             CommandType: "TCommand",
-            Steps: BuildSteps(global, NoMiddlewares, NoMiddlewares));
+            Steps: BuildSteps(global, policy: null, NoMiddlewares));
     }
 
-    private static ImmutableArray<PipelineDefinition> BuildPolicyPipelines(
+    private static ImmutableArray<PolicyPipelineDefinition> BuildPolicyPipelines(
         MiddlewareRef[] global,
         PipelinePolicyContribution[] policies,
         string pipelineClassSuffix)
     {
         if (policies.Length == 0)
         {
-            return ImmutableArray<PipelineDefinition>.Empty;
+            return ImmutableArray<PolicyPipelineDefinition>.Empty;
         }
 
-        var list = new List<PipelineDefinition>(policies.Length);
+        var list = new List<PolicyPipelineDefinition>(policies.Length);
 
         for (var i = 0; i < policies.Length; i++)
         {
             var policy = policies[i];
 
-            list.Add(new PipelineDefinition(
-                ClassName: "TinyDispatcherPolicyPipeline_" +
-                    PipelineNameFactory.SanitizePolicyName(policy.PolicyTypeFqn) +
-                    pipelineClassSuffix,
-                IsOpenGeneric: true,
-                CommandType: "TCommand",
-                Steps: BuildSteps(global, policy.Middlewares, NoMiddlewares)));
+            list.Add(new PolicyPipelineDefinition(
+                Policy: policy,
+                Pipeline: new PipelineDefinition(
+                    ClassName: "TinyDispatcherPolicyPipeline_" +
+                        PipelineNameFactory.SanitizePolicyName(policy.PolicyTypeFqn) +
+                        pipelineClassSuffix,
+                    IsOpenGeneric: true,
+                    CommandType: "TCommand",
+                    Steps: BuildSteps(global, policy, NoMiddlewares))));
         }
 
         return list.ToImmutableArray();
@@ -132,15 +168,11 @@ internal static class PipelinePlanner
         {
             var commandFqn = orderedCommands[i];
             var commandMiddlewares = perCommandMiddlewares[commandFqn];
-            MiddlewareRef[] policyMiddlewares;
+            PipelinePolicyContribution? policy;
 
-            if (policyByCommand.TryGetValue(commandFqn, out var policy))
+            if (!policyByCommand.TryGetValue(commandFqn, out policy))
             {
-                policyMiddlewares = policy.Middlewares;
-            }
-            else
-            {
-                policyMiddlewares = NoMiddlewares;
+                policy = null;
             }
 
             list.Add(new PipelineDefinition(
@@ -149,7 +181,7 @@ internal static class PipelinePlanner
                     pipelineClassSuffix,
                 IsOpenGeneric: false,
                 CommandType: commandFqn,
-                Steps: BuildSteps(global, policyMiddlewares, commandMiddlewares)));
+                Steps: BuildSteps(global, policy, commandMiddlewares)));
         }
 
         return list.ToImmutableArray();
@@ -157,23 +189,35 @@ internal static class PipelinePlanner
 
     private static ImmutableArray<MiddlewareStep> BuildSteps(
         MiddlewareRef[] global,
-        MiddlewareRef[] policy,
+        PipelinePolicyContribution? policy,
         MiddlewareRef[] perCommand)
     {
-        var steps = new List<MiddlewareStep>(global.Length + policy.Length + perCommand.Length);
+        var policyMiddlewares = policy?.Middlewares ?? NoMiddlewares;
+        var steps = new List<MiddlewareStep>(global.Length + policyMiddlewares.Length + perCommand.Length);
 
-        AddSteps(steps, global);
-        AddSteps(steps, policy);
-        AddSteps(steps, perCommand);
+        AddSteps(steps, global, PipelineStepSource.Global);
+        AddSteps(
+            steps,
+            policyMiddlewares,
+            PipelineStepSource.Policy,
+            policy?.PolicyTypeFqn);
+        AddSteps(steps, perCommand, PipelineStepSource.Operation);
 
         return steps.ToImmutableArray();
     }
 
-    private static void AddSteps(List<MiddlewareStep> steps, MiddlewareRef[] middlewares)
+    private static void AddSteps(
+        List<MiddlewareStep> steps,
+        MiddlewareRef[] middlewares,
+        PipelineStepSource source,
+        string? policyTypeFqn = null)
     {
         for (var i = 0; i < middlewares.Length; i++)
         {
-            steps.Add(new MiddlewareStep(middlewares[i]));
+            steps.Add(new MiddlewareStep(
+                middlewares[i],
+                source,
+                policyTypeFqn));
         }
     }
 
@@ -209,10 +253,10 @@ internal static class PipelinePlanner
 
     private static bool ShouldEmitPlan(
         PipelineDefinition? globalPipeline,
-        ImmutableArray<PipelineDefinition> policyPipelines,
+        ImmutableArray<PolicyPipelineDefinition> policyPipelines,
         ImmutableArray<PipelineDefinition> perCommandPipelines,
         ImmutableArray<OpenGenericRegistration> middlewareRegistrations,
-        ImmutableArray<ServiceRegistration> serviceRegistrations)
+        ImmutableArray<PipelineRegistration> serviceRegistrations)
     {
         var hasGlobalPipeline = globalPipeline is not null;
         var hasPolicyPipelines = policyPipelines.Length > 0;

@@ -72,6 +72,47 @@ public sealed class PipelineMapEmissionTests
             name => name == "PipelineMap.ConsoleApp_CtxB.ConsoleApp_Ping.g.cs");
     }
 
+    [Fact]
+    public void Attributes_format_emits_compilable_pipeline_metadata()
+    {
+        var compilation = CreateIsolatedCompilation(AttributesSource());
+        var generator = new Generator();
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(generator);
+
+        driver = driver.RunGeneratorsAndUpdateCompilation(
+            compilation,
+            out var outputCompilation,
+            out var generatorDiagnostics);
+
+        Assert.DoesNotContain(
+            generatorDiagnostics,
+            diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        Assert.DoesNotContain(
+            outputCompilation.GetDiagnostics(),
+            diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+
+        var generated = Assert.Single(
+            driver.GetRunResult()
+                .Results.SelectMany(result => result.GeneratedSources),
+            source => source.HintName ==
+                "PipelineMap.Attributes.TinyDispatcher_AppContext.g.cs");
+        var text = generated.SourceText.ToString();
+
+        Assert.Contains(
+            "[assembly: global::TinyDispatcher.TinyDispatcherPipelineMapAttribute(",
+            text,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "typeof(global::TinyDispatcher.Generated.TinyDispatcherGlobalPipeline_TinyDispatcher_AppContext<>),",
+            text,
+            StringComparison.Ordinal);
+        Assert.Contains("typeof(global::Ping),", text, StringComparison.Ordinal);
+        Assert.Contains(
+            "typeof(global::GlobalMiddleware<,>),",
+            text,
+            StringComparison.Ordinal);
+    }
+
     private static (Microsoft.CodeAnalysis.GeneratorDriver Driver, Microsoft.CodeAnalysis.Diagnostic[] Diagnostics) Run(CSharpCompilation compilation)
     {
         var generator = new Generator();
@@ -96,6 +137,15 @@ public sealed class PipelineMapEmissionTests
             new[] { CSharpSyntaxTree.ParseText(source) },
             refs,
             new CSharpCompilationOptions(Microsoft.CodeAnalysis.OutputKind.DynamicallyLinkedLibrary));
+    }
+
+    private static CSharpCompilation CreateIsolatedCompilation(string source)
+    {
+        return CSharpCompilation.Create(
+            "PipelineMapAttributesTests",
+            new[] { CSharpSyntaxTree.ParseText(source) },
+            SourceGenCompilationReferences.CurrentDomainWithoutUnitTests(),
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
     }
 
     private static string Source(bool emitMaps)
@@ -169,6 +219,54 @@ namespace ConsoleApp
             services.UseTinyDispatcher<CtxA>(tiny => { });
             services.UseTinyDispatcher<CtxB>(tiny => { });
         }
+    }
+}
+";
+    }
+
+    private static string AttributesSource()
+    {
+        return @"
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using TinyDispatcher;
+
+[assembly: TinyDispatcherGeneratorOptions(
+    CommandContextType = typeof(TinyDispatcher.AppContext),
+    EmitPipelineMap = true,
+    PipelineMapFormat = ""attributes""
+)]
+
+public sealed record Ping(Guid Id) : ICommand;
+
+public sealed class PingHandler : ICommandHandler<Ping, TinyDispatcher.AppContext>
+{
+    public Task HandleAsync(
+        Ping command,
+        TinyDispatcher.AppContext context,
+        CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+}
+
+public sealed class GlobalMiddleware<TCommand, TContext> : ICommandMiddleware<TCommand, TContext>
+    where TCommand : ICommand
+{
+    public ValueTask InvokeAsync(
+        TCommand command,
+        TContext context,
+        TinyDispatcher.Pipeline.ICommandPipelineRuntime<TCommand, TContext> runtime,
+        CancellationToken cancellationToken)
+        => runtime.NextAsync(command, context, cancellationToken);
+}
+
+public static class Boot
+{
+    public static void Configure(IServiceCollection services)
+    {
+        services.UseTinyDispatcher<TinyDispatcher.AppContext>(tiny =>
+            tiny.UseGlobalMiddleware(typeof(GlobalMiddleware<,>)));
     }
 }
 ";

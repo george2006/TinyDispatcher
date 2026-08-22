@@ -62,7 +62,7 @@ internal static class PipelineSourceWriter
     {
         for (var i = 0; i < plan.PolicyPipelines.Length; i++)
         {
-            WritePipeline(w, plan, plan.PolicyPipelines[i]);
+            WritePipeline(w, plan, plan.PolicyPipelines[i].Pipeline);
         }
     }
 

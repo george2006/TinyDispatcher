@@ -13,6 +13,11 @@ internal sealed class PipelineMapsEmitter
             return;
         }
 
+        if (plan.Formats.EmitAttributes)
+        {
+            PipelineMapAttributesEmitter.Emit(context, plan.AttributeDescriptors);
+        }
+
         for (var i = 0; i < plan.Descriptors.Length; i++)
         {
             EmitOne(context, plan.Descriptors[i], plan.Formats);

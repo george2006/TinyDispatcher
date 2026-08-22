@@ -21,4 +21,37 @@ Enable via generator options (assembly attribute):
 
 ## Formats
 
-Supported formats depend on your generator options (commonly JSON). The output is emitted at build time alongside generated sources.
+Pipeline maps support three output formats:
+
+- `json` emits one readable JSON map per operation inside generated source comments;
+- `mermaid` emits one Mermaid graph per operation;
+- `attributes` emits one `TinyDispatcherPipelineMapAttribute` per selected generated pipeline.
+
+Separate combined formats with `;`:
+
+```csharp
+[assembly: TinyDispatcherGeneratorOptions(
+    EmitPipelineMap = true,
+    PipelineMapFormat = "json;attributes"
+)]
+```
+
+The attribute format groups every command using the same generated pipeline. It preserves
+the ordered middleware list, the dispatcher context, the selected policy, and the global
+and policy middleware boundaries. The remaining middleware entries belong to the
+operation-specific portion of the pipeline.
+
+Read the metadata through the public pipeline-map API:
+
+```csharp
+var maps = DispatcherPipelineMaps.Get();
+```
+
+Each `DispatcherPipelineMap` exposes pipeline, context, command, middleware, and policy
+types across the loaded application modules without coupling consumers to the generated
+attribute representation. Use `Get(assembly)` only when a tool deliberately needs to
+inspect one assembly.
+
+Pipeline-map attributes are a generated storage detail. They do not participate in
+dispatch, dependency injection, or pipeline execution. TinyDispatcher only reads them
+when `DispatcherPipelineMaps.Get` is called.

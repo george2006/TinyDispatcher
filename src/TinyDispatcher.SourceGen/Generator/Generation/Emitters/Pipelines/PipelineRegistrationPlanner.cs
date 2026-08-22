@@ -7,32 +7,27 @@ namespace TinyDispatcher.SourceGen.Generator.Generation.Emitters.Pipelines;
 
 internal static class PipelineRegistrationPlanner
 {
-    public static ImmutableArray<ServiceRegistration> Build(
+    public static ImmutableArray<PipelineRegistration> Build(
         string generatedNamespace,
         string coreNamespace,
         string contextTypeFqn,
-        bool hasGlobal,
         DiscoveryResult discovery,
-        IReadOnlyDictionary<string, MiddlewareRef[]> perCommand,
-        PipelinePolicyContribution[] policies,
-        string pipelineClassSuffix = "")
+        PipelineDefinition? globalPipeline,
+        ImmutableArray<PolicyPipelineDefinition> policyPipelines,
+        ImmutableArray<PipelineDefinition> perCommandPipelines)
     {
-        var commandToPolicyPipeline = BuildCommandToPolicyPipelineNames(
-            generatedNamespace,
-            policies,
-            pipelineClassSuffix);
+        var perCommandPipelineByCommand = BuildPerCommandPipelineMap(perCommandPipelines);
+        var policyPipelineByCommand = BuildPolicyPipelineMap(policyPipelines);
         var state = new PipelineRegistrationState(
             GeneratedNamespace: generatedNamespace,
             CoreNamespace: coreNamespace,
             ContextTypeFqn: contextTypeFqn,
-            PipelineClassSuffix: pipelineClassSuffix,
-            HasGlobal: hasGlobal,
             Discovery: discovery,
-            PerCommandSet: new HashSet<string>(perCommand.Keys, StringComparer.Ordinal),
-            PolicyCommandSet: new HashSet<string>(commandToPolicyPipeline.Keys, StringComparer.Ordinal),
-            CommandToPolicyPipeline: commandToPolicyPipeline);
+            GlobalPipeline: globalPipeline,
+            PerCommandPipelineByCommand: perCommandPipelineByCommand,
+            PolicyPipelineByCommand: policyPipelineByCommand);
 
-        var registrations = new List<ServiceRegistration>(256);
+        var registrations = new List<PipelineRegistration>(256);
 
         AddPerCommandRegistrations(registrations, state);
         AddPolicyRegistrations(registrations, state);
@@ -41,79 +36,82 @@ internal static class PipelineRegistrationPlanner
         return registrations.ToImmutableArray();
     }
 
-    private static Dictionary<string, string> BuildCommandToPolicyPipelineNames(
-        string generatedNamespace,
-        PipelinePolicyContribution[] policies,
-        string pipelineClassSuffix)
+    private static Dictionary<string, PipelineDefinition> BuildPerCommandPipelineMap(
+        ImmutableArray<PipelineDefinition> pipelines)
     {
-        var map = new Dictionary<string, string>(StringComparer.Ordinal);
+        var map = new Dictionary<string, PipelineDefinition>(StringComparer.Ordinal);
 
-        for (var i = 0; i < policies.Length; i++)
+        for (var i = 0; i < pipelines.Length; i++)
         {
-            var policy = policies[i];
-            var pipelineName = GetPolicyPipelineTypeName(generatedNamespace, policy, pipelineClassSuffix);
-
-            PipelinePolicyCommandMap.AddFirstPolicyWins(map, policy.Commands, pipelineName);
+            var pipeline = pipelines[i];
+            map[pipeline.CommandType] = pipeline;
         }
 
         return map;
     }
 
-    private static string GetPolicyPipelineTypeName(
-        string generatedNamespace,
-        PipelinePolicyContribution policy,
-        string pipelineClassSuffix)
+    private static Dictionary<string, PipelineDefinition> BuildPolicyPipelineMap(
+        ImmutableArray<PolicyPipelineDefinition> pipelines)
     {
-        return "global::" +
-            generatedNamespace +
-            ".TinyDispatcherPolicyPipeline_" +
-            PipelineNameFactory.SanitizePolicyName(policy.PolicyTypeFqn) +
-            pipelineClassSuffix;
+        var map = new Dictionary<string, PipelineDefinition>(StringComparer.Ordinal);
+
+        for (var i = 0; i < pipelines.Length; i++)
+        {
+            PipelinePolicyCommandMap.AddFirstPolicyWins(
+                map,
+                pipelines[i].Policy.Commands,
+                pipelines[i].Pipeline);
+        }
+
+        return map;
     }
 
     private static void AddPerCommandRegistrations(
-        List<ServiceRegistration> registrations,
+        List<PipelineRegistration> registrations,
         PipelineRegistrationState state)
     {
-        var orderedCommands = PipelineOrdering.GetStringsInStableOrder(state.PerCommandSet);
+        var orderedCommands = PipelineOrdering.GetStringsInStableOrder(
+            state.PerCommandPipelineByCommand.Keys);
 
         for (var i = 0; i < orderedCommands.Length; i++)
         {
             var command = orderedCommands[i];
-
-            registrations.Add(new ServiceRegistration(
-                ServiceTypeExpression: $"{state.CoreNamespace}.ICommandPipeline<{command}, {state.ContextTypeFqn}>",
-                ImplementationTypeExpression: $"global::{state.GeneratedNamespace}.TinyDispatcherPipeline_{PipelineNameFactory.SanitizeCommandName(command)}{state.PipelineClassSuffix}"));
+            registrations.Add(CreateRegistration(
+                state,
+                command,
+                state.PerCommandPipelineByCommand[command]));
         }
     }
 
     private static void AddPolicyRegistrations(
-        List<ServiceRegistration> registrations,
+        List<PipelineRegistration> registrations,
         PipelineRegistrationState state)
     {
-        var orderedCommands = PipelineOrdering.GetStringsInStableOrder(state.PolicyCommandSet);
+        var orderedCommands = PipelineOrdering.GetStringsInStableOrder(
+            state.PolicyPipelineByCommand.Keys);
 
         for (var i = 0; i < orderedCommands.Length; i++)
         {
             var command = orderedCommands[i];
-            var hasPerCommandPipeline = state.PerCommandSet.Contains(command);
+            var hasPerCommandPipeline = state.PerCommandPipelineByCommand.ContainsKey(command);
 
             if (hasPerCommandPipeline)
             {
                 continue;
             }
 
-            registrations.Add(new ServiceRegistration(
-                ServiceTypeExpression: $"{state.CoreNamespace}.ICommandPipeline<{command}, {state.ContextTypeFqn}>",
-                ImplementationTypeExpression: $"{state.CommandToPolicyPipeline[command]}<{command}>"));
+            registrations.Add(CreateRegistration(
+                state,
+                command,
+                state.PolicyPipelineByCommand[command]));
         }
     }
 
     private static void AddGlobalRegistrations(
-        List<ServiceRegistration> registrations,
+        List<PipelineRegistration> registrations,
         PipelineRegistrationState state)
     {
-        if (!state.HasGlobal)
+        if (state.GlobalPipeline is null)
         {
             return;
         }
@@ -135,7 +133,7 @@ internal static class PipelineRegistrationPlanner
     }
 
     private static void AddGlobalRegistration(
-        List<ServiceRegistration> registrations,
+        List<PipelineRegistration> registrations,
         PipelineRegistrationState state,
         HandlerContract commandHandler)
     {
@@ -147,28 +145,45 @@ internal static class PipelineRegistrationPlanner
             return;
         }
 
-        var hasPerCommandPipeline = state.PerCommandSet.Contains(command);
-        var hasPolicyPipeline = state.PolicyCommandSet.Contains(command);
+        var hasPerCommandPipeline = state.PerCommandPipelineByCommand.ContainsKey(command);
+        var hasPolicyPipeline = state.PolicyPipelineByCommand.ContainsKey(command);
 
         if (hasPerCommandPipeline || hasPolicyPipeline)
         {
             return;
         }
 
-        registrations.Add(new ServiceRegistration(
+        registrations.Add(CreateRegistration(
+            state,
+            command,
+            state.GlobalPipeline!));
+    }
+
+    private static PipelineRegistration CreateRegistration(
+        PipelineRegistrationState state,
+        string command,
+        PipelineDefinition pipeline)
+    {
+        var implementationType = $"global::{state.GeneratedNamespace}.{pipeline.ClassName}";
+        if (pipeline.IsOpenGeneric)
+        {
+            implementationType += $"<{command}>";
+        }
+
+        return new PipelineRegistration(
+            CommandType: command,
+            Pipeline: pipeline,
             ServiceTypeExpression: $"{state.CoreNamespace}.ICommandPipeline<{command}, {state.ContextTypeFqn}>",
-            ImplementationTypeExpression: $"global::{state.GeneratedNamespace}.TinyDispatcherGlobalPipeline{state.PipelineClassSuffix}<{command}>"));
+            ImplementationTypeExpression: implementationType);
     }
 
     private sealed record PipelineRegistrationState(
         string GeneratedNamespace,
         string CoreNamespace,
         string ContextTypeFqn,
-        string PipelineClassSuffix,
-        bool HasGlobal,
         DiscoveryResult Discovery,
-        HashSet<string> PerCommandSet,
-        HashSet<string> PolicyCommandSet,
-        Dictionary<string, string> CommandToPolicyPipeline);
+        PipelineDefinition? GlobalPipeline,
+        Dictionary<string, PipelineDefinition> PerCommandPipelineByCommand,
+        Dictionary<string, PipelineDefinition> PolicyPipelineByCommand);
 }
 

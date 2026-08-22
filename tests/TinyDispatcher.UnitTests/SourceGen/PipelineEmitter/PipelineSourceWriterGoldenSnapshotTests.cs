@@ -75,7 +75,9 @@ public sealed class PipelineSourceWriterGoldenSnapshotTests
             IsOpenGeneric: true,
             CommandType: "TCommand",
             Steps: ImmutableArray.Create(
-                new MiddlewareStep(Mw("global::MyApp.GlobalLogMiddleware", 2)))
+                new MiddlewareStep(
+                    Mw("global::MyApp.GlobalLogMiddleware", 2),
+                    PipelineStepSource.Global))
         );
 
         // Policy: applies to CmdB (CmdA has per-command, so DI registration should prefer per-command)
@@ -84,8 +86,13 @@ public sealed class PipelineSourceWriterGoldenSnapshotTests
             IsOpenGeneric: true,
             CommandType: "TCommand",
             Steps: ImmutableArray.Create(
-                new MiddlewareStep(Mw("global::MyApp.GlobalLogMiddleware", 2)),
-                new MiddlewareStep(Mw("global::MyApp.PolicyLogMiddleware", 2)))
+                new MiddlewareStep(
+                    Mw("global::MyApp.GlobalLogMiddleware", 2),
+                    PipelineStepSource.Global),
+                new MiddlewareStep(
+                    Mw("global::MyApp.PolicyLogMiddleware", 2),
+                    PipelineStepSource.Policy,
+                    "global::MyApp.CheckoutPolicy"))
         );
 
         // Per-command: CmdA includes global + policy + per-command
@@ -94,9 +101,16 @@ public sealed class PipelineSourceWriterGoldenSnapshotTests
             IsOpenGeneric: false,
             CommandType: "global::MyApp.CmdA",
             Steps: ImmutableArray.Create(
-                new MiddlewareStep(Mw("global::MyApp.GlobalLogMiddleware", 2)),
-                new MiddlewareStep(Mw("global::MyApp.PolicyLogMiddleware", 2)),
-                new MiddlewareStep(Mw("global::MyApp.PerCommandLogMiddleware", 2)))
+                new MiddlewareStep(
+                    Mw("global::MyApp.GlobalLogMiddleware", 2),
+                    PipelineStepSource.Global),
+                new MiddlewareStep(
+                    Mw("global::MyApp.PolicyLogMiddleware", 2),
+                    PipelineStepSource.Policy,
+                    "global::MyApp.CheckoutPolicy"),
+                new MiddlewareStep(
+                    Mw("global::MyApp.PerCommandLogMiddleware", 2),
+                    PipelineStepSource.Operation))
         );
 
         var mwRegs = ImmutableArray.Create(
@@ -106,15 +120,21 @@ public sealed class PipelineSourceWriterGoldenSnapshotTests
         );
 
         var svcRegs = ImmutableArray.Create(
-            new ServiceRegistration(
+            new PipelineRegistration(
+                CommandType: "global::MyApp.CmdA",
+                Pipeline: perCommandPipeline,
                 ServiceTypeExpression: $"{core}.ICommandPipeline<global::MyApp.CmdA, {ctx}>",
                 ImplementationTypeExpression: $"global::{genNs}.TinyDispatcherPipeline_CmdA"
             ),
-            new ServiceRegistration(
+            new PipelineRegistration(
+                CommandType: "global::MyApp.CmdB",
+                Pipeline: policyPipeline,
                 ServiceTypeExpression: $"{core}.ICommandPipeline<global::MyApp.CmdB, {ctx}>",
                 ImplementationTypeExpression: $"global::{genNs}.TinyDispatcherPolicyPipeline_MyApp_CheckoutPolicy<global::MyApp.CmdB>"
             ),
-            new ServiceRegistration(
+            new PipelineRegistration(
+                CommandType: "global::MyApp.CmdC",
+                Pipeline: globalPipeline,
                 ServiceTypeExpression: $"{core}.ICommandPipeline<global::MyApp.CmdC, {ctx}>",
                 ImplementationTypeExpression: $"global::{genNs}.TinyDispatcherGlobalPipeline<global::MyApp.CmdC>"
             )
@@ -126,10 +146,16 @@ public sealed class PipelineSourceWriterGoldenSnapshotTests
             CoreFqn: core,
             ShouldEmit: true,
             GlobalPipeline: globalPipeline,
-            PolicyPipelines: ImmutableArray.Create(policyPipeline),
+            PolicyPipelines: ImmutableArray.Create(new PolicyPipelineDefinition(
+                new PipelinePolicyContribution(
+                    "global::MyApp.CheckoutPolicy",
+                    new[] { Mw("global::MyApp.PolicyLogMiddleware", 2) },
+                    ImmutableArray.Create("global::MyApp.CmdA", "global::MyApp.CmdB")),
+                policyPipeline)),
             PerCommandPipelines: ImmutableArray.Create(perCommandPipeline),
             OpenGenericMiddlewareRegistrations: mwRegs,
-            ServiceRegistrations: svcRegs
+            ServiceRegistrations: svcRegs,
+            ResolvedPipelines: ImmutableArray<ResolvedPipeline>.Empty
         );
     }
 

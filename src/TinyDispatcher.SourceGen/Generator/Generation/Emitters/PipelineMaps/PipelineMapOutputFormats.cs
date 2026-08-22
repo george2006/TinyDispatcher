@@ -10,20 +10,23 @@ internal readonly struct PipelineMapOutputFormats
 
     public bool EmitMermaid { get; }
 
-    private PipelineMapOutputFormats(bool emitJson, bool emitMermaid)
+    public bool EmitAttributes { get; }
+
+    private PipelineMapOutputFormats(bool emitJson, bool emitMermaid, bool emitAttributes)
     {
         EmitJson = emitJson;
         EmitMermaid = emitMermaid;
+        EmitAttributes = emitAttributes;
     }
 
     public static PipelineMapOutputFormats DefaultJson()
-        => new(emitJson: true, emitMermaid: false);
+        => new(emitJson: true, emitMermaid: false, emitAttributes: false);
 
     public static PipelineMapOutputFormats ParseOrDefault(string? raw)
     {
         var parsed = Parse(raw);
 
-        if (!parsed.EmitJson && !parsed.EmitMermaid)
+        if (!parsed.EmitJson && !parsed.EmitMermaid && !parsed.EmitAttributes)
         {
             return DefaultJson();
         }
@@ -42,6 +45,7 @@ internal readonly struct PipelineMapOutputFormats
 
         var json = false;
         var mermaid = false;
+        var attributes = false;
 
         for (var i = 0; i < parts.Length; i++)
         {
@@ -55,9 +59,13 @@ internal readonly struct PipelineMapOutputFormats
             {
                 mermaid = true;
             }
+            else if (part == "attributes")
+            {
+                attributes = true;
+            }
         }
 
-        return new PipelineMapOutputFormats(json, mermaid);
+        return new PipelineMapOutputFormats(json, mermaid, attributes);
     }
 }
 
