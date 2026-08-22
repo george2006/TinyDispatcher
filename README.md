@@ -115,6 +115,12 @@ See [OpenTelemetry](docs/opentelemetry.md) for registration, the telemetry contr
 
 ## Generated application structure
 
+Generated application structure is available starting with `1.3.0-beta.2`:
+
+```bash
+dotnet add package TinyDispatcher --version 1.3.0-beta.2
+```
+
 TinyDispatcher exposes the command/query structure already discovered by its source generator:
 
 ```csharp
