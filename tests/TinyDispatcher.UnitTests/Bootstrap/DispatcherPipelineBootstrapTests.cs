@@ -102,6 +102,44 @@ public sealed class DispatcherPipelineBootstrapTests
         Assert.Equal(1, CountBootstrapMarkers(services));
     }
 
+    [Fact]
+    public void Returns_operations_from_all_registered_contributions_without_applying_them()
+    {
+        var command = new DispatcherOperation(
+            typeof(TestCommand),
+            typeof(TestCommandHandler),
+            DispatcherOperationKind.Command,
+            typeof(TestContext));
+        var query = new DispatcherOperation(
+            typeof(TestQuery),
+            typeof(TestQueryHandler),
+            DispatcherOperationKind.Query);
+
+        DispatcherPipelineBootstrap.AddContribution(new AssemblyContribution(operations: new[] { command }));
+        DispatcherPipelineBootstrap.AddContribution(new AssemblyContribution(operations: new[] { query }));
+
+        var operations = DispatcherPipelineBootstrap.GetOperations();
+
+        Assert.Equal(new[] { command, query }, operations);
+    }
+
+    [Fact]
+    public void Returns_a_new_operation_snapshot_for_each_read()
+    {
+        var operation = new DispatcherOperation(
+            typeof(TestCommand),
+            typeof(TestCommandHandler),
+            DispatcherOperationKind.Command,
+            typeof(TestContext));
+        DispatcherPipelineBootstrap.AddContribution(new AssemblyContribution(operations: new[] { operation }));
+
+        var first = DispatcherPipelineBootstrap.GetOperations();
+        var second = DispatcherPipelineBootstrap.GetOperations();
+
+        Assert.NotSame(first, second);
+        Assert.Equal(first, second);
+    }
+
     private static ServiceCollection CreateServices()
         => new();
 
@@ -144,4 +182,14 @@ public sealed class DispatcherPipelineBootstrapTests
         => PipelineContributionStore.ResetForTests();
 
     private sealed class TestService;
+
+    private sealed class TestCommand;
+
+    private sealed class TestCommandHandler;
+
+    private sealed class TestQuery;
+
+    private sealed class TestQueryHandler;
+
+    private sealed class TestContext;
 }

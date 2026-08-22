@@ -40,8 +40,12 @@ internal sealed class ThisAssemblyContributionEmitter
 
         w.BeginBlock("internal static global::TinyDispatcher.Bootstrap.AssemblyContribution Create()");
         w.Line("return new global::TinyDispatcher.Bootstrap.AssemblyContribution(");
-        w.Line("    registerServices: AddServices);");
+        w.Line("    registerServices: AddServices,");
+        w.Line("    operations: CreateOperations());");
         w.EndBlock();
+        w.Line();
+
+        WriteCreateOperations(w, discovery);
         w.Line();
 
         w.BeginBlock("internal static void AddServices(IServiceCollection services)");
@@ -61,6 +65,30 @@ internal sealed class ThisAssemblyContributionEmitter
 
         w.EnsureAllBlocksClosed();
         context.AddSource("ThisAssemblyContribution.g.cs", SourceText.From(w.ToString(), Encoding.UTF8));
+    }
+
+    private static void WriteCreateOperations(CodeWriter w, DiscoveryResult discovery)
+    {
+        w.BeginBlock("private static global::TinyDispatcher.Bootstrap.DispatcherOperation[] CreateOperations()");
+        w.Line("return new global::TinyDispatcher.Bootstrap.DispatcherOperation[]");
+        w.BeginAnonymousBlock();
+
+        for (var i = 0; i < discovery.Commands.Length; i++)
+        {
+            var command = discovery.Commands[i];
+            w.Line(
+                $"new global::TinyDispatcher.Bootstrap.DispatcherOperation(typeof({command.MessageTypeFqn}), typeof({command.HandlerTypeFqn}), global::TinyDispatcher.Bootstrap.DispatcherOperationKind.Command, typeof({command.ContextTypeFqn})),");
+        }
+
+        for (var i = 0; i < discovery.Queries.Length; i++)
+        {
+            var query = discovery.Queries[i];
+            w.Line(
+                $"new global::TinyDispatcher.Bootstrap.DispatcherOperation(typeof({query.QueryTypeFqn}), typeof({query.HandlerTypeFqn}), global::TinyDispatcher.Bootstrap.DispatcherOperationKind.Query),");
+        }
+
+        w.EndBlock(";");
+        w.EndBlock();
     }
 
     private static ImmutableArray<PipelineContributionSource> GetContributionSources(

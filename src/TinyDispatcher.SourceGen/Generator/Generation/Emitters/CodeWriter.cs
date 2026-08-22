@@ -41,13 +41,13 @@ internal sealed class CodeWriter
         _indent++;
     }
 
-    public void EndBlock()
+    public void EndBlock(string suffix = "")
     {
         if (_blocks.Count == 0)
             throw new InvalidOperationException("Attempted to close a block but none are open.");
 
         _indent--;
-        Line("}");
+        Line("}" + suffix);
         _blocks.Pop();
     }
 
