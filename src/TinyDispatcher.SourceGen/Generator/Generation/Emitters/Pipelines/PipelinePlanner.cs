@@ -43,11 +43,10 @@ internal static class PipelinePlanner
             generatedNamespace,
             coreNamespace,
             contextType,
-            hasGlobalMiddlewares,
             discovery,
-            perCommandMiddlewares,
-            policies,
-            pipelineClassSuffix);
+            globalPipeline,
+            policyPipelines,
+            perCommandPipelines);
 
         var shouldEmit = ShouldEmitPlan(
             globalPipeline,
@@ -86,29 +85,31 @@ internal static class PipelinePlanner
             Steps: BuildSteps(global, NoMiddlewares, NoMiddlewares));
     }
 
-    private static ImmutableArray<PipelineDefinition> BuildPolicyPipelines(
+    private static ImmutableArray<PolicyPipelineDefinition> BuildPolicyPipelines(
         MiddlewareRef[] global,
         PipelinePolicyContribution[] policies,
         string pipelineClassSuffix)
     {
         if (policies.Length == 0)
         {
-            return ImmutableArray<PipelineDefinition>.Empty;
+            return ImmutableArray<PolicyPipelineDefinition>.Empty;
         }
 
-        var list = new List<PipelineDefinition>(policies.Length);
+        var list = new List<PolicyPipelineDefinition>(policies.Length);
 
         for (var i = 0; i < policies.Length; i++)
         {
             var policy = policies[i];
 
-            list.Add(new PipelineDefinition(
-                ClassName: "TinyDispatcherPolicyPipeline_" +
-                    PipelineNameFactory.SanitizePolicyName(policy.PolicyTypeFqn) +
-                    pipelineClassSuffix,
-                IsOpenGeneric: true,
-                CommandType: "TCommand",
-                Steps: BuildSteps(global, policy.Middlewares, NoMiddlewares)));
+            list.Add(new PolicyPipelineDefinition(
+                Policy: policy,
+                Pipeline: new PipelineDefinition(
+                    ClassName: "TinyDispatcherPolicyPipeline_" +
+                        PipelineNameFactory.SanitizePolicyName(policy.PolicyTypeFqn) +
+                        pipelineClassSuffix,
+                    IsOpenGeneric: true,
+                    CommandType: "TCommand",
+                    Steps: BuildSteps(global, policy.Middlewares, NoMiddlewares))));
         }
 
         return list.ToImmutableArray();
@@ -209,10 +210,10 @@ internal static class PipelinePlanner
 
     private static bool ShouldEmitPlan(
         PipelineDefinition? globalPipeline,
-        ImmutableArray<PipelineDefinition> policyPipelines,
+        ImmutableArray<PolicyPipelineDefinition> policyPipelines,
         ImmutableArray<PipelineDefinition> perCommandPipelines,
         ImmutableArray<OpenGenericRegistration> middlewareRegistrations,
-        ImmutableArray<ServiceRegistration> serviceRegistrations)
+        ImmutableArray<PipelineRegistration> serviceRegistrations)
     {
         var hasGlobalPipeline = globalPipeline is not null;
         var hasPolicyPipelines = policyPipelines.Length > 0;

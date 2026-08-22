@@ -106,15 +106,21 @@ public sealed class PipelineSourceWriterGoldenSnapshotTests
         );
 
         var svcRegs = ImmutableArray.Create(
-            new ServiceRegistration(
+            new PipelineRegistration(
+                CommandType: "global::MyApp.CmdA",
+                Pipeline: perCommandPipeline,
                 ServiceTypeExpression: $"{core}.ICommandPipeline<global::MyApp.CmdA, {ctx}>",
                 ImplementationTypeExpression: $"global::{genNs}.TinyDispatcherPipeline_CmdA"
             ),
-            new ServiceRegistration(
+            new PipelineRegistration(
+                CommandType: "global::MyApp.CmdB",
+                Pipeline: policyPipeline,
                 ServiceTypeExpression: $"{core}.ICommandPipeline<global::MyApp.CmdB, {ctx}>",
                 ImplementationTypeExpression: $"global::{genNs}.TinyDispatcherPolicyPipeline_MyApp_CheckoutPolicy<global::MyApp.CmdB>"
             ),
-            new ServiceRegistration(
+            new PipelineRegistration(
+                CommandType: "global::MyApp.CmdC",
+                Pipeline: globalPipeline,
                 ServiceTypeExpression: $"{core}.ICommandPipeline<global::MyApp.CmdC, {ctx}>",
                 ImplementationTypeExpression: $"global::{genNs}.TinyDispatcherGlobalPipeline<global::MyApp.CmdC>"
             )
@@ -126,7 +132,12 @@ public sealed class PipelineSourceWriterGoldenSnapshotTests
             CoreFqn: core,
             ShouldEmit: true,
             GlobalPipeline: globalPipeline,
-            PolicyPipelines: ImmutableArray.Create(policyPipeline),
+            PolicyPipelines: ImmutableArray.Create(new PolicyPipelineDefinition(
+                new PipelinePolicyContribution(
+                    "global::MyApp.CheckoutPolicy",
+                    new[] { Mw("global::MyApp.PolicyLogMiddleware", 2) },
+                    ImmutableArray.Create("global::MyApp.CmdA", "global::MyApp.CmdB")),
+                policyPipeline)),
             PerCommandPipelines: ImmutableArray.Create(perCommandPipeline),
             OpenGenericMiddlewareRegistrations: mwRegs,
             ServiceRegistrations: svcRegs

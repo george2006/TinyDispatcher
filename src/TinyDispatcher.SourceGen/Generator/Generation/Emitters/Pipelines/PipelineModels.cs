@@ -9,10 +9,10 @@ internal sealed record PipelinePlan(
     string CoreFqn,
     bool ShouldEmit,
     PipelineDefinition? GlobalPipeline,
-    ImmutableArray<PipelineDefinition> PolicyPipelines,
+    ImmutableArray<PolicyPipelineDefinition> PolicyPipelines,
     ImmutableArray<PipelineDefinition> PerCommandPipelines,
     ImmutableArray<OpenGenericRegistration> OpenGenericMiddlewareRegistrations,
-    ImmutableArray<ServiceRegistration> ServiceRegistrations);
+    ImmutableArray<PipelineRegistration> ServiceRegistrations);
 
 internal sealed record PipelineDefinition(
     string ClassName,
@@ -20,9 +20,17 @@ internal sealed record PipelineDefinition(
     string CommandType,
     ImmutableArray<MiddlewareStep> Steps);
 
+internal sealed record PolicyPipelineDefinition(
+    PipelinePolicyContribution Policy,
+    PipelineDefinition Pipeline);
+
 internal sealed record MiddlewareStep(MiddlewareRef Middleware);
 
 internal sealed record OpenGenericRegistration(string TypeofExpression);
 
-internal sealed record ServiceRegistration(string ServiceTypeExpression, string ImplementationTypeExpression);
+internal sealed record PipelineRegistration(
+    string CommandType,
+    PipelineDefinition Pipeline,
+    string ServiceTypeExpression,
+    string ImplementationTypeExpression);
 

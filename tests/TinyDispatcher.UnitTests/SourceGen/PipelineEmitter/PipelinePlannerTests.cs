@@ -76,7 +76,7 @@ public sealed class PipelinePlannerTests
         Assert.Null(plan.GlobalPipeline);
         Assert.Single(plan.PolicyPipelines);
         AssertStepNames(
-            plan.PolicyPipelines[0].Steps,
+            plan.PolicyPipelines[0].Pipeline.Steps,
             "global::MyApp.PolicyLogMiddleware");
 
         Assert.Contains(plan.ServiceRegistrations, r =>
@@ -109,7 +109,7 @@ public sealed class PipelinePlannerTests
 
         Assert.Single(plan.PolicyPipelines);
         AssertStepNames(
-            plan.PolicyPipelines[0].Steps,
+            plan.PolicyPipelines[0].Pipeline.Steps,
             "global::MyApp.GlobalLogMiddleware",
             "global::MyApp.PolicyLogMiddleware");
     }
@@ -174,6 +174,85 @@ public sealed class PipelinePlannerTests
         Assert.Contains("TinyDispatcherPipeline_", reg.ImplementationTypeExpression, StringComparison.Ordinal);
         Assert.DoesNotContain("TinyDispatcherPolicyPipeline_", reg.ImplementationTypeExpression, StringComparison.Ordinal);
         Assert.DoesNotContain("TinyDispatcherGlobalPipeline<", reg.ImplementationTypeExpression, StringComparison.Ordinal);
+        Assert.Same(plan.PerCommandPipelines[0], reg.Pipeline);
+        Assert.Equal("global::MyApp.CmdA", reg.CommandType);
+    }
+
+    [Fact]
+    public void Build_per_command_pipeline_registers_configured_command_without_discovered_handler()
+    {
+        var global = ImmutableArray<MiddlewareRef>.Empty;
+        var perCommand = ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty.Add(
+            "global::MyApp.ConfiguredCommand",
+            ImmutableArray.Create(Mw("global::MyApp.PerCommandLogMiddleware", 2)));
+        var policies = ImmutableDictionary<string, PolicySpec>.Empty;
+        var discovery = FakeDiscovery();
+        var options = FakeOptions("MyApp.Generated", "global::MyApp.AppContext");
+
+        var plan = PipelinePlanner.Build(
+            Contributions(global, perCommand, policies),
+            discovery,
+            options);
+
+        var registration = Assert.Single(plan.ServiceRegistrations);
+
+        Assert.Contains(
+            "ICommandPipeline<global::MyApp.ConfiguredCommand",
+            registration.ServiceTypeExpression,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "TinyDispatcherPipeline_ConfiguredCommand_MyApp_AppContext",
+            registration.ImplementationTypeExpression,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Build_policy_pipeline_registers_target_command_without_discovered_handler()
+    {
+        var global = ImmutableArray<MiddlewareRef>.Empty;
+        var perCommand = ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty;
+        var policies = ImmutableDictionary<string, PolicySpec>.Empty.Add(
+            "global::MyApp.ConfiguredPolicy",
+            new PolicySpec(
+                PolicyTypeFqn: "global::MyApp.ConfiguredPolicy",
+                Middlewares: ImmutableArray.Create(Mw("global::MyApp.PolicyLogMiddleware", 2)),
+                Commands: ImmutableArray.Create("global::MyApp.ConfiguredCommand")));
+        var discovery = FakeDiscovery();
+        var options = FakeOptions("MyApp.Generated", "global::MyApp.AppContext");
+
+        var plan = PipelinePlanner.Build(
+            Contributions(global, perCommand, policies),
+            discovery,
+            options);
+
+        var registration = Assert.Single(plan.ServiceRegistrations);
+
+        Assert.Contains(
+            "ICommandPipeline<global::MyApp.ConfiguredCommand",
+            registration.ServiceTypeExpression,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "TinyDispatcherPolicyPipeline_MyApp_ConfiguredPolicy_MyApp_AppContext",
+            registration.ImplementationTypeExpression,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Build_global_pipeline_without_discovered_commands_has_no_service_registrations()
+    {
+        var global = ImmutableArray.Create(Mw("global::MyApp.GlobalLogMiddleware", 2));
+        var perCommand = ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty;
+        var policies = ImmutableDictionary<string, PolicySpec>.Empty;
+        var discovery = FakeDiscovery();
+        var options = FakeOptions("MyApp.Generated", "global::MyApp.AppContext");
+
+        var plan = PipelinePlanner.Build(
+            Contributions(global, perCommand, policies),
+            discovery,
+            options);
+
+        Assert.NotNull(plan.GlobalPipeline);
+        Assert.Empty(plan.ServiceRegistrations);
     }
 
     [Fact]
@@ -201,7 +280,7 @@ public sealed class PipelinePlannerTests
         Assert.Equal("TinyDispatcherPipeline_CmdA_MyApp_AppContext", plan.PerCommandPipelines[0].ClassName);
         Assert.Equal(
             "TinyDispatcherPolicyPipeline_MyApp_CheckoutPolicy_MyApp_AppContext",
-            plan.PolicyPipelines[0].ClassName);
+            plan.PolicyPipelines[0].Pipeline.ClassName);
         Assert.Contains(plan.ServiceRegistrations, r =>
             r.ImplementationTypeExpression.Contains(
                 "TinyDispatcherPipeline_CmdA_MyApp_AppContext",
