@@ -13,7 +13,21 @@ internal sealed record PipelinePlan(
     ImmutableArray<PipelineDefinition> PerCommandPipelines,
     ImmutableArray<OpenGenericRegistration> OpenGenericMiddlewareRegistrations,
     ImmutableArray<PipelineRegistration> ServiceRegistrations,
-    ImmutableArray<ResolvedPipeline> ResolvedPipelines);
+    ImmutableArray<ResolvedPipeline> ResolvedPipelines)
+{
+    public void Accept(IResolvedPipelineVisitor visitor)
+    {
+        if (visitor is null)
+        {
+            throw new System.ArgumentNullException(nameof(visitor));
+        }
+
+        for (var i = 0; i < ResolvedPipelines.Length; i++)
+        {
+            visitor.Visit(ResolvedPipelines[i]);
+        }
+    }
+}
 
 internal sealed record PipelineDefinition(
     string ClassName,
@@ -48,4 +62,9 @@ internal sealed record PipelineRegistration(
 internal sealed record ResolvedPipeline(
     HandlerContract Operation,
     PipelineDefinition Pipeline);
+
+internal interface IResolvedPipelineVisitor
+{
+    void Visit(ResolvedPipeline pipeline);
+}
 

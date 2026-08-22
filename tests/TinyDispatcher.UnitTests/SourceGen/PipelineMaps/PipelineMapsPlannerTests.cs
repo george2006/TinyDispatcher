@@ -18,7 +18,8 @@ public sealed class PipelineMapsPlannerTests
         var plan = PipelineMapsPlanner.Build(
             Discovery("global::MyApp.Ping", "global::MyApp.PingHandler"),
             EmptyContributions(),
-            Options(emitPipelineMap: false, pipelineMapFormat: "json"));
+            pipelinePlan: null,
+            options: Options(emitPipelineMap: false, pipelineMapFormat: "json"));
 
         Assert.False(plan.ShouldEmit);
         Assert.Empty(plan.Descriptors);
@@ -30,12 +31,58 @@ public sealed class PipelineMapsPlannerTests
         var plan = PipelineMapsPlanner.Build(
             Discovery("global::MyApp.Ping", "global::MyApp.PingHandler"),
             EmptyContributions(),
-            Options(emitPipelineMap: true, pipelineMapFormat: "bogus"));
+            pipelinePlan: null,
+            options: Options(emitPipelineMap: true, pipelineMapFormat: "bogus"));
 
         Assert.True(plan.ShouldEmit);
         Assert.True(plan.Formats.EmitJson);
         Assert.False(plan.Formats.EmitMermaid);
         Assert.Single(plan.Descriptors);
+    }
+
+    [Fact]
+    public void Build_uses_policy_selected_by_executable_pipeline_plan()
+    {
+        var discovery = Discovery(
+            "global::MyApp.Ping",
+            "global::MyApp.PingHandler");
+        var policies = ImmutableDictionary<string, PolicySpec>.Empty
+            .Add(
+                "global::MyApp.ZuluPolicy",
+                Policy(
+                    "global::MyApp.ZuluPolicy",
+                    "global::MyApp.ZuluMiddleware"))
+            .Add(
+                "global::MyApp.AlphaPolicy",
+                Policy(
+                    "global::MyApp.AlphaPolicy",
+                    "global::MyApp.AlphaMiddleware"));
+        var contributions = PipelineContributions.Create(
+            ImmutableArray<MiddlewareRef>.Empty,
+            ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
+            policies);
+        var options = Options(emitPipelineMap: true, pipelineMapFormat: "json");
+        var pipelinePlan = PipelinePlanner.Build(
+            contributions,
+            discovery,
+            options);
+
+        var mapPlan = PipelineMapsPlanner.Build(
+            discovery,
+            contributions,
+            pipelinePlan,
+            options);
+
+        var descriptor = Assert.Single(mapPlan.Descriptors);
+
+        Assert.Single(descriptor.PoliciesApplied);
+        Assert.Equal(
+            "global::MyApp.AlphaPolicy",
+            descriptor.PoliciesApplied[0]);
+        Assert.Single(descriptor.Middlewares);
+        Assert.Equal(
+            "global::MyApp.AlphaMiddleware",
+            descriptor.Middlewares[0].MiddlewareFullName);
     }
 
     private static DiscoveryResult Discovery(string commandFqn, string handlerFqn)
@@ -51,6 +98,16 @@ public sealed class PipelineMapsPlannerTests
             ImmutableArray<MiddlewareRef>.Empty,
             ImmutableDictionary<string, ImmutableArray<MiddlewareRef>>.Empty,
             ImmutableDictionary<string, PolicySpec>.Empty);
+    }
+
+    private static PolicySpec Policy(string policyTypeFqn, string middlewareTypeFqn)
+    {
+        return new PolicySpec(
+            PolicyTypeFqn: policyTypeFqn,
+            Middlewares: ImmutableArray.Create(new MiddlewareRef(
+                OpenTypeFqn: middlewareTypeFqn,
+                Arity: 2)),
+            Commands: ImmutableArray.Create("global::MyApp.Ping"));
     }
 
     private static GeneratorOptions Options(bool emitPipelineMap, string? pipelineMapFormat)

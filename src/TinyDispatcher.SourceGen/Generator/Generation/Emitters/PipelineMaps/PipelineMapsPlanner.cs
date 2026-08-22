@@ -13,6 +13,7 @@ internal static class PipelineMapsPlanner
     public static PipelineMapsPlan Build(
         DiscoveryResult discovery,
         PipelineContributions contributions,
+        PipelinePlan? pipelinePlan,
         GeneratorOptions options)
     {
         if (!options.EmitPipelineMap)
@@ -27,10 +28,16 @@ internal static class PipelineMapsPlanner
 
         var formats = PipelineMapOutputFormats.ParseOrDefault(options.PipelineMapFormat);
         var inspector = new PipelineMapInspector(contributions, options);
+        var visitor = new PipelineMapVisitor();
+        pipelinePlan?.Accept(visitor);
         var descriptors = ImmutableArray.CreateBuilder<PipelineDescriptor>(
             discovery.Commands.Length + discovery.Queries.Length);
 
-        AddCommands(descriptors, discovery.Commands, inspector);
+        AddCommands(
+            descriptors,
+            discovery.Commands,
+            visitor,
+            options);
         AddQueries(descriptors, discovery.Queries, inspector);
 
         return new PipelineMapsPlan(descriptors.ToImmutable(), formats);
@@ -39,11 +46,26 @@ internal static class PipelineMapsPlanner
     private static void AddCommands(
         ImmutableArray<PipelineDescriptor>.Builder descriptors,
         ImmutableArray<HandlerContract> handlers,
-        PipelineMapInspector inspector)
+        PipelineMapVisitor visitor,
+        GeneratorOptions options)
     {
         for (var i = 0; i < handlers.Length; i++)
         {
-            descriptors.Add(inspector.InspectCommand(handlers[i]));
+            var handler = handlers[i];
+            var commandType = PipelineTypeNames.NormalizeFqn(handler.MessageTypeFqn);
+
+            if (visitor.TryGetDescriptor(commandType, out var descriptor))
+            {
+                descriptors.Add(descriptor);
+                continue;
+            }
+
+            descriptors.Add(new PipelineDescriptor(
+                CommandFullName: commandType,
+                ContextFullName: PipelineTypeNames.NormalizeFqn(options.CommandContextType!),
+                HandlerFullName: PipelineTypeNames.NormalizeFqn(handler.HandlerTypeFqn),
+                Middlewares: System.Array.Empty<MiddlewareDescriptor>(),
+                PoliciesApplied: System.Array.Empty<string>()));
         }
     }
 

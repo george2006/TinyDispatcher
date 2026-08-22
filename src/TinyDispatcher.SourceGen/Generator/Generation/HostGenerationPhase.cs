@@ -60,6 +60,7 @@ internal sealed class HostGenerationPhase
             var pipelineMapsPlan = PipelineMapsPlanner.Build(
                 lanePlan.Discovery,
                 lanePlan.PipelineContributions,
+                lanePlan.PipelinePlan,
                 lanePlan.EmitOptions);
 
             new PipelineMapsEmitter().Emit(context, pipelineMapsPlan);
