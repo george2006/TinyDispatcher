@@ -72,7 +72,7 @@ public sealed class PipelineNamingTests
     }
 
     [Fact]
-    public void Normalize_distinct_removes_duplicates_by_open_type_and_arity_and_sorts()
+    public void Normalize_distinct_removes_duplicates_and_preserves_first_occurrence()
     {
         var items = ImmutableArray.Create(
             Mw("global::B.Mw", 2),
@@ -85,15 +85,14 @@ public sealed class PipelineNamingTests
 
         Assert.Equal(3, distinct.Length);
 
-        // Sorted by OpenTypeFqn
-        Assert.Equal("global::A.Mw", distinct[0].OpenTypeFqn);
+        Assert.Equal("global::B.Mw", distinct[0].OpenTypeFqn);
         Assert.Equal(2, distinct[0].Arity);
 
         Assert.Equal("global::A.Mw", distinct[1].OpenTypeFqn);
-        Assert.Equal(1, distinct[1].Arity);
+        Assert.Equal(2, distinct[1].Arity);
 
-        Assert.Equal("global::B.Mw", distinct[2].OpenTypeFqn);
-        Assert.Equal(2, distinct[2].Arity);
+        Assert.Equal("global::A.Mw", distinct[2].OpenTypeFqn);
+        Assert.Equal(1, distinct[2].Arity);
     }
 
     [Fact]
