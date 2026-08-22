@@ -20,5 +20,5 @@ public sealed class TinyDispatcherGeneratorOptionsAttribute : Attribute
 
     // Optional extras (if you keep these features)
     public bool EmitPipelineMap { get; set; }
-    public string? PipelineMapFormat { get; set; } // "json", etc.
+    public string? PipelineMapFormat { get; set; } // "json", "mermaid", or "attributes".
 }

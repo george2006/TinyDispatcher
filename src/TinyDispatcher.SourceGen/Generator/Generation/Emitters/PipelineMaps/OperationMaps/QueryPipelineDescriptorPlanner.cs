@@ -8,13 +8,13 @@ using TinyDispatcher.SourceGen.Generator.Options;
 
 namespace TinyDispatcher.SourceGen.Generator.Generation.Emitters.PipelineMaps;
 
-internal sealed class PipelineMapInspector
+internal sealed class QueryPipelineDescriptorPlanner
 {
     private readonly MiddlewareRef[] _globals;
     private readonly IReadOnlyDictionary<string, MiddlewareRef[]> _perCommand;
     private readonly string _contextFqn;
 
-    public PipelineMapInspector(
+    public QueryPipelineDescriptorPlanner(
         PipelineContributions contributions,
         GeneratorOptions options)
     {
@@ -23,7 +23,7 @@ internal sealed class PipelineMapInspector
         _contextFqn = PipelineTypeNames.NormalizeFqn(options.CommandContextType!);
     }
 
-    public PipelineDescriptor InspectQuery(QueryHandlerContract handler)
+    public PipelineDescriptor Build(QueryHandlerContract handler)
         => BuildQuery(handler);
 
     private PipelineDescriptor BuildQuery(QueryHandlerContract handler)
