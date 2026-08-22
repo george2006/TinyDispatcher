@@ -44,7 +44,7 @@
    </PropertyGroup>
 
   <PropertyGroup>
-    <Version>1.2.0</Version>
+    <Version>1.2.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -53,24 +53,13 @@
   </ItemGroup>
   <PropertyGroup>
     <PackageReleaseNotes>
-      TinyDispatcher 1.2.0
+      TinyDispatcher 1.2.1
 
-      Added
-      - Stable multi-context / context-lane dispatching.
-      - Module-owned context types inside the same modular monolith.
-      - Strongly typed dispatcher lanes with independent context factories, handlers, middleware, policies, and generated pipelines.
-      - NoOpContext can participate as a no-context lane alongside typed context lanes.
-      - Orders/Payments multi-lane sample covering module-specific contexts and middleware.
+      Fixed
+      - Generated pipelines now preserve middleware declaration order within the global, policy, and per-command layers.
+      - In affected previous versions, including 1.2.0, middleware was extracted in declaration order but later normalized by type name. When declaration and alphabetical order differed, execution order could change.
+      - Duplicate middleware registrations continue to keep their first occurrence.
 
-      Changed
-      - Source generator composition now models host lanes explicitly.
-      - Pipeline map emission includes lane-aware generated pipeline information.
-      - NoOpContext dispatch tests now live in the main unit test suite because no-op context is modeled as a lane.
-
-      Notes
-      - 1.2.0 is the stable release of the context-lane API introduced in the 1.2.0 prerelease line.
-      - Use one lane by default. Add lanes when modules need distinct contexts or pipelines.
-      - 1.1.x remains available for applications that are not ready to adopt context lanes.
     </PackageReleaseNotes>
 
 

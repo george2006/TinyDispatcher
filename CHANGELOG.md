@@ -1,4 +1,4 @@
-## Unreleased
+## 1.2.1 - 2026-08-22
 
 ### Fixed
 - Generated pipelines now preserve middleware declaration order within the global, policy, and per-command layers. Previous versions, including `1.2.0`, normalized middleware by type name after extraction, which could change execution order when declaration order differed from alphabetical order.
