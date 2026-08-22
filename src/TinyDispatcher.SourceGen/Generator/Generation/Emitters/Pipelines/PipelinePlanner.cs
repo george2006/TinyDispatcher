@@ -47,6 +47,9 @@ internal static class PipelinePlanner
             globalPipeline,
             policyPipelines,
             perCommandPipelines);
+        var resolvedPipelines = ResolvePipelines(
+            serviceRegistrations,
+            discovery);
 
         var shouldEmit = ShouldEmitPlan(
             globalPipeline,
@@ -64,7 +67,39 @@ internal static class PipelinePlanner
             PolicyPipelines: policyPipelines,
             PerCommandPipelines: perCommandPipelines,
             OpenGenericMiddlewareRegistrations: middlewareRegistrations,
-            ServiceRegistrations: serviceRegistrations);
+            ServiceRegistrations: serviceRegistrations,
+            ResolvedPipelines: resolvedPipelines);
+    }
+
+    private static ImmutableArray<ResolvedPipeline> ResolvePipelines(
+        ImmutableArray<PipelineRegistration> registrations,
+        DiscoveryResult discovery)
+    {
+        var handlersByCommand = new Dictionary<string, HandlerContract>(StringComparer.Ordinal);
+
+        for (var i = 0; i < discovery.Commands.Length; i++)
+        {
+            var handler = discovery.Commands[i];
+            var command = PipelineTypeNames.NormalizeFqn(handler.MessageTypeFqn);
+            handlersByCommand[command] = handler;
+        }
+
+        var pipelines = ImmutableArray.CreateBuilder<ResolvedPipeline>();
+
+        for (var i = 0; i < registrations.Length; i++)
+        {
+            var registration = registrations[i];
+            if (!handlersByCommand.TryGetValue(registration.CommandType, out var handler))
+            {
+                continue;
+            }
+
+            pipelines.Add(new ResolvedPipeline(
+                handler,
+                registration.Pipeline));
+        }
+
+        return pipelines.ToImmutable();
     }
 
     private static PipelineDefinition? BuildGlobalPipeline(

@@ -12,7 +12,8 @@ internal sealed record PipelinePlan(
     ImmutableArray<PolicyPipelineDefinition> PolicyPipelines,
     ImmutableArray<PipelineDefinition> PerCommandPipelines,
     ImmutableArray<OpenGenericRegistration> OpenGenericMiddlewareRegistrations,
-    ImmutableArray<PipelineRegistration> ServiceRegistrations);
+    ImmutableArray<PipelineRegistration> ServiceRegistrations,
+    ImmutableArray<ResolvedPipeline> ResolvedPipelines);
 
 internal sealed record PipelineDefinition(
     string ClassName,
@@ -33,4 +34,8 @@ internal sealed record PipelineRegistration(
     PipelineDefinition Pipeline,
     string ServiceTypeExpression,
     string ImplementationTypeExpression);
+
+internal sealed record ResolvedPipeline(
+    HandlerContract Operation,
+    PipelineDefinition Pipeline);
 

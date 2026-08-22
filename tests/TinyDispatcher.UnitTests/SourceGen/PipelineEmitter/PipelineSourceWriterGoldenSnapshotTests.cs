@@ -140,7 +140,8 @@ public sealed class PipelineSourceWriterGoldenSnapshotTests
                 policyPipeline)),
             PerCommandPipelines: ImmutableArray.Create(perCommandPipeline),
             OpenGenericMiddlewareRegistrations: mwRegs,
-            ServiceRegistrations: svcRegs
+            ServiceRegistrations: svcRegs,
+            ResolvedPipelines: ImmutableArray<ResolvedPipeline>.Empty
         );
     }
 

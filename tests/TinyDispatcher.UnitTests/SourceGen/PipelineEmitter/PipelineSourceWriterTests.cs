@@ -150,7 +150,8 @@ public sealed class PipelineSourceWriterTests
             PolicyPipelines: (policyPipelines ?? Array.Empty<PolicyPipelineDefinition>()).ToImmutableArray(),
             PerCommandPipelines: (perCommandPipelines ?? Array.Empty<PipelineDefinition>()).ToImmutableArray(),
             OpenGenericMiddlewareRegistrations: ImmutableArray<OpenGenericRegistration>.Empty,
-            ServiceRegistrations: ImmutableArray<PipelineRegistration>.Empty
+            ServiceRegistrations: ImmutableArray<PipelineRegistration>.Empty,
+            ResolvedPipelines: ImmutableArray<ResolvedPipeline>.Empty
         );
     }
 

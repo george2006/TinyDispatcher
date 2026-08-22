@@ -51,6 +51,10 @@ public sealed class PipelinePlannerTests
         Assert.Contains(plan.ServiceRegistrations, r =>
             r.ServiceTypeExpression.Contains("ICommandPipeline<global::MyApp.CmdB", StringComparison.Ordinal) &&
             r.ImplementationTypeExpression.Contains("TinyDispatcherGlobalPipeline_MyApp_AppContext<global::MyApp.CmdB>", StringComparison.Ordinal));
+
+        Assert.Equal(2, plan.ResolvedPipelines.Length);
+        Assert.All(plan.ResolvedPipelines, pipeline =>
+            Assert.Same(plan.GlobalPipeline, pipeline.Pipeline));
     }
 
     [Fact]
@@ -176,6 +180,13 @@ public sealed class PipelinePlannerTests
         Assert.DoesNotContain("TinyDispatcherGlobalPipeline<", reg.ImplementationTypeExpression, StringComparison.Ordinal);
         Assert.Same(plan.PerCommandPipelines[0], reg.Pipeline);
         Assert.Equal("global::MyApp.CmdA", reg.CommandType);
+
+        var resolved = Assert.Single(plan.ResolvedPipelines);
+
+        Assert.Same(reg.Pipeline, resolved.Pipeline);
+        Assert.Equal("global::MyApp.CmdA", resolved.Operation.MessageTypeFqn);
+        Assert.Equal("global::MyApp.DummyHandler", resolved.Operation.HandlerTypeFqn);
+        Assert.Equal("global::MyApp.AppContext", resolved.Operation.ContextTypeFqn);
     }
 
     [Fact]
@@ -204,6 +215,7 @@ public sealed class PipelinePlannerTests
             "TinyDispatcherPipeline_ConfiguredCommand_MyApp_AppContext",
             registration.ImplementationTypeExpression,
             StringComparison.Ordinal);
+        Assert.Empty(plan.ResolvedPipelines);
     }
 
     [Fact]
@@ -235,6 +247,7 @@ public sealed class PipelinePlannerTests
             "TinyDispatcherPolicyPipeline_MyApp_ConfiguredPolicy_MyApp_AppContext",
             registration.ImplementationTypeExpression,
             StringComparison.Ordinal);
+        Assert.Empty(plan.ResolvedPipelines);
     }
 
     [Fact]
