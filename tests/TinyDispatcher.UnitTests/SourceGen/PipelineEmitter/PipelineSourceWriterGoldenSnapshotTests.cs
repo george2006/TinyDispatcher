@@ -75,7 +75,9 @@ public sealed class PipelineSourceWriterGoldenSnapshotTests
             IsOpenGeneric: true,
             CommandType: "TCommand",
             Steps: ImmutableArray.Create(
-                new MiddlewareStep(Mw("global::MyApp.GlobalLogMiddleware", 2)))
+                new MiddlewareStep(
+                    Mw("global::MyApp.GlobalLogMiddleware", 2),
+                    PipelineStepSource.Global))
         );
 
         // Policy: applies to CmdB (CmdA has per-command, so DI registration should prefer per-command)
@@ -84,8 +86,13 @@ public sealed class PipelineSourceWriterGoldenSnapshotTests
             IsOpenGeneric: true,
             CommandType: "TCommand",
             Steps: ImmutableArray.Create(
-                new MiddlewareStep(Mw("global::MyApp.GlobalLogMiddleware", 2)),
-                new MiddlewareStep(Mw("global::MyApp.PolicyLogMiddleware", 2)))
+                new MiddlewareStep(
+                    Mw("global::MyApp.GlobalLogMiddleware", 2),
+                    PipelineStepSource.Global),
+                new MiddlewareStep(
+                    Mw("global::MyApp.PolicyLogMiddleware", 2),
+                    PipelineStepSource.Policy,
+                    "global::MyApp.CheckoutPolicy"))
         );
 
         // Per-command: CmdA includes global + policy + per-command
@@ -94,9 +101,16 @@ public sealed class PipelineSourceWriterGoldenSnapshotTests
             IsOpenGeneric: false,
             CommandType: "global::MyApp.CmdA",
             Steps: ImmutableArray.Create(
-                new MiddlewareStep(Mw("global::MyApp.GlobalLogMiddleware", 2)),
-                new MiddlewareStep(Mw("global::MyApp.PolicyLogMiddleware", 2)),
-                new MiddlewareStep(Mw("global::MyApp.PerCommandLogMiddleware", 2)))
+                new MiddlewareStep(
+                    Mw("global::MyApp.GlobalLogMiddleware", 2),
+                    PipelineStepSource.Global),
+                new MiddlewareStep(
+                    Mw("global::MyApp.PolicyLogMiddleware", 2),
+                    PipelineStepSource.Policy,
+                    "global::MyApp.CheckoutPolicy"),
+                new MiddlewareStep(
+                    Mw("global::MyApp.PerCommandLogMiddleware", 2),
+                    PipelineStepSource.Operation))
         );
 
         var mwRegs = ImmutableArray.Create(

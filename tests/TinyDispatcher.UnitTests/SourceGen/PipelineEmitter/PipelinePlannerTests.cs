@@ -187,6 +187,10 @@ public sealed class PipelinePlannerTests
         Assert.Equal("global::MyApp.CmdA", resolved.Operation.MessageTypeFqn);
         Assert.Equal("global::MyApp.DummyHandler", resolved.Operation.HandlerTypeFqn);
         Assert.Equal("global::MyApp.AppContext", resolved.Operation.ContextTypeFqn);
+        Assert.Equal(PipelineStepSource.Global, resolved.Pipeline.Steps[0].Source);
+        Assert.Equal(PipelineStepSource.Policy, resolved.Pipeline.Steps[1].Source);
+        Assert.Equal("global::MyApp.CheckoutPolicy", resolved.Pipeline.Steps[1].PolicyTypeFqn);
+        Assert.Equal(PipelineStepSource.Operation, resolved.Pipeline.Steps[2].Source);
     }
 
     [Fact]

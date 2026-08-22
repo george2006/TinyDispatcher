@@ -165,7 +165,11 @@ public sealed class PipelineSourceWriterTests
             ClassName: className,
             IsOpenGeneric: isOpenGeneric,
             CommandType: commandType,
-            Steps: steps.Select(m => new MiddlewareStep(m)).ToImmutableArray()
+            Steps: steps
+                .Select(middleware => new MiddlewareStep(
+                    middleware,
+                    PipelineStepSource.Operation))
+                .ToImmutableArray()
         );
     }
 

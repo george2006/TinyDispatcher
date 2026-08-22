@@ -25,7 +25,17 @@ internal sealed record PolicyPipelineDefinition(
     PipelinePolicyContribution Policy,
     PipelineDefinition Pipeline);
 
-internal sealed record MiddlewareStep(MiddlewareRef Middleware);
+internal sealed record MiddlewareStep(
+    MiddlewareRef Middleware,
+    PipelineStepSource Source,
+    string? PolicyTypeFqn = null);
+
+internal enum PipelineStepSource
+{
+    Global,
+    Policy,
+    Operation
+}
 
 internal sealed record OpenGenericRegistration(string TypeofExpression);
 
