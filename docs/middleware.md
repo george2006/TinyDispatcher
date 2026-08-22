@@ -70,6 +70,9 @@ Global middleware:
 tiny.UseGlobalMiddleware(typeof(LoggingMiddleware<,>));
 ```
 
+When multiple middleware components are registered in the same layer, declaration order is
+execution order. Middleware entered first is also exited last.
+
 Per-command middleware:
 
 ```csharp
