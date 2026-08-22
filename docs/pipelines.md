@@ -14,7 +14,8 @@ The runtime pipeline for a command is deterministic:
 
 **Global -> Policy -> Per-command -> Handler**
 
-This order is enforced by the planner and reflected in the generated pipeline switch.
+This order is enforced by the planner and reflected in the generated pipeline switch. Within each
+layer, middleware runs in declaration order. Duplicate registrations keep their first occurrence.
 
 ## Pipeline kinds
 
