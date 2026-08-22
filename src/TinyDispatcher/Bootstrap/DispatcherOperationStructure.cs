@@ -2,9 +2,9 @@ using System;
 
 namespace TinyDispatcher.Bootstrap;
 
-public sealed class DispatcherOperation
+public sealed class DispatcherOperationStructure
 {
-    public DispatcherOperation(
+    public DispatcherOperationStructure(
         Type operationType,
         Type handlerType,
         DispatcherOperationKind kind,
@@ -12,6 +12,11 @@ public sealed class DispatcherOperation
     {
         OperationType = operationType ?? throw new ArgumentNullException(nameof(operationType));
         HandlerType = handlerType ?? throw new ArgumentNullException(nameof(handlerType));
+        if (kind != DispatcherOperationKind.Command && kind != DispatcherOperationKind.Query)
+        {
+            throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown dispatcher operation kind.");
+        }
+
         Kind = kind;
         ContextType = contextType;
     }

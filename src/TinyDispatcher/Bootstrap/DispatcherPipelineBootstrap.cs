@@ -31,18 +31,26 @@ public static class DispatcherPipelineBootstrap
             c.Apply(services);
     }
 
-    public static IReadOnlyList<DispatcherOperation> GetOperations()
+    public static IReadOnlyList<DispatcherOperationStructure> GetOperations()
     {
         var contributions = PipelineContributionStore.GetSnapshot();
-        var operations = new List<DispatcherOperation>();
+        var operations = new List<DispatcherOperationStructure>();
 
         foreach (var contribution in contributions)
         {
             operations.AddRange(contribution.GetOperationSnapshot());
         }
 
-        return operations.ToArray();
+        return operations
+            .OrderBy(operation => GetTypeIdentity(operation.OperationType), StringComparer.Ordinal)
+            .ThenBy(operation => GetTypeIdentity(operation.ContextType), StringComparer.Ordinal)
+            .ThenBy(operation => GetTypeIdentity(operation.HandlerType), StringComparer.Ordinal)
+            .ThenBy(operation => operation.Kind)
+            .ToArray();
     }
+
+    private static string GetTypeIdentity(Type? type)
+        => type?.FullName ?? type?.Name ?? string.Empty;
 
     private sealed class DispatcherPipelineBootstrapAppliedMarker { }
 }

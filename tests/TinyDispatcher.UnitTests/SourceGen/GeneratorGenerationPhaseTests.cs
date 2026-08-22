@@ -113,11 +113,13 @@ public sealed class GeneratorGenerationPhaseTests
             source => source.HintName == "ThisAssemblyContribution.g.cs").Content;
 
         Assert.Contains(
-            "DispatcherOperation(typeof(global::MyApp.CreateUser), typeof(global::MyApp.CreateUserHandler), global::TinyDispatcher.Bootstrap.DispatcherOperationKind.Command, typeof(global::MyApp.AppContext))",
+            "DispatcherOperationStructure(typeof(global::MyApp.CreateUser), typeof(global::MyApp.CreateUserHandler), global::TinyDispatcher.Bootstrap.DispatcherOperationKind.Command, typeof(global::MyApp.AppContext))",
             contribution);
         Assert.Contains(
-            "DispatcherOperation(typeof(global::MyApp.GetUser), typeof(global::MyApp.GetUserHandler), global::TinyDispatcher.Bootstrap.DispatcherOperationKind.Query)",
+            "DispatcherOperationStructure(typeof(global::MyApp.GetUser), typeof(global::MyApp.GetUserHandler), global::TinyDispatcher.Bootstrap.DispatcherOperationKind.Query)",
             contribution);
+        Assert.Contains("getOperations: CreateOperations", contribution);
+        Assert.DoesNotContain("getOperations: CreateOperations()", contribution);
     }
 
     [Fact]

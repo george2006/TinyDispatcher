@@ -7,14 +7,27 @@ namespace TinyDispatcher.Bootstrap;
 
 public class AssemblyContribution
 {
-    private readonly DispatcherOperation[] _operations;
+    private readonly Lazy<DispatcherOperationStructure[]>? _operations;
 
-    public AssemblyContribution(
-        Action<IServiceCollection>? registerServices = null,
-        IReadOnlyCollection<DispatcherOperation>? operations = null)
+    public AssemblyContribution(Action<IServiceCollection>? registerServices = null)
     {
         RegisterServices = registerServices;
-        _operations = operations?.ToArray() ?? Array.Empty<DispatcherOperation>();
+    }
+
+    public AssemblyContribution(
+        Action<IServiceCollection>? registerServices,
+        Func<IReadOnlyCollection<DispatcherOperationStructure>> getOperations)
+    {
+        RegisterServices = registerServices;
+        if (getOperations is null) throw new ArgumentNullException(nameof(getOperations));
+
+        _operations = new Lazy<DispatcherOperationStructure[]>(() =>
+        {
+            var operations = getOperations()
+                ?? throw new InvalidOperationException("The dispatcher operation factory returned null.");
+
+            return operations.ToArray();
+        });
     }
 
     public Action<IServiceCollection>? RegisterServices { get; }
@@ -25,8 +38,8 @@ public class AssemblyContribution
         RegisterServices?.Invoke(services);
     }
 
-    internal DispatcherOperation[] GetOperationSnapshot()
+    internal DispatcherOperationStructure[] GetOperationSnapshot()
     {
-        return _operations.ToArray();
+        return _operations?.Value.ToArray() ?? Array.Empty<DispatcherOperationStructure>();
     }
 }

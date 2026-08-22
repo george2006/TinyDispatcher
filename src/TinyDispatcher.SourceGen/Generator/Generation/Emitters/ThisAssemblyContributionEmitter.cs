@@ -41,7 +41,7 @@ internal sealed class ThisAssemblyContributionEmitter
         w.BeginBlock("internal static global::TinyDispatcher.Bootstrap.AssemblyContribution Create()");
         w.Line("return new global::TinyDispatcher.Bootstrap.AssemblyContribution(");
         w.Line("    registerServices: AddServices,");
-        w.Line("    operations: CreateOperations());");
+        w.Line("    getOperations: CreateOperations);");
         w.EndBlock();
         w.Line();
 
@@ -69,22 +69,22 @@ internal sealed class ThisAssemblyContributionEmitter
 
     private static void WriteCreateOperations(CodeWriter w, DiscoveryResult discovery)
     {
-        w.BeginBlock("private static global::TinyDispatcher.Bootstrap.DispatcherOperation[] CreateOperations()");
-        w.Line("return new global::TinyDispatcher.Bootstrap.DispatcherOperation[]");
+        w.BeginBlock("private static global::TinyDispatcher.Bootstrap.DispatcherOperationStructure[] CreateOperations()");
+        w.Line("return new global::TinyDispatcher.Bootstrap.DispatcherOperationStructure[]");
         w.BeginAnonymousBlock();
 
         for (var i = 0; i < discovery.Commands.Length; i++)
         {
             var command = discovery.Commands[i];
             w.Line(
-                $"new global::TinyDispatcher.Bootstrap.DispatcherOperation(typeof({command.MessageTypeFqn}), typeof({command.HandlerTypeFqn}), global::TinyDispatcher.Bootstrap.DispatcherOperationKind.Command, typeof({command.ContextTypeFqn})),");
+                $"new global::TinyDispatcher.Bootstrap.DispatcherOperationStructure(typeof({command.MessageTypeFqn}), typeof({command.HandlerTypeFqn}), global::TinyDispatcher.Bootstrap.DispatcherOperationKind.Command, typeof({command.ContextTypeFqn})),");
         }
 
         for (var i = 0; i < discovery.Queries.Length; i++)
         {
             var query = discovery.Queries[i];
             w.Line(
-                $"new global::TinyDispatcher.Bootstrap.DispatcherOperation(typeof({query.QueryTypeFqn}), typeof({query.HandlerTypeFqn}), global::TinyDispatcher.Bootstrap.DispatcherOperationKind.Query),");
+                $"new global::TinyDispatcher.Bootstrap.DispatcherOperationStructure(typeof({query.QueryTypeFqn}), typeof({query.HandlerTypeFqn}), global::TinyDispatcher.Bootstrap.DispatcherOperationKind.Query),");
         }
 
         w.EndBlock(";");
