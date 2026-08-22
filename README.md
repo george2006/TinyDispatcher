@@ -21,6 +21,7 @@ It provides a predictable, explicit, and performant command/query dispatch core 
 - **Source-generator diagnostics** for invalid shapes/config (fail fast, no guessing)
 - **Context lanes** in `1.2.0` for module-owned contexts and typed dispatchers
 - **Built-in OpenTelemetry** traces and metrics for commands and queries
+- **Generated application structure** available without dispatching operations or scanning assemblies
 
 ## Install
 
@@ -111,6 +112,23 @@ POST /orders
 Collection is opt-in through the application's OpenTelemetry configuration. TinyDispatcher does not select an exporter, send telemetry by itself, or automatically record command and query payloads.
 
 See [OpenTelemetry](docs/opentelemetry.md) for registration, the telemetry contract, privacy behavior, and runnable samples.
+
+## Generated application structure
+
+TinyDispatcher exposes the command/query structure already discovered by its source generator:
+
+```csharp
+var operations = DispatcherPipelineBootstrap.GetOperations();
+```
+
+Each `DispatcherOperationStructure` identifies the operation type, handler type, command/query
+kind, and optional dispatcher context. The snapshot is deterministic and independent from the
+DI registration path. Reading it does not dispatch an operation, construct a handler, scan an
+assembly, configure OpenTelemetry, or expose command/query payloads.
+
+The generated structure is lazy: applications that never call `GetOperations()` do not build
+the operation objects. The first read materializes and caches each generated contribution;
+every read returns a fresh aggregate snapshot.
 
 ## Documentation
 

@@ -85,6 +85,44 @@ public sealed class GeneratorGenerationPhaseTests
     }
 
     [Fact]
+    public void Generate_emits_command_and_query_operation_metadata()
+    {
+        var context = new CapturingGeneratorContext();
+        var command = new HandlerContract(
+            MessageTypeFqn: "global::MyApp.CreateUser",
+            HandlerTypeFqn: "global::MyApp.CreateUserHandler",
+            ContextTypeFqn: "global::MyApp.AppContext");
+        var query = new QueryHandlerContract(
+            QueryTypeFqn: "global::MyApp.GetUser",
+            ResultTypeFqn: "global::MyApp.User",
+            HandlerTypeFqn: "global::MyApp.GetUserHandler");
+        var discovery = new DiscoveryResult(
+            ImmutableArray.Create(command),
+            ImmutableArray.Create(query));
+        var extraction = Extraction(discovery, PipelineConfig.Empty);
+        var hostBootstrap = HostBootstrap("global::MyApp.AppContext");
+
+        new GeneratorGenerationPhase().Generate(
+            context,
+            Options(commandContextType: null),
+            Composition(hostBootstrap, extraction),
+            hostBootstrap);
+
+        var contribution = Assert.Single(
+            context.Sources,
+            source => source.HintName == "ThisAssemblyContribution.g.cs").Content;
+
+        Assert.Contains(
+            "DispatcherOperationStructure(typeof(global::MyApp.CreateUser), typeof(global::MyApp.CreateUserHandler), global::TinyDispatcher.Bootstrap.DispatcherOperationKind.Command, typeof(global::MyApp.AppContext))",
+            contribution);
+        Assert.Contains(
+            "DispatcherOperationStructure(typeof(global::MyApp.GetUser), typeof(global::MyApp.GetUserHandler), global::TinyDispatcher.Bootstrap.DispatcherOperationKind.Query)",
+            contribution);
+        Assert.Contains("getOperations: CreateOperations", contribution);
+        Assert.DoesNotContain("getOperations: CreateOperations()", contribution);
+    }
+
+    [Fact]
     public void Generate_emits_global_pipeline_registrations_for_referenced_contributed_commands()
     {
         var context = new CapturingGeneratorContext();

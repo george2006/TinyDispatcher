@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -29,6 +30,27 @@ public static class DispatcherPipelineBootstrap
         foreach (var c in contributions)
             c.Apply(services);
     }
+
+    public static IReadOnlyList<DispatcherOperationStructure> GetOperations()
+    {
+        var contributions = PipelineContributionStore.GetSnapshot();
+        var operations = new List<DispatcherOperationStructure>();
+
+        foreach (var contribution in contributions)
+        {
+            operations.AddRange(contribution.GetOperationSnapshot());
+        }
+
+        return operations
+            .OrderBy(operation => GetTypeIdentity(operation.OperationType), StringComparer.Ordinal)
+            .ThenBy(operation => GetTypeIdentity(operation.ContextType), StringComparer.Ordinal)
+            .ThenBy(operation => GetTypeIdentity(operation.HandlerType), StringComparer.Ordinal)
+            .ThenBy(operation => operation.Kind)
+            .ToArray();
+    }
+
+    private static string GetTypeIdentity(Type? type)
+        => type?.FullName ?? type?.Name ?? string.Empty;
 
     private sealed class DispatcherPipelineBootstrapAppliedMarker { }
 }

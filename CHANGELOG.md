@@ -1,7 +1,14 @@
 ## Unreleased
 
+## 1.3.0-beta.2 - 2026-08-22
+
 ### Added
 - Dispatcher context identity on operation activities and metrics, allowing the same operation to be distinguished across context lanes.
+- Generated command and query structure through `DispatcherPipelineBootstrap.GetOperations()`, without dispatching operations or scanning assemblies at runtime.
+
+### Notes
+- Generated operation structure is materialized lazily on first access, cached per assembly contribution, and returned in deterministic snapshots.
+- Operation structure contains type identities and command/query metadata only; it does not construct handlers or expose operation payloads.
 
 ## 1.3.0-beta.1 - 2026-08-16
 

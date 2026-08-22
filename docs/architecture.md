@@ -21,6 +21,8 @@ At startup, generated code publishes contributions via a small bootstrap hook:
 - the generator emits a `ModuleInitializer` per project
 - module initializers publish generated DI registration hooks
 - `UseTinyDispatcher<TContext>` calls `DispatcherPipelineBootstrap.Apply(services)` to apply generated registrations
+- `DispatcherPipelineBootstrap.GetOperations()` materializes the optional generated operation
+  structure only when a caller requests it
 
 ## Generator
 
@@ -40,5 +42,7 @@ The generator also emits diagnostics for invalid shapes/config (duplicate handle
 - Contributing assemblies publish compile-time metadata through assembly attributes.
 - The host owns final pipeline composition.
 - The runtime applies generated registrations, but does not perform discovery, composition, or runtime scanning.
+- Structural snapshots reuse compile-time discovery, remain independent from DI application,
+  and contain type identities rather than operation payloads or execution state.
 
 For the multi-assembly flow, see [Multi-Assembly Composition](multi-assembly-composition.md).
