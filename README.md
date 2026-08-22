@@ -13,7 +13,7 @@ It provides a predictable, explicit, and performant command/query dispatch core 
 
 - **Compile-time handler discovery** (no runtime scanning/reflection)
 - **Generated pipelines** (global middleware -> policy middleware -> per-command middleware -> handler)
-- **Deterministic ordering** and precedence rules (predictable output)
+- **Deterministic ordering** with declaration order preserved inside each middleware layer
 - **Explicit context (`TContext`)** for command handlers
 - **Multi-assembly composition** with host-owned final pipeline generation
 - **Pluggable context factory** (delegate factory or DI registration)
@@ -31,7 +31,7 @@ Stable release:
 dotnet add package TinyDispatcher
 ```
 
-`1.2.0` is the current stable line and includes context lanes. `1.1.x` remains available for applications that are not ready to adopt the multi-context API.
+`1.2.1` is the current stable release. It includes context lanes and preserves middleware declaration order within each pipeline layer. `1.1.x` remains available for applications that are not ready to adopt the multi-context API.
 
 ## Quick start
 
