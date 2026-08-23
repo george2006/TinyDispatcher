@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using Microsoft.CodeAnalysis;
 using TinyDispatcher.SourceGen.Generator.Models;
 
 namespace TinyDispatcher.SourceGen.Generator.Validation;
@@ -27,8 +28,10 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
             return;
         }
 
-        ValidatePerCommandMiddlewareConflicts(context, diags);
-        ValidatePolicyConflicts(context, diags);
+        var location = GetHostBootstrapLocation(context);
+
+        ValidatePerCommandMiddlewareConflicts(context, diags, location);
+        ValidatePolicyConflicts(context, diags, location);
     }
 
     private static bool ShouldValidate(GeneratorValidationContext context)
@@ -37,9 +40,16 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
                !string.IsNullOrWhiteSpace(context.ContextTypeFqn);
     }
 
+    private static Location GetHostBootstrapLocation(GeneratorValidationContext context)
+    {
+        var calls = context.UseTinyDispatcherCalls;
+        return calls.Length > 0 ? (calls[0].Location ?? Location.None) : Location.None;
+    }
+
     private static void ValidatePerCommandMiddlewareConflicts(
         GeneratorValidationContext context,
-        DiagnosticBag diags)
+        DiagnosticBag diags,
+        Location location)
     {
         var ownersByCommand = new Dictionary<string, string>(StringComparer.Ordinal);
 
@@ -47,7 +57,7 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
 
         foreach (var referencedAssembly in context.ReferencedContributions.EnumerateMatchingContext(context.ContextTypeFqn))
         {
-            RememberReferencedPerCommandMiddleware(context, diags, ownersByCommand, referencedAssembly);
+            RememberReferencedPerCommandMiddleware(context, diags, ownersByCommand, referencedAssembly, location);
         }
     }
 
@@ -65,7 +75,8 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
         GeneratorValidationContext context,
         DiagnosticBag diags,
         Dictionary<string, string> ownersByCommand,
-        ReferencedAssemblyContribution referencedAssembly)
+        ReferencedAssemblyContribution referencedAssembly,
+        Location location)
     {
         var reportedCommands = new HashSet<string>(StringComparer.Ordinal);
 
@@ -88,7 +99,8 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
                     diags,
                     contribution.CommandTypeFqn,
                     referencedAssembly.AssemblyName,
-                    referencedAssembly.AssemblyName);
+                    referencedAssembly.AssemblyName,
+                    location);
                 continue;
             }
 
@@ -99,7 +111,8 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
                     diags,
                     contribution.CommandTypeFqn,
                     existingOwner,
-                    referencedAssembly.AssemblyName);
+                    referencedAssembly.AssemblyName,
+                    location);
                 continue;
             }
 
@@ -109,7 +122,8 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
 
     private static void ValidatePolicyConflicts(
         GeneratorValidationContext context,
-        DiagnosticBag diags)
+        DiagnosticBag diags,
+        Location location)
     {
         var ownersByPolicy = new Dictionary<string, string>(StringComparer.Ordinal);
 
@@ -117,7 +131,7 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
 
         foreach (var referencedAssembly in context.ReferencedContributions.EnumerateMatchingContext(context.ContextTypeFqn))
         {
-            RememberReferencedPolicies(context, diags, ownersByPolicy, referencedAssembly);
+            RememberReferencedPolicies(context, diags, ownersByPolicy, referencedAssembly, location);
         }
     }
 
@@ -135,7 +149,8 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
         GeneratorValidationContext context,
         DiagnosticBag diags,
         Dictionary<string, string> ownersByPolicy,
-        ReferencedAssemblyContribution referencedAssembly)
+        ReferencedAssemblyContribution referencedAssembly,
+        Location location)
     {
         var reportedPolicies = new HashSet<string>(StringComparer.Ordinal);
 
@@ -158,7 +173,8 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
                     diags,
                     contribution.PolicyTypeFqn,
                     referencedAssembly.AssemblyName,
-                    referencedAssembly.AssemblyName);
+                    referencedAssembly.AssemblyName,
+                    location);
                 continue;
             }
 
@@ -169,7 +185,8 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
                     diags,
                     contribution.PolicyTypeFqn,
                     existingOwner,
-                    referencedAssembly.AssemblyName);
+                    referencedAssembly.AssemblyName,
+                    location);
                 continue;
             }
 
@@ -190,10 +207,12 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
         DiagnosticBag diags,
         string commandTypeFqn,
         string firstOwner,
-        string secondOwner)
+        string secondOwner,
+        Location location)
     {
         diags.Add(context.Diagnostics.Create(
             context.Diagnostics.DuplicatePerCommandMiddlewareContribution,
+            location,
             commandTypeFqn,
             JoinOwners(firstOwner, secondOwner)));
     }
@@ -203,10 +222,12 @@ internal sealed class ReferencedContributionConflictValidator : IGeneratorValida
         DiagnosticBag diags,
         string policyTypeFqn,
         string firstOwner,
-        string secondOwner)
+        string secondOwner,
+        Location location)
     {
         diags.Add(context.Diagnostics.Create(
             context.Diagnostics.DuplicatePolicyContribution,
+            location,
             policyTypeFqn,
             JoinOwners(firstOwner, secondOwner)));
     }
