@@ -90,9 +90,10 @@ internal sealed class PolicySpecBuilder
         }
 
         return new PolicySpec(
-            PolicyTypeFqn: policyTypeFqn,
-            Middlewares: distinctMiddlewares,
-            Commands: distinctCommands);
+            policyTypeFqn,
+            distinctMiddlewares,
+            distinctCommands,
+            SymbolLocations.GetPrimary(policy));
     }
 
     private static PolicyAttributes ReadPolicyAttributes(INamedTypeSymbol policy)

@@ -99,7 +99,8 @@ namespace ConsoleApp
 }
 "));
 
-        Assert.Single(diags, d => d.Id == "DISP410" && d.Severity == DiagnosticSeverity.Warning);
+        var diagnostic = Assert.Single(diags, d => d.Id == "DISP410" && d.Severity == DiagnosticSeverity.Warning);
+        Assert.NotEqual(Location.None, diagnostic.Location);
     }
 
     [Fact]
@@ -208,7 +209,8 @@ namespace ConsoleApp
 }
 "));
 
-        Assert.Single(diags, d => d.Id == "DISP411" && d.Severity == DiagnosticSeverity.Warning);
+        var diagnostic = Assert.Single(diags, d => d.Id == "DISP411" && d.Severity == DiagnosticSeverity.Warning);
+        Assert.NotEqual(Location.None, diagnostic.Location);
     }
 
     [Fact]
@@ -326,6 +328,9 @@ namespace ConsoleApp
 "));
 
         Assert.Contains(diags, d => d.Id == "DISP412" && d.Severity == DiagnosticSeverity.Warning);
+
+        var diagnostic = diags.First(d => d.Id == "DISP412" && d.Severity == DiagnosticSeverity.Warning);
+        Assert.NotEqual(Location.None, diagnostic.Location);
     }
 
     private static (GeneratorDriver Driver, Diagnostic[] Diagnostics) Run(CSharpCompilation compilation)
