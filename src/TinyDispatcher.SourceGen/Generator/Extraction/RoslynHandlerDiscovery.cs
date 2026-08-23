@@ -178,7 +178,8 @@ internal sealed class RoslynHandlerDiscovery
         var handlerTypeFqn = EnsureGlobalPrefix(handlerType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
         var contextTypeFqn = EnsureGlobalPrefix(ctxArg.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
 
-        commandHandlers.Add(new HandlerContract(messageTypeFqn, handlerTypeFqn, contextTypeFqn));
+        commandHandlers.Add(new HandlerContract(
+            messageTypeFqn, handlerTypeFqn, contextTypeFqn, SymbolLocations.GetPrimary(handlerType)));
     }
 
     private static void AddQueryHandlerContract(
@@ -205,7 +206,8 @@ internal sealed class RoslynHandlerDiscovery
         var resultTypeFqn = resultArg.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         var handlerTypeFqn = handlerType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
-        queryHandlers.Add(new QueryHandlerContract(queryTypeFqn, resultTypeFqn, handlerTypeFqn));
+        queryHandlers.Add(new QueryHandlerContract(
+            queryTypeFqn, resultTypeFqn, handlerTypeFqn, SymbolLocations.GetPrimary(handlerType)));
     }
 
     private static string EnsureGlobalPrefix(string s)

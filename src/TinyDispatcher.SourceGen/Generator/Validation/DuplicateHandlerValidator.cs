@@ -119,6 +119,7 @@ internal sealed class DuplicateHandlerValidator : IGeneratorValidator
 
         diags.Add(context.Diagnostics.Create(
             context.Diagnostics.DuplicateCommand,
+            duplicateCommand.HandlerLocation,
             duplicateCommand.MessageTypeFqn,
             firstCommand.HandlerTypeFqn,
             duplicateCommand.HandlerTypeFqn));
@@ -134,6 +135,7 @@ internal sealed class DuplicateHandlerValidator : IGeneratorValidator
 
         diags.Add(context.Diagnostics.Create(
             context.Diagnostics.DuplicateQuery,
+            duplicateQuery.HandlerLocation,
             duplicateQuery.QueryTypeFqn,
             firstQuery.HandlerTypeFqn,
             duplicateQuery.HandlerTypeFqn));
