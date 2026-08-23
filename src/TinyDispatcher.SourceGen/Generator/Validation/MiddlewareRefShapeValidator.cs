@@ -317,7 +317,7 @@ internal sealed class MiddlewareRefShapeValidator : IGeneratorValidator
     {
         diags.Add(context.Diagnostics.Create(
             context.Diagnostics.InvalidMiddlewareType,
-            Location.None,
+            middleware.MiddlewareLocation,
             middleware.OpenTypeFqn));
     }
 
@@ -328,7 +328,7 @@ internal sealed class MiddlewareRefShapeValidator : IGeneratorValidator
     {
         diags.Add(context.Diagnostics.Create(
             context.Diagnostics.UnsupportedMiddlewareArity,
-            Location.None,
+            middleware.MiddlewareLocation,
             middleware.OpenTypeFqn));
     }
 
@@ -340,7 +340,7 @@ internal sealed class MiddlewareRefShapeValidator : IGeneratorValidator
     {
         diags.Add(context.Diagnostics.Create(
             context.Diagnostics.InvalidContextClosedMiddleware,
-            Location.None,
+            middleware.MiddlewareLocation,
             middleware.OpenTypeFqn,
             contextTypeFqn));
     }

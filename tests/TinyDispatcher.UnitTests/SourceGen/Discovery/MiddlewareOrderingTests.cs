@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Text;
 using Moq;
 using TinyDispatcher.SourceGen.Generator.Extraction;
 using TinyDispatcher.SourceGen.Generator.Models;
@@ -110,8 +111,33 @@ public sealed class MiddlewareOrderingTests
         Assert.Equal(shared, result["CommandB"][0]);
     }
 
+    [Fact]
+    public void Order_and_distinct_globals_treats_same_middleware_as_duplicate_even_with_different_locations()
+    {
+        var sut = new MiddlewareOrdering();
+
+        var middlewareAtFileA = new MiddlewareRef("Middleware1", 2, CreateLocation("a.cs"));
+        var middlewareAtFileB = new MiddlewareRef("Middleware1", 2, CreateLocation("b.cs"));
+
+        var items = new List<OrderedEntry>
+        {
+            new(middlewareAtFileA, new OrderKey("a.cs", 10)),
+            new(middlewareAtFileB, new OrderKey("b.cs", 20))
+        };
+
+        var result = sut.OrderAndDistinctGlobals(items);
+
+        Assert.Single(result);
+    }
+
     private static MiddlewareRef CreateMiddlewareRef(string openTypeFqn, int arity = 2)
     {
         return new MiddlewareRef(openTypeFqn, arity);
+    }
+
+    private static Location CreateLocation(string filePath)
+    {
+        var lineSpan = new LinePositionSpan(new LinePosition(0, 0), new LinePosition(0, 1));
+        return Location.Create(filePath, new TextSpan(0, 1), lineSpan);
     }
 }
