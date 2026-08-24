@@ -1,6 +1,8 @@
 #nullable enable
 
 using System.Collections.Immutable;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Text;
 using TinyDispatcher.SourceGen.Diagnostics;
 using TinyDispatcher.SourceGen.Generator.Models;
 using TinyDispatcher.SourceGen.Generator.Validation;
@@ -36,6 +38,7 @@ public sealed class ReferencedContributionConflictValidatorTests
 
         var diagnostic = Assert.Single(diagnostics.ToImmutable());
         Assert.Equal("DISP413", diagnostic.Id);
+        Assert.NotEqual(Location.None, diagnostic.Location);
     }
 
     [Fact]
@@ -183,6 +186,7 @@ public sealed class ReferencedContributionConflictValidatorTests
 
         var diagnostic = Assert.Single(diagnostics.ToImmutable());
         Assert.Equal("DISP414", diagnostic.Id);
+        Assert.NotEqual(Location.None, diagnostic.Location);
     }
 
     [Fact]
@@ -302,13 +306,19 @@ public sealed class ReferencedContributionConflictValidatorTests
     {
         var declaration = new HostLaneDeclaration(
             contextTypeFqn,
-            ImmutableArray<UseTinyDispatcherCall>.Empty);
+            ImmutableArray.Create(new UseTinyDispatcherCall(contextTypeFqn, CreateBootstrapCallLocation())));
 
         return new HostLane(
             declaration,
             thisAssemblyPipeline,
             EmptyDiscovery(),
             pipeline);
+    }
+
+    private static Location CreateBootstrapCallLocation()
+    {
+        var lineSpan = new LinePositionSpan(new LinePosition(0, 0), new LinePosition(0, 1));
+        return Location.Create("Startup.cs", new TextSpan(0, 1), lineSpan);
     }
 
     private static DiscoveryResult EmptyDiscovery()

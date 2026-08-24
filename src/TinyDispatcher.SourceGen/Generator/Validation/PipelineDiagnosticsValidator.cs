@@ -62,10 +62,15 @@ internal sealed class PipelineDiagnosticsValidator : IGeneratorValidator
             {
                 diags.Add(context.Diagnostics.Create(
                     context.Diagnostics.MiddlewareConfiguredForUnknownCommand,
-                    Location.None,
+                    GetFirstMiddlewareLocation(perCommandPipeline.Value),
                     command));
             }
         }
+    }
+
+    private static Location GetFirstMiddlewareLocation(IReadOnlyList<MiddlewareRef> middlewares)
+    {
+        return middlewares.Count > 0 ? middlewares[0].MiddlewareLocation : Location.None;
     }
 
     private static void ValidatePolicyTargets(
@@ -95,7 +100,7 @@ internal sealed class PipelineDiagnosticsValidator : IGeneratorValidator
                 {
                     diags.Add(context.Diagnostics.Create(
                         context.Diagnostics.PolicyTargetsUnknownCommand,
-                        Location.None,
+                        policy.PolicyLocation,
                         policyType,
                         command));
                 }
@@ -121,19 +126,20 @@ internal sealed class PipelineDiagnosticsValidator : IGeneratorValidator
                 continue;
             }
 
-            var policies = JoinDistinct(policyGroup.Value);
+            var policyNames = JoinDistinct(policyGroup.Value);
+            var conflictingPolicyLocation = policyGroup.Value[1].PolicyLocation;
 
             diags.Add(context.Diagnostics.Create(
                 context.Diagnostics.MultiplePoliciesForSameCommand,
-                Location.None,
+                conflictingPolicyLocation,
                 policyGroup.Key,
-                policies));
+                policyNames));
         }
     }
 
-    private static Dictionary<string, List<string>> BuildPoliciesByCommand(IEnumerable<PolicySpec> policies)
+    private static Dictionary<string, List<PolicySpec>> BuildPoliciesByCommand(IEnumerable<PolicySpec> policies)
     {
-        var policiesByCommand = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        var policiesByCommand = new Dictionary<string, List<PolicySpec>>(StringComparer.Ordinal);
 
         foreach (var policy in policies)
         {
@@ -143,16 +149,16 @@ internal sealed class PipelineDiagnosticsValidator : IGeneratorValidator
                 continue;
             }
 
-            AddPolicyCommands(policiesByCommand, policy.Commands, policyType);
+            AddPolicyCommands(policiesByCommand, policy.Commands, policy);
         }
 
         return policiesByCommand;
     }
 
     private static void AddPolicyCommands(
-        Dictionary<string, List<string>> policiesByCommand,
+        Dictionary<string, List<PolicySpec>> policiesByCommand,
         IReadOnlyList<string> commands,
-        string policyType)
+        PolicySpec policy)
     {
         for (var i = 0; i < commands.Count; i++)
         {
@@ -163,11 +169,11 @@ internal sealed class PipelineDiagnosticsValidator : IGeneratorValidator
 
             if (!policiesByCommand.TryGetValue(command, out var policies))
             {
-                policies = new List<string>(4);
+                policies = new List<PolicySpec>(4);
                 policiesByCommand[command] = policies;
             }
 
-            policies.Add(policyType);
+            policies.Add(policy);
         }
     }
 
@@ -185,14 +191,14 @@ internal sealed class PipelineDiagnosticsValidator : IGeneratorValidator
         return !string.IsNullOrWhiteSpace(command);
     }
 
-    private static string JoinDistinct(List<string> values)
+    private static string JoinDistinct(List<PolicySpec> policies)
     {
-        var distinct = new List<string>(values.Count);
+        var distinct = new List<string>(policies.Count);
         var seen = new HashSet<string>(StringComparer.Ordinal);
 
-        for (var i = 0; i < values.Count; i++)
+        for (var i = 0; i < policies.Count; i++)
         {
-            var value = values[i];
+            var value = PipelineTypeNames.NormalizeFqn(policies[i].PolicyTypeFqn);
             if (seen.Add(value))
             {
                 distinct.Add(value);
