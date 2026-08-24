@@ -45,7 +45,7 @@
    </PropertyGroup>
 
   <PropertyGroup>
-    <Version>1.3.0-beta.2</Version>
+    <Version>1.3.0-beta.3</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -54,16 +54,22 @@
   </ItemGroup>
   <PropertyGroup>
     <PackageReleaseNotes>
-      TinyDispatcher 1.3.0-beta.2
+      TinyDispatcher 1.3.0-beta.3
 
       Added
-      - Dispatcher context identity on operation activities and metrics.
-      - Generated command and query structure through DispatcherPipelineBootstrap.GetOperations().
+      - Opt-in generated pipeline structure through DispatcherPipelineMaps.Get().
+      - Attribute-backed pipeline maps preserving pipeline, context, command, middleware, and policy types.
+
+      Improved
+      - Generator diagnostics now point to the relevant source location for duplicate handlers, invalid middleware, pipeline configuration, and referenced-assembly conflicts.
+
+      Fixed
+      - Middleware declaration order is preserved within each generated pipeline layer.
 
       Notes
-      - Generated operation structure is lazy, deterministic, and independent from dispatch or runtime assembly scanning.
-      - Structure snapshots contain type identities and command/query metadata only; they do not expose operation payloads.
-      - 1.2.0 remains the current stable release.
+      - Pipeline-map generation is opt-in and does not affect dispatch when disabled.
+      - Reading pipeline maps does not dispatch operations, construct handlers, or execute middleware.
+      - 1.2.1 remains the current stable release.
     </PackageReleaseNotes>
 
 

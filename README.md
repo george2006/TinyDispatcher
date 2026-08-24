@@ -115,10 +115,11 @@ See [OpenTelemetry](docs/opentelemetry.md) for registration, the telemetry contr
 
 ## Generated application structure
 
-Generated application structure is available starting with `1.3.0-beta.2`:
+Generated operation structure is available starting with `1.3.0-beta.2`. Generated pipeline
+structure is available starting with `1.3.0-beta.3`:
 
 ```bash
-dotnet add package TinyDispatcher --version 1.3.0-beta.2
+dotnet add package TinyDispatcher --version 1.3.0-beta.3
 ```
 
 TinyDispatcher exposes the command/query structure already discovered by its source generator:
@@ -135,6 +136,15 @@ assembly, configure OpenTelemetry, or expose command/query payloads.
 The generated structure is lazy: applications that never call `GetOperations()` do not build
 the operation objects. The first read materializes and caches each generated contribution;
 every read returns a fresh aggregate snapshot.
+
+Applications can also opt into generated pipeline metadata and inspect the final composition
+without dispatching operations or executing middleware:
+
+```csharp
+var pipelines = DispatcherPipelineMaps.Get();
+```
+
+See [Pipeline Maps](docs/pipeline-maps.md) for generator configuration and the metadata contract.
 
 ## Documentation
 
