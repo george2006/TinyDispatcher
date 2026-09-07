@@ -1,5 +1,7 @@
 # TinyDispatcher
 
+[Support the Tiny suite on Buy Me a Coffee](https://buymeacoffee.com/durbich) to help fund testing and ongoing maintenance.
+
 TinyDispatcher is a small, compile-time oriented dispatcher for .NET.
 
 It provides a predictable, explicit, and performant command/query dispatch core by moving:
